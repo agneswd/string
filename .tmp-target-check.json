@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.app.json",
+  "include": [
+    "src/lib/stringStore.ts",
+    "src/lib/useStringStore.ts",
+    "src/App.tsx",
+    "src/components/ChatViewPane.tsx",
+    "src/components/VoicePanel.tsx",
+    "src/lib/webrtc/**/*",
+    "src/components/DmListPane.tsx",
+    "src/components/ReactionBar.tsx",
+    "src/components/ScreenShareStatus.tsx"
+  ]
+}
