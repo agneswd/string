@@ -1,7 +1,8 @@
 import React, { type FormEvent, useEffect, useRef, useState, useMemo, useCallback, type CSSProperties } from 'react'
-import { Phone, Trash2, Pencil, Check, X } from 'lucide-react'
+import { Phone, Trash2, Pencil, Check, X, Copy } from 'lucide-react'
 import { ReactionBar, QuickReactBar, type ReactionBarItem } from './ReactionBar'
 import { getAvatarColor, getInitial } from '../../lib/avatarUtils'
+import { ContextMenu, type ContextMenuItem } from '../ui/ContextMenu'
 
 export interface ChatMessageItem {
   id: string | number
@@ -10,6 +11,7 @@ export interface ChatMessageItem {
   timestamp: string
   authorId?: string | number
   profileColor?: string
+  canEditDelete?: boolean
 }
 
 export interface ChatViewPaneProps {
@@ -386,6 +388,8 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
   const avatarUrl = message.authorId ? getAvatarUrl?.(String(message.authorId)) : undefined
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState('')
+  const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number } | null>(null)
+  const canEditOrDelete = isOwnMessage && message.canEditDelete !== false
 
   const rowStyle = hovered
     ? (isGrouped ? S_messageGroupedHover : S_messageFirstHover)
@@ -400,14 +404,56 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
 
   const handleAvatarContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
+    e.stopPropagation()
     onViewProfile?.({ displayName: message.authorName, username: message.authorName }, e.clientX, e.clientY)
   }, [onViewProfile, message.authorName])
+
+  const handleMessageContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setContextMenuPosition({ x: e.clientX, y: e.clientY })
+  }, [])
+
+  const handleCopyMessage = useCallback(() => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+      return
+    }
+    void navigator.clipboard.writeText(message.content)
+  }, [message.content])
+
+  const contextItems = useMemo<ContextMenuItem[]>(() => [
+    {
+      label: 'Edit',
+      icon: <Pencil size={16} />,
+      disabled: !canEditOrDelete || !onEditMessage,
+      onClick: () => {
+        if (!canEditOrDelete) return
+        setEditValue(message.content)
+        setIsEditing(true)
+      },
+    },
+    {
+      label: 'Copy',
+      icon: <Copy size={16} />,
+      onClick: handleCopyMessage,
+    },
+    {
+      label: 'Delete',
+      icon: <Trash2 size={16} />,
+      danger: true,
+      disabled: !canEditOrDelete || !onDeleteMessage,
+      onClick: () => {
+        if (!canEditOrDelete || !onDeleteMessage) return
+        onDeleteMessage(message.id)
+      },
+    },
+  ], [canEditOrDelete, onEditMessage, onDeleteMessage, message.content, message.id, handleCopyMessage])
 
   return (
     <li
       style={rowStyle}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onContextMenu={handleMessageContextMenu}
       data-own={isOwnMessage || undefined}
     >
       {isGrouped && (
@@ -483,12 +529,12 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
           padding: 2,
           zIndex: 5,
         }}>
-          {isOwnMessage && onEditMessage && (
+          {canEditOrDelete && onEditMessage && (
             <button type="button" onClick={() => { setEditValue(message.content); setIsEditing(true) }} style={actionBtnStyle} title="Edit" aria-label="Edit message">
               <Pencil size={16} />
             </button>
           )}
-          {isOwnMessage && onDeleteMessage && (
+          {canEditOrDelete && onDeleteMessage && (
             <button type="button" onClick={() => onDeleteMessage(message.id)} style={{...actionBtnStyle, color: '#ed4245'}} title="Delete" aria-label="Delete message">
               <Trash2 size={16} />
             </button>
@@ -510,6 +556,15 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
           disabled={!onToggleReaction}
         />
       ) : null}
+
+      {contextMenuPosition && (
+        <ContextMenu
+          x={contextMenuPosition.x}
+          y={contextMenuPosition.y}
+          items={contextItems}
+          onClose={() => setContextMenuPosition(null)}
+        />
+      )}
     </li>
   )
 })

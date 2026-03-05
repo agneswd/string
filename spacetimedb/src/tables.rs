@@ -378,3 +378,30 @@ pub struct DmCallRequest {
     pub callee_identity: Identity,
     pub created_at: Timestamp,
 }
+
+/// Persistent DM call lifecycle event log.
+#[spacetimedb::table(
+    accessor = dm_call_event,
+    public,
+    index(
+        name = "dm_call_event_by_dm_channel_id",
+        accessor = dm_call_event_by_dm_channel_id,
+        btree(columns = [dm_channel_id])
+    ),
+    index(
+        name = "dm_call_event_by_actor_identity",
+        accessor = dm_call_event_by_actor_identity,
+        btree(columns = [actor_identity])
+    )
+)]
+#[derive(Clone)]
+pub struct DmCallEvent {
+    #[primary_key]
+    #[auto_inc]
+    pub event_id: u64,
+    pub dm_channel_id: u64,
+    pub actor_identity: Identity,
+    pub event_type: String,
+    pub created_at: Timestamp,
+    pub duration_seconds: Option<u64>,
+}

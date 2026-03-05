@@ -3,6 +3,7 @@ import type { Identity } from 'spacetimedb/sdk'
 import type { DbConnection, SubscriptionHandle } from '../module_bindings'
 import type {
   Channel,
+  DmCallEvent,
   DmCallRequest,
   DmChannel,
   DmMessage,
@@ -122,6 +123,7 @@ const TABLE_KEYS = [
   'my_dm_channels',
   'my_dm_participants',
   'my_dm_messages',
+  'my_dm_call_events',
   'my_rtc_signals',
   'my_voice_states',
   'dm_call_request',
@@ -143,6 +145,7 @@ const CORE_SUBSCRIPTION_QUERIES = [
   'SELECT * FROM my_dm_channels',
   'SELECT * FROM my_dm_participants',
   'SELECT * FROM my_dm_messages',
+  'SELECT * FROM my_dm_call_events',
   'SELECT * FROM my_rtc_signals',
   'SELECT * FROM my_voice_states',
   'SELECT * FROM dm_call_request',
@@ -169,6 +172,8 @@ export type StringState = {
   voiceStates: VoiceState[]
   myRtcSignals: RtcSignal[]
   dmCallRequests: DmCallRequest[]
+  dmCallEvents: DmCallEvent[]
+  dmUnreadCountsByChannel: Map<string, number>
   dmMessageCountsByChannel: Map<string, number>
   dmLastMessageByChannel: Map<string, DmMessage>
   guildMessagesVersion: number
@@ -202,6 +207,8 @@ class StringStore {
     voiceStates: [],
     myRtcSignals: [],
     dmCallRequests: [],
+    dmCallEvents: [],
+    dmUnreadCountsByChannel: new Map(),
     dmMessageCountsByChannel: new Map(),
     dmLastMessageByChannel: new Map(),
     guildMessagesVersion: 0,
@@ -298,6 +305,8 @@ class StringStore {
           voiceStates: [],
           myRtcSignals: [],
           dmCallRequests: [],
+          dmCallEvents: [],
+          dmUnreadCountsByChannel: new Map(),
           dmMessageCountsByChannel: new Map(),
           dmLastMessageByChannel: new Map(),
           guildMessagesVersion: this.state.guildMessagesVersion + 1,
@@ -509,6 +518,10 @@ class StringStore {
     this.selectedTextChannelId = nextTextChannelId
     this.selectedDmChannelId = nextDmChannelId
 
+    if (nextDmChannelId) {
+      this.clearDmUnreadForChannel(nextDmChannelId)
+    }
+
     if (shouldSwapGuild) {
       this.swapGuildChannelSubscription(nextTextChannelId)
     }
@@ -649,6 +662,7 @@ class StringStore {
     this.updateState({
       dmMessages: this.getSelectedDmMessages(),
       dmReactions: [],
+      dmUnreadCountsByChannel: this.getPrunedDmUnreadCountsByChannel(),
       dmMessageCountsByChannel: this.getDmMessageCountsByChannel(),
       dmLastMessageByChannel: this.getDmLastMessageByChannel(),
       dmMessagesVersion: this.state.dmMessagesVersion + 1,
@@ -842,6 +856,7 @@ class StringStore {
       this.rebuildDmHotIndexes(dmMessages, dmReactions)
       next.dmMessages = this.getSelectedDmMessages()
       next.dmReactions = this.getSelectedDmReactions(next.dmMessages)
+      next.dmUnreadCountsByChannel = this.getPrunedDmUnreadCountsByChannel()
       next.dmMessageCountsByChannel = this.getDmMessageCountsByChannel()
       next.dmLastMessageByChannel = this.getDmLastMessageByChannel()
       if (shouldSyncDmMessages) next.dmMessagesVersion = prev.dmMessagesVersion + 1
@@ -855,6 +870,7 @@ class StringStore {
     if (syncAll || mutated.has('my_voice_states')) next.voiceStates = this.readRows<VoiceState>(db, PREFERRED_VOICE_TABLE_KEYS[0])
     if (syncAll || mutated.has('my_rtc_signals')) next.myRtcSignals = this.readRows<RtcSignal>(db, 'my_rtc_signals')
     if (syncAll || mutated.has('dm_call_request')) next.dmCallRequests = this.readRows<DmCallRequest>(db, 'dm_call_request')
+    if (syncAll || mutated.has('my_dm_call_events')) next.dmCallEvents = this.readRows<DmCallEvent>(db, 'my_dm_call_events')
 
     this.updateState(next)
   }
@@ -1194,6 +1210,35 @@ class StringStore {
     return counts
   }
 
+  private getPrunedDmUnreadCountsByChannel(): Map<string, number> {
+    const nextUnreadCounts = new Map<string, number>()
+
+    for (const [channelId, count] of this.state.dmUnreadCountsByChannel.entries()) {
+      if (count <= 0) {
+        continue
+      }
+      if (this.selectedDmChannelId && channelId === this.selectedDmChannelId) {
+        continue
+      }
+      if (!this.dmMessageOrderByChannel.has(channelId)) {
+        continue
+      }
+      nextUnreadCounts.set(channelId, count)
+    }
+
+    return nextUnreadCounts
+  }
+
+  private clearDmUnreadForChannel(channelId: string): void {
+    if (!this.state.dmUnreadCountsByChannel.has(channelId)) {
+      return
+    }
+
+    const nextUnreadCounts = new Map(this.state.dmUnreadCountsByChannel)
+    nextUnreadCounts.delete(channelId)
+    this.updateState({ dmUnreadCountsByChannel: nextUnreadCounts })
+  }
+
   private toSortableBigInt(value: unknown): bigint | null {
     try {
       return BigInt(String(value))
@@ -1494,9 +1539,20 @@ class StringStore {
       this.dmMessageOrderByChannel.set(channelKey, [messageId])
     }
 
+    const nextUnreadCounts = new Map(this.state.dmUnreadCountsByChannel)
+    const myIdentity = this.state.identity ? String(this.state.identity) : null
+    const authorIdentity = String(row.authorIdentity)
+    const isIncoming = myIdentity !== null && authorIdentity !== myIdentity
+    const isSelectedChannel = this.selectedDmChannelId !== null && channelKey === this.selectedDmChannelId
+
+    if (isIncoming && !isSelectedChannel) {
+      nextUnreadCounts.set(channelKey, (nextUnreadCounts.get(channelKey) ?? 0) + 1)
+    }
+
     this.updateState({
       dmMessages: this.getSelectedDmMessages(),
       dmReactions: this.getSelectedDmReactions(this.getSelectedDmMessages()),
+      dmUnreadCountsByChannel: nextUnreadCounts,
       dmMessageCountsByChannel: this.getDmMessageCountsByChannel(),
       dmLastMessageByChannel: this.getDmLastMessageByChannel(),
       dmMessagesVersion: this.state.dmMessagesVersion + 1,
@@ -1549,6 +1605,7 @@ class StringStore {
     const nextState: Partial<StringState> = {
       dmMessages: selectedMessages,
       dmReactions: this.getSelectedDmReactions(selectedMessages),
+      dmUnreadCountsByChannel: this.getPrunedDmUnreadCountsByChannel(),
       dmMessageCountsByChannel: this.getDmMessageCountsByChannel(),
       dmLastMessageByChannel: this.getDmLastMessageByChannel(),
       dmMessagesVersion: this.state.dmMessagesVersion + 1,

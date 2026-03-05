@@ -5,15 +5,103 @@ use crate::{
         cleanup_stale_rtc_signals, find_member, pending_rtc_signals_within_limit, require_role,
         rtc_signal_within_rate_limit_window, sender_rtc_signals_within_limit,
         timestamp_to_unix_micros, validate_signal_payload, MAX_PENDING_RTC_SIGNALS_PER_RECIPIENT,
-        MAX_RTC_SIGNALS_PER_SENDER_WINDOW, RTC_SIGNAL_RATE_LIMIT_WINDOW_SECS,
+        MAX_RTC_SIGNALS_PER_SENDER_WINDOW, MICROS_PER_SECOND, RTC_SIGNAL_RATE_LIMIT_WINDOW_SECS,
     },
     tables::{
-        channel, channel__view, dm_channel, dm_participant, dm_participant__view,
+        channel, channel__view, dm_call_event, dm_channel, dm_participant, dm_participant__view,
         guild_member__view, rtc_signal, rtc_signal__view, user, voice_state, voice_state__view,
-        RtcSignal, VoiceState,
+        DmCallEvent, RtcSignal, VoiceState,
     },
     types::{ChannelType, MemberRole, RtcSignalType},
 };
+
+const DM_CALL_EVENT_STARTED: &str = "started";
+const DM_CALL_EVENT_ENDED: &str = "ended";
+
+fn should_emit_dm_call_ended(remaining_participants: usize) -> bool {
+    remaining_participants < 2
+}
+
+fn duration_seconds_between_micros(start_micros: u128, end_micros: u128) -> u64 {
+    let duration_micros = end_micros.saturating_sub(start_micros);
+    (duration_micros / MICROS_PER_SECOND) as u64
+}
+
+fn active_dm_call_start_micros(ctx: &ReducerContext, dm_channel_id: u64) -> Option<u128> {
+    let mut latest_started_micros: Option<u128> = None;
+    let mut latest_ended_micros: Option<u128> = None;
+
+    for event in ctx
+        .db
+        .dm_call_event()
+        .dm_call_event_by_dm_channel_id()
+        .filter(dm_channel_id)
+    {
+        let event_micros = timestamp_to_unix_micros(&event.created_at);
+        if event.event_type == DM_CALL_EVENT_STARTED {
+            latest_started_micros = Some(match latest_started_micros {
+                Some(current) => current.max(event_micros),
+                None => event_micros,
+            });
+        }
+
+        if event.event_type == DM_CALL_EVENT_ENDED {
+            latest_ended_micros = Some(match latest_ended_micros {
+                Some(current) => current.max(event_micros),
+                None => event_micros,
+            });
+        }
+    }
+
+    match (latest_started_micros, latest_ended_micros) {
+        (Some(started), Some(ended)) if started <= ended => None,
+        (Some(started), _) => Some(started),
+        _ => None,
+    }
+}
+
+pub(crate) fn maybe_emit_dm_call_ended_for_departure(
+    ctx: &ReducerContext,
+    who: Identity,
+    state: &VoiceState,
+) {
+    if state.guild_id != 0 {
+        return;
+    }
+
+    let dm_channel_id = state.channel_id;
+    let participants_before_leave: Vec<Identity> = ctx
+        .db
+        .voice_state()
+        .channel_id()
+        .filter(dm_channel_id)
+        .filter(|voice_state| voice_state.guild_id == 0)
+        .map(|voice_state| voice_state.identity)
+        .collect();
+
+    let remaining_participants = participants_before_leave
+        .iter()
+        .filter(|identity| **identity != who)
+        .count();
+
+    if !should_emit_dm_call_ended(remaining_participants) {
+        return;
+    }
+
+    if let Some(start_micros) = active_dm_call_start_micros(ctx, dm_channel_id) {
+        let end_micros = timestamp_to_unix_micros(&ctx.timestamp);
+        let duration_seconds = duration_seconds_between_micros(start_micros, end_micros);
+
+        ctx.db.dm_call_event().insert(DmCallEvent {
+            event_id: 0,
+            dm_channel_id,
+            actor_identity: who,
+            event_type: DM_CALL_EVENT_ENDED.to_string(),
+            created_at: ctx.timestamp,
+            duration_seconds: Some(duration_seconds),
+        });
+    }
+}
 
 /// Join or switch to a voice channel.
 #[spacetimedb::reducer]
@@ -33,6 +121,7 @@ pub fn join_voice_channel(ctx: &ReducerContext, channel_id: u64) -> Result<(), S
 
     let who = ctx.sender();
     if let Some(mut state) = ctx.db.voice_state().identity().find(who) {
+        maybe_emit_dm_call_ended_for_departure(ctx, who, &state);
         state.guild_id = channel.guild_id;
         state.channel_id = channel_id;
         state.joined_at = ctx.timestamp;
@@ -57,7 +146,11 @@ pub fn join_voice_channel(ctx: &ReducerContext, channel_id: u64) -> Result<(), S
 pub fn leave_voice_channel(ctx: &ReducerContext) -> Result<(), String> {
     let who = ctx.sender();
 
-    // Just delete — if no voice state exists, this is a no-op which is fine
+    let Some(state) = ctx.db.voice_state().identity().find(who) else {
+        return Ok(());
+    };
+
+    maybe_emit_dm_call_ended_for_departure(ctx, who, &state);
     ctx.db.voice_state().identity().delete(who);
 
     Ok(())
@@ -116,7 +209,12 @@ pub fn join_voice_dm(ctx: &ReducerContext, dm_channel_id: u64) -> Result<(), Str
 
     // Leave any existing voice state (guild or DM)
     let who = ctx.sender();
-    if ctx.db.voice_state().identity().find(who).is_some() {
+    if let Some(state) = ctx.db.voice_state().identity().find(who) {
+        if state.guild_id == 0 && state.channel_id == dm_channel_id {
+            return Ok(());
+        }
+
+        maybe_emit_dm_call_ended_for_departure(ctx, who, &state);
         ctx.db.voice_state().identity().delete(who);
     }
 
@@ -433,4 +531,23 @@ pub fn my_voice_states(ctx: &ViewContext) -> Vec<VoiceState> {
     }
 
     voice_states
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dm_call_ends_when_remaining_participants_drop_below_two() {
+        assert!(should_emit_dm_call_ended(1));
+        assert!(should_emit_dm_call_ended(0));
+        assert!(!should_emit_dm_call_ended(2));
+    }
+
+    #[test]
+    fn duration_seconds_saturates_and_truncates_to_seconds() {
+        assert_eq!(duration_seconds_between_micros(5_000_000, 5_000_000), 0);
+        assert_eq!(duration_seconds_between_micros(5_000_000, 6_500_000), 1);
+        assert_eq!(duration_seconds_between_micros(6_000_000, 5_000_000), 0);
+    }
 }

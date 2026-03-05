@@ -31,6 +31,16 @@ export const ChannelType = __t.enum("ChannelType", {
 });
 export type ChannelType = __Infer<typeof ChannelType>;
 
+export const DmCallEvent = __t.object("DmCallEvent", {
+  eventId: __t.u64(),
+  dmChannelId: __t.u64(),
+  actorIdentity: __t.identity(),
+  eventType: __t.string(),
+  createdAt: __t.timestamp(),
+  durationSeconds: __t.option(__t.u64()),
+});
+export type DmCallEvent = __Infer<typeof DmCallEvent>;
+
 export const DmCallRequest = __t.object("DmCallRequest", {
   callId: __t.u64(),
   dmChannelId: __t.u64(),

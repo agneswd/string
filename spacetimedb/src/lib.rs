@@ -6,12 +6,13 @@ pub use types::{ChannelType, MemberRole, RtcSignalType, UserStatus};
 
 pub mod tables;
 pub use tables::{
-    Channel, DmCallRequest, Guild, GuildInvite, GuildMember, Message, PresenceOfflineJob,
-    PresenceState, RtcSignal, User, UserPresence, VoiceState,
+    Channel, DmCallEvent, DmCallRequest, Guild, GuildInvite, GuildMember, Message,
+    PresenceOfflineJob, PresenceState, RtcSignal, User, UserPresence, VoiceState,
 };
 pub mod helpers;
 pub mod reducers;
 
+use crate::reducers::rtc::maybe_emit_dm_call_ended_for_departure;
 use crate::tables::{
     dm_call_request, presence_offline_job, presence_state, rtc_signal, user, user_presence,
     voice_state,
@@ -120,7 +121,10 @@ pub(crate) fn update_user_status_if_changed(
 }
 
 fn cleanup_ephemeral_presence(ctx: &ReducerContext, who: Identity) {
-    ctx.db.voice_state().identity().delete(who);
+    if let Some(state) = ctx.db.voice_state().identity().find(who) {
+        maybe_emit_dm_call_ended_for_departure(ctx, who, &state);
+        ctx.db.voice_state().identity().delete(who);
+    }
 
     let caller_call_ids: Vec<u64> = ctx
         .db

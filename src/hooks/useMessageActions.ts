@@ -84,26 +84,36 @@ export function useMessageActions({
   const statusError = stateError ?? actionError
 
   const handleDeleteMessage = useCallback((messageId: string | number) => {
+    const idLiteral = String(messageId)
+    if (!/^\d+$/.test(idLiteral)) {
+      return
+    }
+
     void runAction(async () => {
       if (isDmMode) {
         await callActionOrReducer(extendedActions.deleteDmMessage, 'deleteDmMessage', {
-          dmMessageId: BigInt(messageId),
+          dmMessageId: BigInt(idLiteral),
         })
       } else {
-        await actions.deleteMessage({ messageId: BigInt(messageId) })
+        await actions.deleteMessage({ messageId: BigInt(idLiteral) })
       }
     })
   }, [isDmMode, runAction, callActionOrReducer, extendedActions, actions])
 
   const handleEditMessage = useCallback((messageId: string | number, newContent: string) => {
+    const idLiteral = String(messageId)
+    if (!/^\d+$/.test(idLiteral)) {
+      return
+    }
+
     void runAction(async () => {
       if (isDmMode) {
         await callActionOrReducer(extendedActions.editDmMessage, 'editDmMessage', {
-          dmMessageId: BigInt(messageId),
+          dmMessageId: BigInt(idLiteral),
           newContent,
         })
       } else {
-        await actions.editMessage({ messageId: BigInt(messageId), newContent })
+        await actions.editMessage({ messageId: BigInt(idLiteral), newContent })
       }
     })
   }, [isDmMode, runAction, callActionOrReducer, extendedActions, actions])

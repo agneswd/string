@@ -3,8 +3,8 @@ import type { Identity } from 'spacetimedb/sdk'
 
 import type { AppData } from './useAppData'
 import type { ActionFeedback } from './useActionFeedback'
-import type { DmChannel } from '../module_bindings/types'
-import { toIdKey, identityToString, formatTimestamp, compareById } from '../lib/helpers'
+import type { DmCallEvent, DmChannel, DmMessage } from '../module_bindings/types'
+import { toIdKey, identityToString, formatTimestamp, compareById, toSortableBigInt } from '../lib/helpers'
 
 interface ReactionEntry {
   emoji: string
@@ -21,6 +21,63 @@ interface UseDmChatParams {
   setActionStatus: ActionFeedback['setActionStatus']
 }
 
+const formatDuration = (durationSeconds: number): string => {
+  const totalSeconds = Math.max(0, Math.floor(durationSeconds))
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+
+  const parts: string[] = []
+  if (hours > 0) {
+    parts.push(`${hours} hour${hours === 1 ? '' : 's'}`)
+  }
+  if (minutes > 0) {
+    parts.push(`${minutes} minute${minutes === 1 ? '' : 's'}`)
+  }
+  if (parts.length === 0 || (hours === 0 && minutes === 0 && seconds > 0)) {
+    parts.push(`${seconds} second${seconds === 1 ? '' : 's'}`)
+  }
+
+  if (parts.length === 1) {
+    return parts[0]
+  }
+
+  const tail = parts.pop()
+  return `${parts.join(', ')} and ${tail}`
+}
+
+const timestampToMillis = (value: unknown): number => {
+  if (typeof value === 'object' && value !== null) {
+    const withToDate = value as { toDate?: () => Date }
+    const maybeDate = withToDate.toDate?.()
+    if (maybeDate instanceof Date) {
+      return maybeDate.getTime()
+    }
+  }
+  return new Date(String(value)).getTime()
+}
+
+const isDmMessageNewer = (left: DmMessage, right: DmMessage): boolean => {
+  const leftId = toSortableBigInt(left.dmMessageId)
+  const rightId = toSortableBigInt(right.dmMessageId)
+  if (leftId !== null && rightId !== null && leftId !== rightId) {
+    return leftId > rightId
+  }
+  return timestampToMillis(left.sentAt) > timestampToMillis(right.sentAt)
+}
+
+const compareTimelineItems = (left: { sortTime: number; sortId: bigint | null }, right: { sortTime: number; sortId: bigint | null }): number => {
+  if (left.sortTime !== right.sortTime) {
+    return left.sortTime - right.sortTime
+  }
+
+  if (left.sortId !== null && right.sortId !== null && left.sortId !== right.sortId) {
+    return left.sortId < right.sortId ? -1 : 1
+  }
+
+  return 0
+}
+
 export function useDmChat({
   appData,
   friendIdentityById,
@@ -29,7 +86,18 @@ export function useDmChat({
   setActionError,
   setActionStatus,
 }: UseDmChatParams) {
-  const { dmChannels, dmParticipants, dmMessages, dmReactions, identityString, usersByIdentity, extendedActions } = appData
+  const {
+    dmChannels,
+    dmParticipants,
+    dmMessages,
+    dmReactions,
+    dmCallEvents,
+    dmUnreadCountsByChannel,
+    dmLastMessageByChannel,
+    identityString,
+    usersByIdentity,
+    extendedActions,
+  } = appData
 
   const [selectedDmChannelId, setSelectedDmChannelId] = useState<string | undefined>(undefined)
 
@@ -81,13 +149,18 @@ export function useDmChat({
         }
       }
 
+      const unreadCount = dmUnreadCountsByChannel.get(dmChannelKey) ?? 0
+      const latestDmMessage = dmLastMessageByChannel.get(dmChannelKey)
+
       return {
         id: dmChannelKey,
         name: names.length > 0 ? names.join(', ') : `dm-${dmChannelKey}`,
         status,
+        unreadCount,
+        lastMessage: latestDmMessage ? String(latestDmMessage.content ?? '') : undefined,
       }
     })
-  }, [dmParticipants, identityString, myDmChannels, usersByIdentity])
+  }, [dmParticipants, identityString, myDmChannels, usersByIdentity, dmUnreadCountsByChannel, dmLastMessageByChannel])
 
   const selectedDmChannel = useMemo(
     () => myDmChannels.find((channel) => toIdKey(channel.dmChannelId) === selectedDmChannelId) ?? null,
@@ -107,12 +180,26 @@ export function useDmChat({
         authorName: string
         content: string
         timestamp: string
+        canEditDelete: boolean
       }>
     }
 
+    const selectedDmChannelKey = toIdKey(selectedDmChannel.dmChannelId)
+
+    const participantsForSelectedChannel = dmParticipants
+      .filter((participant) => toIdKey(participant.dmChannelId) === selectedDmChannelKey)
+      .map((participant) => identityToString(participant.identity))
+
+    const otherParticipantId = participantsForSelectedChannel.find((participantId) => participantId !== identityString)
+    const otherParticipantName = otherParticipantId
+      ? (usersByIdentity.get(otherParticipantId)?.displayName
+        ?? usersByIdentity.get(otherParticipantId)?.username
+        ?? otherParticipantId.slice(0, 12))
+      : 'Someone'
+
     const seenIds = new Set<string>()
 
-    return dmMessages
+    const messageTimeline = dmMessages
       .filter((message) => {
         if (message.isDeleted) return false
         const idKey = toIdKey(message.dmMessageId)
@@ -120,8 +207,6 @@ export function useDmChat({
         seenIds.add(idKey)
         return true
       })
-      .slice()
-      .sort((left, right) => compareById(left.dmMessageId, right.dmMessageId))
       .map((message) => {
         const authorId = identityToString(message.authorIdentity)
         const author = usersByIdentity.get(authorId)
@@ -132,10 +217,68 @@ export function useDmChat({
           authorName: author?.displayName ?? author?.username ?? authorId.slice(0, 12),
           content: message.content,
           timestamp: formatTimestamp(message.sentAt),
+          canEditDelete: true,
           profileColor: (author as any)?.profileColor ?? undefined,
+          sortTime: timestampToMillis(message.sentAt),
+          sortId: toSortableBigInt(message.dmMessageId),
         }
       })
-  }, [dmMessages, selectedDmChannel, usersByIdentity])
+
+    const callEventTimeline = dmCallEvents
+      .filter((event) => toIdKey(event.dmChannelId) === selectedDmChannelKey)
+      .map((event) => {
+        const eventId = toIdKey(event.eventId)
+        const actorId = identityToString(event.actorIdentity)
+        const actorName = usersByIdentity.get(actorId)?.displayName
+          ?? usersByIdentity.get(actorId)?.username
+          ?? actorId.slice(0, 12)
+
+        let content = 'Call activity'
+        switch (String(event.eventType)) {
+          case 'started':
+            content = `${actorName} started a call`
+            break
+          case 'missed':
+            content = actorId === identityString
+              ? `${otherParticipantName} tried to call you`
+              : `${actorName} didn’t pick up`
+            break
+          case 'canceled':
+            content = actorId === identityString
+              ? 'You canceled the call'
+              : `${actorName} canceled the call`
+            break
+          case 'ended': {
+            const secondsRaw = event.durationSeconds
+            const secondsBigInt = secondsRaw !== null && secondsRaw !== undefined ? toSortableBigInt(secondsRaw) : null
+            const seconds = secondsBigInt !== null ? Number(secondsBigInt) : 0
+            content = seconds > 0
+              ? `Call ended after ${formatDuration(seconds)}`
+              : 'Call ended'
+            break
+          }
+          default:
+            content = 'Call activity'
+        }
+
+        return {
+          id: `call-event-${eventId}`,
+          authorId: 'system',
+          authorName: 'Call',
+          content,
+          timestamp: formatTimestamp(event.createdAt),
+          canEditDelete: false,
+          profileColor: undefined,
+          sortTime: timestampToMillis(event.createdAt),
+          sortId: toSortableBigInt(event.eventId),
+        }
+      })
+
+    return [...messageTimeline, ...callEventTimeline]
+      .slice()
+      .sort(compareTimelineItems)
+      .map(({ sortTime: _sortTime, sortId: _sortId, ...row }) => row)
+  }, [dmMessages, dmCallEvents, dmParticipants, selectedDmChannel, usersByIdentity, identityString])
 
   const dmReactionsForSelectedChannel = useMemo(() => {
     if (!selectedDmChannel) {

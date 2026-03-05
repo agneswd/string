@@ -1,8 +1,30 @@
 use crate::tables::{
-    dm_call_request as _, dm_channel as _, dm_participant as _, user as _, voice_state as _,
+    dm_call_event as _, dm_call_event__view as _, dm_call_request as _, dm_channel as _,
+    dm_participant as _, dm_participant__view as _, user as _, voice_state as _, DmCallEvent,
     DmCallRequest, VoiceState,
 };
-use spacetimedb::{reducer, Identity, ReducerContext, Table};
+use spacetimedb::{reducer, Identity, ReducerContext, Table, ViewContext};
+
+const DM_CALL_EVENT_STARTED: &str = "started";
+const DM_CALL_EVENT_MISSED: &str = "missed";
+const DM_CALL_EVENT_CANCELED: &str = "canceled";
+
+fn decline_event_type_for_actor(is_callee: bool) -> &'static str {
+    if is_callee {
+        DM_CALL_EVENT_MISSED
+    } else {
+        DM_CALL_EVENT_CANCELED
+    }
+}
+
+fn my_dm_channel_ids(ctx: &ViewContext, identity: &Identity) -> std::collections::BTreeSet<u64> {
+    ctx.db
+        .dm_participant()
+        .dm_participant_by_identity()
+        .filter(identity)
+        .map(|participant| participant.dm_channel_id)
+        .collect()
+}
 
 #[reducer]
 pub fn initiate_dm_call(ctx: &ReducerContext, dm_channel_id: u64) -> Result<(), String> {
@@ -134,6 +156,15 @@ pub fn accept_dm_call(ctx: &ReducerContext, call_id: u64) -> Result<(), String> 
         joined_at: ctx.timestamp,
     });
 
+    ctx.db.dm_call_event().insert(DmCallEvent {
+        event_id: 0,
+        dm_channel_id,
+        actor_identity: ctx.sender(),
+        event_type: DM_CALL_EVENT_STARTED.to_string(),
+        created_at: ctx.timestamp,
+        duration_seconds: None,
+    });
+
     Ok(())
 }
 
@@ -146,11 +177,53 @@ pub fn decline_dm_call(ctx: &ReducerContext, call_id: u64) -> Result<(), String>
         .find(call_id)
         .ok_or("Call not found")?;
 
-    // Either the caller (cancel) or callee (decline) can remove the request
+    // Either the caller (cancel) or callee (decline/missed) can remove the request
     if call.callee_identity != ctx.sender() && call.caller_identity != ctx.sender() {
         return Err("Not your call".into());
     }
 
+    let is_callee = call.callee_identity == ctx.sender();
+    ctx.db.dm_call_event().insert(DmCallEvent {
+        event_id: 0,
+        dm_channel_id: call.dm_channel_id,
+        actor_identity: ctx.sender(),
+        event_type: decline_event_type_for_actor(is_callee).to_string(),
+        created_at: ctx.timestamp,
+        duration_seconds: None,
+    });
+
     ctx.db.dm_call_request().call_id().delete(call_id);
     Ok(())
+}
+
+#[spacetimedb::view(accessor = my_dm_call_events, public)]
+pub fn my_dm_call_events(ctx: &ViewContext) -> Vec<DmCallEvent> {
+    let who = ctx.sender();
+    let mut events = Vec::new();
+
+    for dm_channel_id in my_dm_channel_ids(ctx, &who) {
+        events.extend(
+            ctx.db
+                .dm_call_event()
+                .dm_call_event_by_dm_channel_id()
+                .filter(dm_channel_id),
+        );
+    }
+
+    events
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn decline_event_is_missed_when_callee_declines() {
+        assert_eq!(decline_event_type_for_actor(true), "missed");
+    }
+
+    #[test]
+    fn decline_event_is_canceled_when_caller_cancels() {
+        assert_eq!(decline_event_type_for_actor(false), "canceled");
+    }
 }

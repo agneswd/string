@@ -5,6 +5,7 @@ export interface ContextMenuItem {
   icon?: React.ReactNode
   onClick: () => void
   danger?: boolean
+  disabled?: boolean
 }
 
 interface ContextMenuProps {
@@ -57,15 +58,23 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
       border: '1px solid #1e1f22',
     }}>
       {items.map((item, i) => (
-        <button key={i} onClick={() => { item.onClick(); onClose() }} style={{
+        <button key={i} onClick={() => { if (!item.disabled) { item.onClick(); onClose() } }} disabled={item.disabled} style={{
           display: 'flex', alignItems: 'center', gap: 8,
           width: '100%', padding: '6px 8px', border: 'none',
           borderRadius: 2, background: 'transparent',
           color: item.danger ? '#ed4245' : '#b5bac1',
-          fontSize: 14, cursor: 'pointer', textAlign: 'left',
+          fontSize: 14, cursor: item.disabled ? 'not-allowed' : 'pointer', textAlign: 'left',
+          opacity: item.disabled ? 0.5 : 1,
         }}
-        onMouseEnter={e => { (e.target as HTMLElement).style.background = item.danger ? 'rgba(237,66,69,0.1)' : '#4752c4'; (e.target as HTMLElement).style.color = '#fff' }}
-        onMouseLeave={e => { (e.target as HTMLElement).style.background = 'transparent'; (e.target as HTMLElement).style.color = item.danger ? '#ed4245' : '#b5bac1' }}
+        onMouseEnter={e => {
+          if (item.disabled) return
+          (e.target as HTMLElement).style.background = item.danger ? 'rgba(237,66,69,0.1)' : '#4752c4'
+          (e.target as HTMLElement).style.color = '#fff'
+        }}
+        onMouseLeave={e => {
+          (e.target as HTMLElement).style.background = 'transparent'
+          (e.target as HTMLElement).style.color = item.danger ? '#ed4245' : '#b5bac1'
+        }}
         >
           {item.icon}
           {item.label}

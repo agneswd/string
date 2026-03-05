@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 import { useStringActions, useStringStore } from '../lib/useStringStore'
 import type { StringState } from '../lib/stringStore'
 import { toIdKey } from '../lib/helpers'
-import type { User, DmCallRequest, DmChannel, DmMessage, DmParticipant, DmReaction, GuildInvite, GuildMember, Reaction } from '../module_bindings/types'
+import type { User, DmCallEvent, DmCallRequest, DmChannel, DmMessage, DmParticipant, DmReaction, GuildInvite, GuildMember, Reaction } from '../module_bindings/types'
 
 // ---------------------------------------------------------------------------
 // Helper – identity to hex string (mirrors App.tsx logic)
@@ -77,12 +77,14 @@ export interface AppData {
   dmParticipants: DmParticipant[]
   dmMessages: DmMessage[]
   guildMembersByGuildId: Map<string, GuildMember[]>
+  dmUnreadCountsByChannel: Map<string, number>
   dmMessageCountsByChannel: Map<string, number>
   dmLastMessageByChannel: Map<string, DmMessage>
   dmReactions: DmReaction[]
   reactions: Reaction[]
   guildInvites: GuildInvite[]
   dmCallRequests: DmCallRequest[]
+  dmCallEvents: DmCallEvent[]
 }
 
 // ---------------------------------------------------------------------------
@@ -120,6 +122,11 @@ export function useAppData(): AppData {
     [state.dmMessageCountsByChannel],
   )
 
+  const dmUnreadCountsByChannel = useMemo(
+    () => state.dmUnreadCountsByChannel ?? new Map<string, number>(),
+    [state.dmUnreadCountsByChannel],
+  )
+
   const dmLastMessageByChannel = useMemo(
     () => state.dmLastMessageByChannel ?? new Map<string, DmMessage>(),
     [state.dmLastMessageByChannel],
@@ -129,6 +136,7 @@ export function useAppData(): AppData {
   const reactions = useMemo(() => extendedState.reactions ?? [], [extendedState.reactions])
   const guildInvites = useMemo(() => state.guildInvites ?? [], [state.guildInvites])
   const dmCallRequests = useMemo(() => state.dmCallRequests ?? [], [state.dmCallRequests])
+  const dmCallEvents = useMemo(() => state.dmCallEvents ?? [], [state.dmCallEvents])
 
   const identityString = useMemo(() => identityToString(state.identity), [state.identity])
 
@@ -154,13 +162,15 @@ export function useAppData(): AppData {
     dmParticipants,
     dmMessages,
     guildMembersByGuildId,
+    dmUnreadCountsByChannel,
     dmMessageCountsByChannel,
     dmLastMessageByChannel,
     dmReactions,
     reactions,
     guildInvites,
     dmCallRequests,
-  }), [state, actions, extendedState, extendedActions, identityString, usersByIdentity, me, dmChannels, dmParticipants, dmMessages, guildMembersByGuildId, dmMessageCountsByChannel, dmLastMessageByChannel, dmReactions, reactions, guildInvites, dmCallRequests])
+    dmCallEvents,
+  }), [state, actions, extendedState, extendedActions, identityString, usersByIdentity, me, dmChannels, dmParticipants, dmMessages, guildMembersByGuildId, dmUnreadCountsByChannel, dmMessageCountsByChannel, dmLastMessageByChannel, dmReactions, reactions, guildInvites, dmCallRequests, dmCallEvents])
 }
 
 export { identityToString }

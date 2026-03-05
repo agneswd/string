@@ -83,10 +83,12 @@ import UpdateVoiceStateReducer from "./update_voice_state_reducer";
 // Import all procedure arg schemas
 
 // Import all table schema definitions
+import DmCallEventRow from "./dm_call_event_table";
 import DmCallRequestRow from "./dm_call_request_table";
 import DmReactionRow from "./dm_reaction_table";
 import GuildInviteRow from "./guild_invite_table";
 import MyChannelsRow from "./my_channels_table";
+import MyDmCallEventsRow from "./my_dm_call_events_table";
 import MyDmChannelsRow from "./my_dm_channels_table";
 import MyDmMessagesRow from "./my_dm_messages_table";
 import MyDmParticipantsRow from "./my_dm_participants_table";
@@ -108,6 +110,23 @@ import UserPresenceRow from "./user_presence_table";
 
 /** The schema information for all tables in this module. This is defined the same was as the tables would have been defined in the server. */
 const tablesSchema = __schema({
+  dm_call_event: __table({
+    name: 'dm_call_event',
+    indexes: [
+      { name: 'dm_call_event_by_actor_identity', algorithm: 'btree', columns: [
+        'actorIdentity',
+      ] },
+      { name: 'dm_call_event_by_dm_channel_id', algorithm: 'btree', columns: [
+        'dmChannelId',
+      ] },
+      { name: 'event_id', algorithm: 'btree', columns: [
+        'eventId',
+      ] },
+    ],
+    constraints: [
+      { name: 'dm_call_event_event_id_key', constraint: 'unique', columns: ['eventId'] },
+    ],
+  }, DmCallEventRow),
   dm_call_request: __table({
     name: 'dm_call_request',
     indexes: [
@@ -195,6 +214,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyChannelsRow),
+  my_dm_call_events: __table({
+    name: 'my_dm_call_events',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyDmCallEventsRow),
   my_dm_channels: __table({
     name: 'my_dm_channels',
     indexes: [
