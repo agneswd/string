@@ -172,6 +172,62 @@ export function useDmChat({
     [dmListItems, selectedDmChannelId],
   )
 
+  const markDmReadInFlightByChannelRef = useRef<Map<string, string>>(new Map())
+
+  useEffect(() => {
+    if (!selectedDmChannelId || !identityString) {
+      return
+    }
+
+    const selectedDmChannelIdBigInt = toSortableBigInt(selectedDmChannelId)
+    if (selectedDmChannelIdBigInt === null) {
+      return
+    }
+
+    const latestMessage = dmLastMessageByChannel.get(selectedDmChannelId)
+    if (!latestMessage) {
+      return
+    }
+
+    const latestMessageId = toSortableBigInt(latestMessage.dmMessageId)
+    if (latestMessageId === null) {
+      return
+    }
+
+    const myParticipant = dmParticipants.find((participant) => (
+      toIdKey(participant.dmChannelId) === selectedDmChannelId
+      && identityToString(participant.identity) === identityString
+    ))
+    if (!myParticipant) {
+      return
+    }
+
+    const lastReadMessageId = toSortableBigInt(myParticipant.lastReadMessageId)
+    if (lastReadMessageId !== null && latestMessageId <= lastReadMessageId) {
+      return
+    }
+
+    const inFlightKey = latestMessageId.toString()
+    const inFlightForChannel = markDmReadInFlightByChannelRef.current.get(selectedDmChannelId)
+    if (inFlightForChannel === inFlightKey) {
+      return
+    }
+
+    markDmReadInFlightByChannelRef.current.set(selectedDmChannelId, inFlightKey)
+    void callActionOrReducer(
+      undefined,
+      'markDmRead',
+      {
+        dmChannelId: selectedDmChannelIdBigInt,
+        messageId: latestMessageId,
+      },
+    ).catch(() => {}).finally(() => {
+      if (markDmReadInFlightByChannelRef.current.get(selectedDmChannelId) === inFlightKey) {
+        markDmReadInFlightByChannelRef.current.delete(selectedDmChannelId)
+      }
+    })
+  }, [selectedDmChannelId, identityString, dmLastMessageByChannel, dmParticipants, callActionOrReducer])
+
   const dmMessagesForSelectedChannel = useMemo(() => {
     if (!selectedDmChannel) {
       return [] as Array<{

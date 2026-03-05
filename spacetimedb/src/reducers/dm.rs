@@ -44,6 +44,19 @@ fn require_dm_participant(
         .ok_or_else(|| "You are not a participant in this DM channel".to_string())
 }
 
+fn validate_dm_read_cursor_advance(
+    last_read_message_id: Option<u64>,
+    next_read_message_id: u64,
+) -> Result<(), String> {
+    if let Some(last_read_message_id) = last_read_message_id {
+        if next_read_message_id < last_read_message_id {
+            return Err("Cannot move DM read cursor backwards".to_string());
+        }
+    }
+
+    Ok(())
+}
+
 fn my_dm_channel_ids(ctx: &ViewContext, identity: &Identity) -> std::collections::BTreeSet<u64> {
     let channel_ids = ctx
         .db
@@ -121,8 +134,30 @@ pub fn create_dm_channel(
             dm_channel_id: dm_channel.dm_channel_id,
             identity,
             joined_at: ctx.timestamp,
+            last_read_message_id: None,
         });
     }
+
+    Ok(())
+}
+
+/// Mark the caller's DM read cursor for a channel.
+#[spacetimedb::reducer]
+pub fn mark_dm_read(
+    ctx: &ReducerContext,
+    dm_channel_id: u64,
+    message_id: u64,
+) -> Result<(), String> {
+    let caller = ctx.sender();
+    let mut participant = require_dm_participant(ctx, dm_channel_id, &caller)?;
+
+    validate_dm_read_cursor_advance(participant.last_read_message_id, message_id)?;
+    participant.last_read_message_id = Some(message_id);
+
+    ctx.db
+        .dm_participant()
+        .dm_participant_id()
+        .update(participant);
 
     Ok(())
 }
@@ -314,7 +349,7 @@ pub fn my_dm_messages(ctx: &ViewContext) -> Vec<DmMessage> {
 
 #[cfg(test)]
 mod tests {
-    use super::collect_valid_dm_channel_ids;
+    use super::{collect_valid_dm_channel_ids, validate_dm_read_cursor_advance};
 
     #[test]
     fn collect_valid_dm_channel_ids_filters_orphaned_rows_and_dedupes() {
@@ -331,5 +366,21 @@ mod tests {
         let result = collect_valid_dm_channel_ids(participant_channel_ids, |_| false);
 
         assert!(result.is_empty());
+    }
+
+    #[test]
+    fn validate_dm_read_cursor_advance_allows_initial_and_forward_progress() {
+        assert!(validate_dm_read_cursor_advance(None, 5).is_ok());
+        assert!(validate_dm_read_cursor_advance(Some(5), 5).is_ok());
+        assert!(validate_dm_read_cursor_advance(Some(5), 6).is_ok());
+    }
+
+    #[test]
+    fn validate_dm_read_cursor_advance_rejects_backwards_progress() {
+        let result = validate_dm_read_cursor_advance(Some(10), 9);
+        assert_eq!(
+            result,
+            Err("Cannot move DM read cursor backwards".to_string())
+        );
     }
 }

@@ -74,6 +74,7 @@ export const DmParticipant = __t.object("DmParticipant", {
   dmChannelId: __t.u64(),
   identity: __t.identity(),
   joinedAt: __t.timestamp(),
+  lastReadMessageId: __t.option(__t.u64()),
 });
 export type DmParticipant = __Infer<typeof DmParticipant>;
 

@@ -16,6 +16,7 @@ interface UseNotificationEffectsParams {
   addNotification: (notif: Omit<NotificationItem, 'id'>) => void
   friends: FriendEntry[]
   identityString: string
+  dmMessagesHydrated: boolean
   dmMessageCountsByChannel: Map<string, number>
   dmLastMessageByChannel: Map<string, DmMessage>
   selectedDmChannelId: string | undefined
@@ -39,6 +40,7 @@ export function useNotificationEffects({
   addNotification,
   friends,
   identityString,
+  dmMessagesHydrated,
   dmMessageCountsByChannel,
   dmLastMessageByChannel,
   selectedDmChannelId,
@@ -135,6 +137,15 @@ export function useNotificationEffects({
   useEffect(() => {
     const prev = prevDmMsgCounts.current
 
+    if (!dmMessagesHydrated) {
+      prev.clear()
+      for (const [chId, count] of dmMessageCountsByChannel) {
+        prev.set(chId, count)
+      }
+      dmCountsInitialized.current = false
+      return
+    }
+
     if (!dmCountsInitialized.current) {
       prev.clear()
       for (const [chId, count] of dmMessageCountsByChannel) {
@@ -176,5 +187,5 @@ export function useNotificationEffects({
         prev.delete(channelId)
       }
     }
-  }, [dmMessageCountsByChannel, dmLastMessageByChannel, identityString, selectedDmChannelId, addNotification, usersByIdentity, setSelectedDmChannelId, setSelectedGuildId])
+  }, [dmMessagesHydrated, dmMessageCountsByChannel, dmLastMessageByChannel, identityString, selectedDmChannelId, addNotification, usersByIdentity, setSelectedDmChannelId, setSelectedGuildId])
 }

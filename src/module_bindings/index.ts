@@ -64,6 +64,7 @@ import LeaveDmChannelReducer from "./leave_dm_channel_reducer";
 import LeaveGuildReducer from "./leave_guild_reducer";
 import LeaveVoiceChannelReducer from "./leave_voice_channel_reducer";
 import LoginAsUserReducer from "./login_as_user_reducer";
+import MarkDmReadReducer from "./mark_dm_read_reducer";
 import RegisterUserReducer from "./register_user_reducer";
 import RemoveDmReactionReducer from "./remove_dm_reaction_reducer";
 import RemoveFriendReducer from "./remove_friend_reducer";
@@ -353,6 +354,7 @@ const reducersSchema = __reducers(
   __reducerSchema("leave_guild", LeaveGuildReducer),
   __reducerSchema("leave_voice_channel", LeaveVoiceChannelReducer),
   __reducerSchema("login_as_user", LoginAsUserReducer),
+  __reducerSchema("mark_dm_read", MarkDmReadReducer),
   __reducerSchema("register_user", RegisterUserReducer),
   __reducerSchema("remove_dm_reaction", RemoveDmReactionReducer),
   __reducerSchema("remove_friend", RemoveFriendReducer),

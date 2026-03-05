@@ -68,9 +68,9 @@ type TableLike = {
 
 type TableMutationHandler = (...args: unknown[]) => void
 
-type HotTableKey = 'my_messages' | 'my_reactions' | 'my_dm_messages' | 'dm_reaction'
+type HotTableKey = 'message' | 'my_reactions' | 'dm_message' | 'dm_reaction'
 
-const HOT_TABLE_KEYS = new Set<HotTableKey>(['my_messages', 'my_reactions', 'my_dm_messages', 'dm_reaction'])
+const HOT_TABLE_KEYS = new Set<HotTableKey>(['message', 'my_reactions', 'dm_message', 'dm_reaction'])
 
 type AttachedTableHandlers = {
   table: TableLike
@@ -114,7 +114,7 @@ const TABLE_KEYS = [
   'my_guilds',
   'my_guild_members',
   'my_channels',
-  'my_messages',
+  'message',
   'my_reactions',
   'dm_reaction',
   'guild_invite',
@@ -122,7 +122,7 @@ const TABLE_KEYS = [
   'my_friend_requests_outgoing',
   'my_dm_channels',
   'my_dm_participants',
-  'my_dm_messages',
+  'dm_message',
   'my_dm_call_events',
   'my_rtc_signals',
   'my_voice_states',
@@ -144,7 +144,6 @@ const CORE_SUBSCRIPTION_QUERIES = [
   'SELECT * FROM my_friend_requests_outgoing',
   'SELECT * FROM my_dm_channels',
   'SELECT * FROM my_dm_participants',
-  'SELECT * FROM my_dm_messages',
   'SELECT * FROM my_dm_call_events',
   'SELECT * FROM my_rtc_signals',
   'SELECT * FROM my_voice_states',
@@ -154,6 +153,7 @@ const CORE_SUBSCRIPTION_QUERIES = [
 export type StringState = {
   connectionStatus: ConnectionStatus
   identity: Identity | null
+  dmMessagesHydrated: boolean
   users: User[]
   myProfile: User | null
   guilds: Guild[]
@@ -189,6 +189,7 @@ class StringStore {
   private state: StringState = {
     connectionStatus: 'idle',
     identity: null,
+    dmMessagesHydrated: false,
     users: [],
     myProfile: null,
     guilds: [],
@@ -279,7 +280,7 @@ class StringStore {
     initConnection({
       onConnect: (identity) => {
         this.beginDmHydrationReplayWindow()
-        this.updateState({ identity, connectionStatus: 'connected', error: null })
+        this.updateState({ identity, connectionStatus: 'connected', dmMessagesHydrated: false, error: null })
         this.attachRealtime(getConn())
         this.syncFromCache()
       },
@@ -311,6 +312,7 @@ class StringStore {
           myRtcSignals: [],
           dmCallRequests: [],
           dmCallEvents: [],
+          dmMessagesHydrated: false,
           dmUnreadCountsByChannel: new Map(),
           dmMessageCountsByChannel: new Map(),
           dmLastMessageByChannel: new Map(),
@@ -328,6 +330,7 @@ class StringStore {
         this.clearHotIndexes()
         this.updateState({
           connectionStatus: 'error',
+          dmMessagesHydrated: false,
           error: err.message,
         })
       },
@@ -353,7 +356,7 @@ class StringStore {
       console.warn('Disconnect failed:', e)
     }
 
-    this.updateState({ connectionStatus: 'disconnected', identity: null })
+    this.updateState({ connectionStatus: 'disconnected', identity: null, dmMessagesHydrated: false })
   }
 
   /**
@@ -546,7 +549,7 @@ class StringStore {
         if (!this.realtimeAttached) {
           this.beginDmHydrationReplayWindow()
         }
-        this.updateState({ identity, connectionStatus: 'connected', error: null })
+        this.updateState({ identity, connectionStatus: 'connected', dmMessagesHydrated: false, error: null })
         this.attachRealtime(conn)
         this.syncFromCache()
       }
@@ -653,7 +656,7 @@ class StringStore {
   }
 
   private clearGuildChannelState(): void {
-    this.pendingMutatedTables.delete('my_messages')
+    this.pendingMutatedTables.delete('message')
     this.pendingMutatedTables.delete('my_reactions')
     this.messagesById.clear()
     this.messageOrderByChannel.clear()
@@ -667,6 +670,7 @@ class StringStore {
   }
 
   private clearDmChannelState(): void {
+    this.pendingMutatedTables.delete('dm_message')
     this.pendingMutatedTables.delete('dm_reaction')
     this.dmReactionsByMessage.clear()
     this.updateState({
@@ -709,7 +713,7 @@ class StringStore {
         this.updateState({ connectionStatus: 'error', error: 'Guild channel subscription error' })
       })
       .subscribe([
-        `SELECT * FROM my_messages WHERE channel_id = ${channelIdLiteral}`,
+        `SELECT * FROM message WHERE channel_id = ${channelIdLiteral}`,
         `SELECT * FROM my_reactions WHERE channel_id = ${channelIdLiteral}`,
       ])
   }
@@ -742,7 +746,10 @@ class StringStore {
       .onError(() => {
         this.updateState({ connectionStatus: 'error', error: 'DM channel subscription error' })
       })
-      .subscribe([`SELECT * FROM dm_reaction WHERE dm_channel_id = ${dmChannelIdLiteral}`])
+      .subscribe([
+        `SELECT * FROM dm_message WHERE dm_channel_id = ${dmChannelIdLiteral}`,
+        `SELECT * FROM dm_reaction WHERE dm_channel_id = ${dmChannelIdLiteral}`,
+      ])
   }
 
   private detachRealtimeListeners(): void {
@@ -843,10 +850,10 @@ class StringStore {
     if (syncAll || mutated.has('my_guild_members')) next.guildMembers = this.readRows<GuildMember>(db, 'my_guild_members')
     if (syncAll || mutated.has('my_channels')) next.channels = this.readRows<Channel>(db, 'my_channels')
 
-    const shouldSyncGuildMessages = syncAll || mutated.has('my_messages')
+    const shouldSyncGuildMessages = syncAll || mutated.has('message')
     const shouldSyncGuildReactions = syncAll || mutated.has('my_reactions')
     if (shouldSyncGuildMessages || shouldSyncGuildReactions) {
-      const messages = this.readRows<Message>(db, 'my_messages')
+      const messages = this.readRows<Message>(db, 'message')
       const reactions = this.readRows<Reaction>(db, 'my_reactions')
       this.rebuildGuildHotIndexes(messages, reactions)
       next.messages = this.getSelectedGuildMessages()
@@ -856,22 +863,25 @@ class StringStore {
     }
 
     if (syncAll || mutated.has('my_dm_channels')) next.dmChannels = this.readRows<DmChannel>(db, 'my_dm_channels')
-    if (syncAll || mutated.has('my_dm_participants')) next.dmParticipants = this.readRows<DmParticipant>(db, 'my_dm_participants')
+    const shouldSyncDmParticipants = syncAll || mutated.has('my_dm_participants')
+    if (shouldSyncDmParticipants) next.dmParticipants = this.readRows<DmParticipant>(db, 'my_dm_participants')
 
-    const shouldSyncDmMessages = syncAll || mutated.has('my_dm_messages')
+    const shouldSyncDmMessages = syncAll || mutated.has('dm_message')
     const shouldSyncDmReactions = syncAll || mutated.has('dm_reaction')
     if (shouldSyncDmMessages || shouldSyncDmReactions) {
-      const dmMessages = this.readRows<DmMessage>(db, 'my_dm_messages')
+      const dmMessages = this.readRows<DmMessage>(db, 'dm_message')
       const dmReactions = this.readRows<DmReaction>(db, 'dm_reaction')
       this.rebuildDmHotIndexes(dmMessages, dmReactions)
       next.dmMessages = this.getSelectedDmMessages()
       next.dmReactions = this.getSelectedDmReactions(next.dmMessages)
-      const nextUnreadCounts = this.getPrunedDmUnreadCountsByChannel()
+      const dmParticipantsForUnread = next.dmParticipants ?? prev.dmParticipants
+      const nextUnreadCounts = this.getPrunedDmUnreadCountsByChannel(dmParticipantsForUnread)
       if (shouldSyncDmMessages && !this.dmMessagesHydrated) {
-        next.dmUnreadCountsByChannel = this.reconcilePreHydrationDmUnread(nextUnreadCounts)
+        next.dmUnreadCountsByChannel = this.reconcilePreHydrationDmUnread(nextUnreadCounts, dmParticipantsForUnread)
         this.dmMessagesHydrated = true
         this.dmHydrationStartedAtMs = null
         this.preHydrationIncomingDmMessages.clear()
+        next.dmMessagesHydrated = true
       } else {
         next.dmUnreadCountsByChannel = nextUnreadCounts
       }
@@ -879,6 +889,8 @@ class StringStore {
       next.dmLastMessageByChannel = this.getDmLastMessageByChannel()
       if (shouldSyncDmMessages) next.dmMessagesVersion = prev.dmMessagesVersion + 1
       if (shouldSyncDmReactions) next.dmReactionsVersion = prev.dmReactionsVersion + 1
+    } else if (shouldSyncDmParticipants) {
+      next.dmUnreadCountsByChannel = this.getPrunedDmUnreadCountsByChannel(next.dmParticipants ?? prev.dmParticipants)
     }
 
     if (syncAll || mutated.has('guild_invite')) next.guildInvites = this.readRows<GuildInvite>(db, 'guild_invite')
@@ -956,7 +968,7 @@ class StringStore {
   private createHotInsertHandler(tableKey: HotTableKey): TableMutationHandler {
     return (...args: unknown[]) => {
       switch (tableKey) {
-        case 'my_messages': {
+        case 'message': {
           const row = this.findLastMatchingArg(args, this.isMessageRow.bind(this))
           if (!row) {
             this.syncFromCache()
@@ -974,7 +986,7 @@ class StringStore {
           this.applyGuildReactionInsert(row)
           return
         }
-        case 'my_dm_messages': {
+        case 'dm_message': {
           const row = this.findLastMatchingArg(args, this.isDmMessageRow.bind(this))
           if (!row) {
             this.syncFromCache()
@@ -999,7 +1011,7 @@ class StringStore {
   private createHotDeleteHandler(tableKey: HotTableKey): TableMutationHandler {
     return (...args: unknown[]) => {
       switch (tableKey) {
-        case 'my_messages': {
+        case 'message': {
           const row = this.findLastMatchingArg(args, this.isMessageRow.bind(this))
           if (!row) {
             this.syncFromCache()
@@ -1017,7 +1029,7 @@ class StringStore {
           this.applyGuildReactionDelete(row)
           return
         }
-        case 'my_dm_messages': {
+        case 'dm_message': {
           const row = this.findLastMatchingArg(args, this.isDmMessageRow.bind(this))
           if (!row) {
             this.syncFromCache()
@@ -1042,7 +1054,7 @@ class StringStore {
   private createHotUpdateHandler(tableKey: HotTableKey): TableMutationHandler {
     return (...args: unknown[]) => {
       switch (tableKey) {
-        case 'my_messages': {
+        case 'message': {
           const { oldRow, newRow } = this.getUpdateRows(args, this.isMessageRow.bind(this))
           if (!newRow) {
             this.syncFromCache()
@@ -1060,7 +1072,7 @@ class StringStore {
           this.applyGuildReactionUpdate(oldRow, newRow)
           return
         }
-        case 'my_dm_messages': {
+        case 'dm_message': {
           const { oldRow, newRow } = this.getUpdateRows(args, this.isDmMessageRow.bind(this))
           if (!newRow) {
             this.syncFromCache()
@@ -1116,15 +1128,43 @@ class StringStore {
     }
   }
 
-  private reconcilePreHydrationDmUnread(baseUnreadCounts: Map<string, number>): Map<string, number> {
+  private getMyDmLastReadByChannel(dmParticipants: DmParticipant[] = this.state.dmParticipants): Map<string, bigint | null> {
+    const identity = this.resolveCurrentIdentityKey()
+    if (!identity) {
+      return new Map()
+    }
+
+    const lastReadByChannel = new Map<string, bigint | null>()
+    for (const participant of dmParticipants) {
+      if (String(participant.identity) !== identity) {
+        continue
+      }
+
+      const channelKey = String(participant.dmChannelId)
+      lastReadByChannel.set(channelKey, this.toSortableBigInt(participant.lastReadMessageId))
+    }
+
+    return lastReadByChannel
+  }
+
+  private reconcilePreHydrationDmUnread(
+    baseUnreadCounts: Map<string, number>,
+    dmParticipants: DmParticipant[] = this.state.dmParticipants,
+  ): Map<string, number> {
     if (this.preHydrationIncomingDmMessages.size === 0) {
       return baseUnreadCounts
     }
 
     const nextUnreadCounts = new Map(baseUnreadCounts)
     const hydrationStartedAtMs = this.dmHydrationStartedAtMs
+    const lastReadByChannel = this.getMyDmLastReadByChannel(dmParticipants)
 
     for (const row of this.preHydrationIncomingDmMessages.values()) {
+      const messageId = String(row.dmMessageId)
+      if (this.dmMessagesById.has(messageId)) {
+        continue
+      }
+
       const channelKey = String(row.dmChannelId)
       if (this.selectedDmChannelId && channelKey === this.selectedDmChannelId) {
         continue
@@ -1136,6 +1176,14 @@ class StringStore {
       if (hydrationStartedAtMs !== null) {
         const sentAtMs = this.toTimestampMillis(row.sentAt)
         if (sentAtMs === null || sentAtMs < hydrationStartedAtMs) {
+          continue
+        }
+      }
+
+      const lastRead = lastReadByChannel.get(channelKey)
+      if (lastRead !== undefined && lastRead !== null) {
+        const rowMessageId = this.toSortableBigInt(row.dmMessageId)
+        if (rowMessageId !== null && rowMessageId <= lastRead) {
           continue
         }
       }
@@ -1283,20 +1331,42 @@ class StringStore {
     return counts
   }
 
-  private getPrunedDmUnreadCountsByChannel(): Map<string, number> {
+  private getPrunedDmUnreadCountsByChannel(dmParticipants: DmParticipant[] = this.state.dmParticipants): Map<string, number> {
     const nextUnreadCounts = new Map<string, number>()
+    const myIdentity = this.resolveCurrentIdentityKey()
+    if (!myIdentity) {
+      return nextUnreadCounts
+    }
 
-    for (const [channelId, count] of this.state.dmUnreadCountsByChannel.entries()) {
-      if (count <= 0) {
-        continue
-      }
+    const lastReadByChannel = this.getMyDmLastReadByChannel(dmParticipants)
+
+    for (const [channelId, order] of this.dmMessageOrderByChannel.entries()) {
       if (this.selectedDmChannelId && channelId === this.selectedDmChannelId) {
         continue
       }
-      if (!this.dmMessageOrderByChannel.has(channelId)) {
-        continue
+
+      const lastRead = lastReadByChannel.get(channelId)
+      let unreadCount = 0
+
+      for (const messageId of order) {
+        const message = this.dmMessagesById.get(messageId)
+        if (!message || String(message.authorIdentity) === myIdentity) {
+          continue
+        }
+
+        if (lastRead !== undefined && lastRead !== null) {
+          const dmMessageId = this.toSortableBigInt(message.dmMessageId)
+          if (dmMessageId !== null && dmMessageId <= lastRead) {
+            continue
+          }
+        }
+
+        unreadCount += 1
       }
-      nextUnreadCounts.set(channelId, count)
+
+      if (unreadCount > 0) {
+        nextUnreadCounts.set(channelId, unreadCount)
+      }
     }
 
     return nextUnreadCounts
@@ -1307,7 +1377,9 @@ class StringStore {
       return
     }
 
-    const nextUnreadCounts = new Map(this.state.dmUnreadCountsByChannel)
+    const nextUnreadCounts = this.dmMessagesHydrated
+      ? this.getPrunedDmUnreadCountsByChannel()
+      : this.state.dmUnreadCountsByChannel
     nextUnreadCounts.delete(channelId)
     this.updateState({ dmUnreadCountsByChannel: nextUnreadCounts })
   }
@@ -1618,12 +1690,8 @@ class StringStore {
     const isIncoming = myIdentity !== null && authorIdentity !== myIdentity
     const isSelectedChannel = this.selectedDmChannelId !== null && channelKey === this.selectedDmChannelId
 
-    if (isIncoming && !isSelectedChannel) {
-      if (this.dmMessagesHydrated) {
-        nextUnreadCounts.set(channelKey, (nextUnreadCounts.get(channelKey) ?? 0) + 1)
-      } else {
-        this.preHydrationIncomingDmMessages.set(messageId, row)
-      }
+    if (isIncoming && !isSelectedChannel && !this.dmMessagesHydrated) {
+      this.preHydrationIncomingDmMessages.set(messageId, row)
     }
 
     this.updateState({
@@ -1663,6 +1731,7 @@ class StringStore {
     this.updateState({
       dmMessages: this.getSelectedDmMessages(),
       dmReactions: this.getSelectedDmReactions(this.getSelectedDmMessages()),
+      dmUnreadCountsByChannel: this.getPrunedDmUnreadCountsByChannel(),
       dmMessageCountsByChannel: this.getDmMessageCountsByChannel(),
       dmLastMessageByChannel: this.getDmLastMessageByChannel(),
       dmMessagesVersion: this.state.dmMessagesVersion + 1,

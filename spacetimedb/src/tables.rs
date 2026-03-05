@@ -121,7 +121,7 @@ pub struct Channel {
 
 /// A text message sent in a channel.
 /// Soft-deleted: `is_deleted = true` hides content rather than removing the row.
-#[spacetimedb::table(accessor = message)]
+#[spacetimedb::table(accessor = message, public)]
 #[derive(Clone)]
 pub struct Message {
     #[primary_key]
@@ -245,11 +245,13 @@ pub struct DmParticipant {
     pub dm_channel_id: u64,
     pub identity: Identity,
     pub joined_at: Timestamp,
+    pub last_read_message_id: Option<u64>,
 }
 
 /// A text message sent in a DM channel.
 #[spacetimedb::table(
     accessor = dm_message,
+    public,
     index(
         name = "dm_message_by_dm_channel_id",
         accessor = dm_message_by_dm_channel_id,
