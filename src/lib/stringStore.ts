@@ -484,10 +484,12 @@ class StringStore {
     }
 
     const db = conn.db as unknown as Record<string, TableLike>
+    const missingTableKeys: string[] = []
 
     for (const key of TABLE_KEYS) {
       const table = db[key]
       if (!table) {
+        missingTableKeys.push(key)
         continue
       }
 
@@ -496,6 +498,10 @@ class StringStore {
       table.onDelete?.(handler)
       table.onUpdate?.(handler)
       this.attachedTables.push({ table, handler })
+    }
+
+    if (missingTableKeys.length > 0) {
+      console.warn('[stringStore] Missing expected table accessors on conn.db:', missingTableKeys)
     }
 
     const preferredVoiceTable = db.my_voice_states
