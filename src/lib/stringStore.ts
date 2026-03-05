@@ -142,6 +142,7 @@ const CORE_SUBSCRIPTION_QUERIES = [
   'SELECT * FROM my_friend_requests_outgoing',
   'SELECT * FROM my_dm_channels',
   'SELECT * FROM my_dm_participants',
+  'SELECT * FROM my_dm_messages',
   'SELECT * FROM my_rtc_signals',
   'SELECT * FROM my_voice_states',
   'SELECT * FROM dm_call_request',
@@ -168,6 +169,8 @@ export type StringState = {
   voiceStates: VoiceState[]
   myRtcSignals: RtcSignal[]
   dmCallRequests: DmCallRequest[]
+  dmMessageCountsByChannel: Map<string, number>
+  dmLastMessageByChannel: Map<string, DmMessage>
   guildMessagesVersion: number
   guildReactionsVersion: number
   dmMessagesVersion: number
@@ -199,6 +202,8 @@ class StringStore {
     voiceStates: [],
     myRtcSignals: [],
     dmCallRequests: [],
+    dmMessageCountsByChannel: new Map(),
+    dmLastMessageByChannel: new Map(),
     guildMessagesVersion: 0,
     guildReactionsVersion: 0,
     dmMessagesVersion: 0,
@@ -293,6 +298,8 @@ class StringStore {
           voiceStates: [],
           myRtcSignals: [],
           dmCallRequests: [],
+          dmMessageCountsByChannel: new Map(),
+          dmLastMessageByChannel: new Map(),
           guildMessagesVersion: this.state.guildMessagesVersion + 1,
           guildReactionsVersion: this.state.guildReactionsVersion + 1,
           dmMessagesVersion: this.state.dmMessagesVersion + 1,
@@ -637,14 +644,13 @@ class StringStore {
   }
 
   private clearDmChannelState(): void {
-    this.pendingMutatedTables.delete('my_dm_messages')
     this.pendingMutatedTables.delete('dm_reaction')
-    this.dmMessagesById.clear()
-    this.dmMessageOrderByChannel.clear()
     this.dmReactionsByMessage.clear()
     this.updateState({
-      dmMessages: [],
+      dmMessages: this.getSelectedDmMessages(),
       dmReactions: [],
+      dmMessageCountsByChannel: this.getDmMessageCountsByChannel(),
+      dmLastMessageByChannel: this.getDmLastMessageByChannel(),
       dmMessagesVersion: this.state.dmMessagesVersion + 1,
       dmReactionsVersion: this.state.dmReactionsVersion + 1,
     })
@@ -712,10 +718,7 @@ class StringStore {
       .onError(() => {
         this.updateState({ connectionStatus: 'error', error: 'DM channel subscription error' })
       })
-      .subscribe([
-        `SELECT * FROM my_dm_messages WHERE dm_channel_id = ${dmChannelIdLiteral}`,
-        `SELECT * FROM dm_reaction WHERE dm_channel_id = ${dmChannelIdLiteral}`,
-      ])
+      .subscribe([`SELECT * FROM dm_reaction WHERE dm_channel_id = ${dmChannelIdLiteral}`])
   }
 
   private detachRealtimeListeners(): void {
@@ -839,6 +842,8 @@ class StringStore {
       this.rebuildDmHotIndexes(dmMessages, dmReactions)
       next.dmMessages = this.getSelectedDmMessages()
       next.dmReactions = this.getSelectedDmReactions(next.dmMessages)
+      next.dmMessageCountsByChannel = this.getDmMessageCountsByChannel()
+      next.dmLastMessageByChannel = this.getDmLastMessageByChannel()
       if (shouldSyncDmMessages) next.dmMessagesVersion = prev.dmMessagesVersion + 1
       if (shouldSyncDmReactions) next.dmReactionsVersion = prev.dmReactionsVersion + 1
     }
@@ -1181,6 +1186,75 @@ class StringStore {
     return rows
   }
 
+  private getDmMessageCountsByChannel(): Map<string, number> {
+    const counts = new Map<string, number>()
+    for (const [channelId, order] of this.dmMessageOrderByChannel.entries()) {
+      counts.set(channelId, order.length)
+    }
+    return counts
+  }
+
+  private toSortableBigInt(value: unknown): bigint | null {
+    try {
+      return BigInt(String(value))
+    } catch {
+      return null
+    }
+  }
+
+  private toTimestampMillis(value: unknown): number | null {
+    if (this.isRecord(value)) {
+      const withToDate = value as { toDate?: () => Date }
+      const maybeDate = withToDate.toDate?.()
+      if (maybeDate instanceof Date) {
+        const maybeMillis = maybeDate.getTime()
+        if (Number.isFinite(maybeMillis)) {
+          return maybeMillis
+        }
+      }
+    }
+
+    const maybeMillis = new Date(String(value)).getTime()
+    return Number.isFinite(maybeMillis) ? maybeMillis : null
+  }
+
+  private getDmLastMessageByChannel(): Map<string, DmMessage> {
+    const latestByChannel = new Map<string, DmMessage>()
+
+    for (const message of this.dmMessagesById.values()) {
+      const channelId = String(message.dmChannelId)
+      const current = latestByChannel.get(channelId)
+      if (!current) {
+        latestByChannel.set(channelId, message)
+        continue
+      }
+
+      const messageId = this.toSortableBigInt(message.dmMessageId)
+      const currentId = this.toSortableBigInt(current.dmMessageId)
+      if (messageId !== null && currentId !== null) {
+        if (messageId > currentId) {
+          latestByChannel.set(channelId, message)
+        }
+        continue
+      }
+
+      const messageSentAt = this.toTimestampMillis(message.sentAt)
+      const currentSentAt = this.toTimestampMillis(current.sentAt)
+      if (messageSentAt !== null && currentSentAt !== null) {
+        if (messageSentAt > currentSentAt) {
+          latestByChannel.set(channelId, message)
+        }
+        continue
+      }
+
+      if (String(message.dmMessageId) > String(current.dmMessageId)) {
+        latestByChannel.set(channelId, message)
+      }
+    }
+
+    return latestByChannel
+  }
+
   private getSelectedDmReactions(selectedMessages: DmMessage[]): DmReaction[] {
     if (!this.selectedDmChannelId) {
       return []
@@ -1423,6 +1497,8 @@ class StringStore {
     this.updateState({
       dmMessages: this.getSelectedDmMessages(),
       dmReactions: this.getSelectedDmReactions(this.getSelectedDmMessages()),
+      dmMessageCountsByChannel: this.getDmMessageCountsByChannel(),
+      dmLastMessageByChannel: this.getDmLastMessageByChannel(),
       dmMessagesVersion: this.state.dmMessagesVersion + 1,
     })
   }
@@ -1454,6 +1530,8 @@ class StringStore {
     this.updateState({
       dmMessages: this.getSelectedDmMessages(),
       dmReactions: this.getSelectedDmReactions(this.getSelectedDmMessages()),
+      dmMessageCountsByChannel: this.getDmMessageCountsByChannel(),
+      dmLastMessageByChannel: this.getDmLastMessageByChannel(),
       dmMessagesVersion: this.state.dmMessagesVersion + 1,
     })
   }
@@ -1471,6 +1549,8 @@ class StringStore {
     const nextState: Partial<StringState> = {
       dmMessages: selectedMessages,
       dmReactions: this.getSelectedDmReactions(selectedMessages),
+      dmMessageCountsByChannel: this.getDmMessageCountsByChannel(),
+      dmLastMessageByChannel: this.getDmLastMessageByChannel(),
       dmMessagesVersion: this.state.dmMessagesVersion + 1,
     }
     if (removedReactions) {

@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 
 import { useStringActions, useStringStore } from '../lib/useStringStore'
 import type { StringState } from '../lib/stringStore'
-import { toIdKey, toSortableBigInt } from '../lib/helpers'
+import { toIdKey } from '../lib/helpers'
 import type { User, DmCallRequest, DmChannel, DmMessage, DmParticipant, DmReaction, GuildInvite, GuildMember, Reaction } from '../module_bindings/types'
 
 // ---------------------------------------------------------------------------
@@ -115,51 +115,15 @@ export function useAppData(): AppData {
     return grouped
   }, [state.guildMembers])
 
-  const toTimestampMillis = (value: unknown): number | null => {
-    if (typeof value === 'object' && value !== null) {
-      const withToDate = value as { toDate?: () => Date }
-      const maybeDate = withToDate.toDate?.()
-      if (maybeDate instanceof Date) {
-        const maybeMillis = maybeDate.getTime()
-        if (Number.isFinite(maybeMillis)) {
-          return maybeMillis
-        }
-      }
-    }
+  const dmMessageCountsByChannel = useMemo(
+    () => state.dmMessageCountsByChannel ?? new Map<string, number>(),
+    [state.dmMessageCountsByChannel],
+  )
 
-    const maybeMillis = new Date(String(value)).getTime()
-    return Number.isFinite(maybeMillis) ? maybeMillis : null
-  }
-
-  const isDmMessageNewer = (candidate: DmMessage, existing: DmMessage): boolean => {
-    const candidateId = toSortableBigInt(candidate.dmMessageId)
-    const existingId = toSortableBigInt(existing.dmMessageId)
-    if (candidateId !== null && existingId !== null && candidateId !== existingId) {
-      return candidateId > existingId
-    }
-
-    const candidateSentAt = toTimestampMillis(candidate.sentAt)
-    const existingSentAt = toTimestampMillis(existing.sentAt)
-    if (candidateSentAt !== null && existingSentAt !== null && candidateSentAt !== existingSentAt) {
-      return candidateSentAt > existingSentAt
-    }
-
-    return toIdKey(candidate.dmMessageId) > toIdKey(existing.dmMessageId)
-  }
-  
-  const { dmMessageCountsByChannel, dmLastMessageByChannel } = useMemo(() => {
-    const counts = new Map<string, number>()
-    const lastMsgs = new Map<string, DmMessage>()
-    for (const msg of dmMessages) {
-      const chId = toIdKey(msg.dmChannelId)
-      counts.set(chId, (counts.get(chId) ?? 0) + 1)
-      const currentLast = lastMsgs.get(chId)
-      if (!currentLast || isDmMessageNewer(msg, currentLast)) {
-        lastMsgs.set(chId, msg)
-      }
-    }
-    return { dmMessageCountsByChannel: counts, dmLastMessageByChannel: lastMsgs }
-  }, [dmMessages])
+  const dmLastMessageByChannel = useMemo(
+    () => state.dmLastMessageByChannel ?? new Map<string, DmMessage>(),
+    [state.dmLastMessageByChannel],
+  )
 
   const dmReactions = useMemo(() => state.dmReactions ?? [], [state.dmReactions])
   const reactions = useMemo(() => extendedState.reactions ?? [], [extendedState.reactions])

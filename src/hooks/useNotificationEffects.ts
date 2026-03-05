@@ -3,7 +3,6 @@ import { useEffect, useRef } from 'react'
 import type { DmMessage, User } from '../module_bindings/types'
 import type { NotificationItem } from '../components/ui/NotificationToast'
 import type { FriendEntry } from './useFriends'
-import { toIdKey } from '../lib/helpers'
 import { identityToString } from './useAppData'
 import { playSound } from '../lib/sfx'
 
@@ -11,20 +10,11 @@ import { playSound } from '../lib/sfx'
 // Params
 // ---------------------------------------------------------------------------
 
-interface DmMessageView {
-  id: string
-  authorId: string
-  authorName: string
-  content: string
-  timestamp: string
-}
-
 interface UseNotificationEffectsParams {
   actionStatus: string | null
   actionError: string | null
   addNotification: (notif: Omit<NotificationItem, 'id'>) => void
   friends: FriendEntry[]
-  dmMessagesForSelectedChannel: DmMessageView[]
   identityString: string
   dmMessageCountsByChannel: Map<string, number>
   dmLastMessageByChannel: Map<string, DmMessage>
@@ -48,7 +38,6 @@ export function useNotificationEffects({
   actionError,
   addNotification,
   friends,
-  dmMessagesForSelectedChannel,
   identityString,
   dmMessageCountsByChannel,
   dmLastMessageByChannel,
@@ -140,34 +129,24 @@ export function useNotificationEffects({
     }
   }, [])
 
-  // DM message received sound for current channel
-  const prevSelectedDmMsgCount = useRef(0)
-  const prevSelectedDmChannelForMsgRef = useRef<string | undefined>(undefined)
-  useEffect(() => {
-    const msgs = dmMessagesForSelectedChannel
-    const count = msgs?.length ?? 0
-    // Reset count when switching channels to avoid false positives
-    if (selectedDmChannelId !== prevSelectedDmChannelForMsgRef.current) {
-      prevSelectedDmChannelForMsgRef.current = selectedDmChannelId
-      prevSelectedDmMsgCount.current = count
-      return
-    }
-    if (count > prevSelectedDmMsgCount.current && prevSelectedDmMsgCount.current > 0) {
-      const lastMsg = msgs?.[count - 1]
-      if (lastMsg && lastMsg.authorId !== identityString) {
-        playSound('message-received')
-      }
-    }
-    prevSelectedDmMsgCount.current = count
-  }, [dmMessagesForSelectedChannel, identityString, selectedDmChannelId])
-
   // DM notifications for messages in non-selected channels
   const prevDmMsgCounts = useRef<Map<string, number>>(new Map())
+  const dmCountsInitialized = useRef(false)
   useEffect(() => {
     const prev = prevDmMsgCounts.current
+
+    if (!dmCountsInitialized.current) {
+      prev.clear()
+      for (const [chId, count] of dmMessageCountsByChannel) {
+        prev.set(chId, count)
+      }
+      dmCountsInitialized.current = true
+      return
+    }
+
     for (const [chId, count] of dmMessageCountsByChannel) {
       const prevCount = prev.get(chId) ?? 0
-      if (count > prevCount && prevCount > 0) {
+      if (count > prevCount) {
         // New message(s) in this channel
         const lastMsg = dmLastMessageByChannel.get(chId)
         if (lastMsg) {
@@ -190,6 +169,12 @@ export function useNotificationEffects({
         }
       }
       prev.set(chId, count)
+    }
+
+    for (const channelId of Array.from(prev.keys())) {
+      if (!dmMessageCountsByChannel.has(channelId)) {
+        prev.delete(channelId)
+      }
     }
   }, [dmMessageCountsByChannel, dmLastMessageByChannel, identityString, selectedDmChannelId, addNotification, usersByIdentity, setSelectedDmChannelId, setSelectedGuildId])
 }

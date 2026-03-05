@@ -362,7 +362,6 @@ function App() {
     actionError,
     addNotification,
     friends,
-    dmMessagesForSelectedChannel,
     identityString,
     dmMessageCountsByChannel: appData.dmMessageCountsByChannel,
     dmLastMessageByChannel: appData.dmLastMessageByChannel,
