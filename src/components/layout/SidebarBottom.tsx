@@ -19,6 +19,7 @@ export interface SidebarBottomProps {
   deafenColor: string
   onToggleMute: () => void
   onToggleDeafen: () => void
+  onOpenSettings: () => void
   onOpenProfile: () => void
 }
 
@@ -36,6 +37,7 @@ export function SidebarBottom({
   deafenColor,
   onToggleMute,
   onToggleDeafen,
+  onOpenSettings,
   onOpenProfile,
 }: SidebarBottomProps) {
   return (
@@ -60,6 +62,7 @@ export function SidebarBottom({
         deafenColor={deafenColor}
         onToggleMute={onToggleMute}
         onToggleDeafen={onToggleDeafen}
+        onOpenSettings={onOpenSettings}
         onOpenProfile={onOpenProfile}
       />
     </>

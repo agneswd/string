@@ -1,10 +1,11 @@
-import { useCallback, useMemo, useEffect, useLayoutEffect } from 'react'
+import { useCallback, useMemo, useEffect, useLayoutEffect, useState } from 'react'
 
 import {
   CallBanner,
   ChannelColumn,
   IncomingCallModal,
   RegisterOverlay,
+  SettingsModal,
 } from './components'
 import { ServerColumn } from './components/layout/ServerColumn'
 import type { ProfileSettingsModalProps } from './components/modals/ProfileSettingsModal'
@@ -20,6 +21,7 @@ import { ScreenShareViewer } from './components/voice/ScreenShareViewer'
 import { useRtcOrchestrator } from './lib/webrtc'
 import { toIdKey, isVoiceChannel, statusToLabel } from './lib/helpers'
 import { avatarBytesToUrl } from './lib/avatarUtils'
+import { setSfxVolume } from './lib/sfx'
 import { identityToString } from './hooks/useAppData'
 
 import { useAppData } from './hooks/useAppData'
@@ -44,6 +46,34 @@ import {
   S_appShell,
   S_main,
 } from './constants/appStyles'
+
+const UI_SOUND_LEVEL_STORAGE_KEY = 'string.settings.uiSoundLevel'
+const FRIEND_STATUS_NOTIFICATIONS_STORAGE_KEY = 'string.settings.friendStatusNotificationsEnabled'
+const DM_MESSAGE_NOTIFICATIONS_STORAGE_KEY = 'string.settings.dmMessageNotificationsEnabled'
+
+function readUiSoundLevel(): number {
+  try {
+    const raw = window.localStorage.getItem(UI_SOUND_LEVEL_STORAGE_KEY)
+    if (raw === null) return 50
+    const parsed = Number(raw)
+    if (!Number.isFinite(parsed)) return 50
+    if (parsed < 0) return 0
+    if (parsed > 100) return 100
+    return Math.round(parsed)
+  } catch {
+    return 50
+  }
+}
+
+function readBooleanSetting(key: string, fallback: boolean): boolean {
+  try {
+    const raw = window.localStorage.getItem(key)
+    if (raw === null) return fallback
+    return raw === 'true'
+  } catch {
+    return fallback
+  }
+}
 
 function App() {
   // ---------------------------------------------------------------------------
@@ -209,6 +239,34 @@ function App() {
     preDeafened,
   })
 
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [uiSoundLevel, setUiSoundLevel] = useState<number>(() => readUiSoundLevel())
+  const [friendStatusNotificationsEnabled, setFriendStatusNotificationsEnabled] = useState<boolean>(() =>
+    readBooleanSetting(FRIEND_STATUS_NOTIFICATIONS_STORAGE_KEY, true),
+  )
+  const [dmMessageNotificationsEnabled, setDmMessageNotificationsEnabled] = useState<boolean>(() =>
+    readBooleanSetting(DM_MESSAGE_NOTIFICATIONS_STORAGE_KEY, true),
+  )
+
+  useEffect(() => {
+    setSfxVolume(uiSoundLevel / 100)
+    try {
+      window.localStorage.setItem(UI_SOUND_LEVEL_STORAGE_KEY, String(uiSoundLevel))
+    } catch {}
+  }, [uiSoundLevel])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(FRIEND_STATUS_NOTIFICATIONS_STORAGE_KEY, String(friendStatusNotificationsEnabled))
+    } catch {}
+  }, [friendStatusNotificationsEnabled])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(DM_MESSAGE_NOTIFICATIONS_STORAGE_KEY, String(dmMessageNotificationsEnabled))
+    } catch {}
+  }, [dmMessageNotificationsEnabled])
+
   // ---------------------------------------------------------------------------
   // RTC Signaling (debug panel)
   // ---------------------------------------------------------------------------
@@ -361,6 +419,8 @@ function App() {
     actionStatus,
     actionError,
     addNotification,
+    friendStatusNotificationsEnabled,
+    dmMessageNotificationsEnabled,
     friends,
     identityString,
     dmParticipants: appData.dmParticipants,
@@ -578,6 +638,7 @@ function App() {
               deafenColor={deafenColor}
               onToggleMute={onToggleMute}
               onToggleDeafen={onToggleDeafen}
+              onOpenSettings={() => setShowSettingsModal(true)}
               onOpenProfile={() => setShowProfileModal(true)}
             />
           }
@@ -627,6 +688,17 @@ function App() {
           onSetStatus={(statusTag) => {
             void actions.setStatus({ status: { tag: statusTag } as never })
           }}
+        />
+
+        <SettingsModal
+          isOpen={showSettingsModal}
+          onClose={() => setShowSettingsModal(false)}
+          uiSoundLevel={uiSoundLevel}
+          onUiSoundLevelChange={setUiSoundLevel}
+          friendStatusNotificationsEnabled={friendStatusNotificationsEnabled}
+          onFriendStatusNotificationsChange={setFriendStatusNotificationsEnabled}
+          dmMessageNotificationsEnabled={dmMessageNotificationsEnabled}
+          onDmMessageNotificationsChange={setDmMessageNotificationsEnabled}
         />
 
         <ContextMenuOverlay

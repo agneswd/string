@@ -27,11 +27,28 @@ const SOUNDS = {
 
 export type SoundName = keyof typeof SOUNDS
 
+let sfxVolume = 0.5
+
+function clampVolume(volume: number): number {
+  if (!Number.isFinite(volume)) return sfxVolume
+  if (volume < 0) return 0
+  if (volume > 1) return 1
+  return volume
+}
+
+export function setSfxVolume(volume: number): void {
+  sfxVolume = clampVolume(volume)
+}
+
+export function getSfxVolume(): number {
+  return sfxVolume
+}
+
 /** Play a sound effect once. */
 export function playSound(name: SoundName): void {
   try {
     const audio = new Audio(SOUNDS[name])
-    audio.volume = 0.5
+    audio.volume = sfxVolume
     audio.play().catch(() => {/* user hasn't interacted yet */})
   } catch { /* ignore */ }
 }
@@ -49,7 +66,7 @@ export function playLoop(name: SoundName, intervalMs = 3000): () => void {
     if (stopped) return
     try {
       currentAudio = new Audio(SOUNDS[name])
-      currentAudio.volume = 0.5
+      currentAudio.volume = sfxVolume
       currentAudio.play().catch(() => {})
       timeoutId = window.setTimeout(play, intervalMs)
     } catch { /* ignore */ }

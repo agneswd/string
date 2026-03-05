@@ -26,6 +26,7 @@ export * from './modals/IncomingCallModal'
 export * from './modals/CreateGuildModal'
 export * from './modals/CreateChannelModal'
 export * from './modals/InviteFriendsModal'
+export * from './modals/SettingsModal'
 
 // social
 export * from './social/FriendRequestPanel'

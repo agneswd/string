@@ -15,6 +15,8 @@ interface UseNotificationEffectsParams {
   actionStatus: string | null
   actionError: string | null
   addNotification: (notif: Omit<NotificationItem, 'id'>) => void
+  friendStatusNotificationsEnabled: boolean
+  dmMessageNotificationsEnabled: boolean
   friends: FriendEntry[]
   identityString: string
   dmParticipants: DmParticipant[]
@@ -38,6 +40,8 @@ export function useNotificationEffects({
   actionStatus,
   actionError,
   addNotification,
+  friendStatusNotificationsEnabled,
+  dmMessageNotificationsEnabled,
   friends,
   identityString,
   dmParticipants,
@@ -87,6 +91,16 @@ export function useNotificationEffects({
     for (const friend of friends) {
       const prevStatus = prev.get(friend.id)
       if (prevStatus !== undefined) {
+        if (!friendStatusNotificationsEnabled) {
+          const offlineTimer = pending.get(friend.id)
+          if (offlineTimer) {
+            clearTimeout(offlineTimer)
+            pending.delete(friend.id)
+          }
+          prev.set(friend.id, friend.status)
+          continue
+        }
+
         const wasOnline = isOnlineStatus(prevStatus)
         const isOnline = isOnlineStatus(friend.status)
 
@@ -118,7 +132,19 @@ export function useNotificationEffects({
 
       prev.set(friend.id, friend.status)
     }
-  }, [friends, addNotification])
+  }, [friends, addNotification, friendStatusNotificationsEnabled])
+
+  useEffect(() => {
+    if (friendStatusNotificationsEnabled) {
+      return
+    }
+
+    const pending = pendingOfflineNotifications.current
+    for (const timeoutHandle of pending.values()) {
+      clearTimeout(timeoutHandle)
+    }
+    pending.clear()
+  }, [friendStatusNotificationsEnabled])
 
   useEffect(() => {
     const pending = pendingOfflineNotifications.current
@@ -188,6 +214,7 @@ export function useNotificationEffects({
       const lastReadMessageId = myLastReadMessageIdByChannel.get(channelId) ?? null
       const isUnread = lastReadMessageId === null || messageId > lastReadMessageId
       if (!isUnread) continue
+      if (!dmMessageNotificationsEnabled) continue
 
       const notificationKey = `${channelId}:${messageId.toString()}`
       if (notified.has(notificationKey)) continue
@@ -214,5 +241,5 @@ export function useNotificationEffects({
     for (const [channelId, messageId] of currentLastMessageIdByChannel) {
       prev.set(channelId, messageId)
     }
-  }, [isReadyToNotify, dmParticipants, dmLastMessageByChannel, identityString, selectedDmChannelId, addNotification, usersByIdentity, setSelectedDmChannelId, setSelectedGuildId])
+  }, [isReadyToNotify, dmParticipants, dmLastMessageByChannel, identityString, selectedDmChannelId, addNotification, usersByIdentity, setSelectedDmChannelId, setSelectedGuildId, dmMessageNotificationsEnabled])
 }

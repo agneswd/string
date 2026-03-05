@@ -1,4 +1,4 @@
-import { Mic, MicOff, Headphones, HeadphoneOff } from 'lucide-react'
+import { Settings, Mic, MicOff, Headphones, HeadphoneOff } from 'lucide-react'
 import { getAvatarColor, getInitial, avatarBytesToUrl } from '../../lib/avatarUtils'
 import {
   S_userPanel,
@@ -22,6 +22,7 @@ export interface UserPanelProps {
   deafenColor: string
   onToggleMute: () => void
   onToggleDeafen: () => void
+  onOpenSettings: () => void
   onOpenProfile: () => void
 }
 
@@ -33,6 +34,7 @@ export function UserPanel({
   deafenColor,
   onToggleMute,
   onToggleDeafen,
+  onOpenSettings,
   onOpenProfile,
 }: UserPanelProps) {
   if (!user) return null
@@ -84,6 +86,14 @@ export function UserPanel({
         </div>
       </div>
       <div style={S_userPanelActions}>
+        <button onClick={onOpenSettings} title="Settings" aria-label="Open settings" style={{
+          width: 32, height: 32, borderRadius: '4px', border: 'none', padding: 0,
+          backgroundColor: 'transparent',
+          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: 'var(--text-muted, #b5bac1)',
+        }}>
+          <Settings style={{ width: 18, height: 18 }} />
+        </button>
         <button onClick={onToggleMute} title={isMuted ? 'Unmute' : 'Mute'} style={{
           width: 32, height: 32, borderRadius: '4px', border: 'none', padding: 0,
           backgroundColor: isMuted ? 'rgba(237,66,69,0.2)' : 'transparent',
