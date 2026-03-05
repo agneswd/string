@@ -45,6 +45,10 @@ const stringActions = {
   initiateDmCall: (params: Parameters<typeof stringStore.initiateDmCall>[0]) => stringStore.initiateDmCall(params),
   acceptDmCall: (params: Parameters<typeof stringStore.acceptDmCall>[0]) => stringStore.acceptDmCall(params),
   declineDmCall: (params: Parameters<typeof stringStore.declineDmCall>[0]) => stringStore.declineDmCall(params),
+  setActiveSubscriptions: (
+    selectedTextChannelId?: string,
+    selectedDmChannelId?: string,
+  ) => stringStore.setActiveSubscriptions(selectedTextChannelId, selectedDmChannelId),
 }
 
 export function useStringStore(): StringState;

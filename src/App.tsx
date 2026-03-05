@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useEffect } from 'react'
 
 import {
   CallBanner,
@@ -127,6 +127,15 @@ function App() {
     channelIdsForSelectedGuild,
     selectedTextChannel, selectedVoiceChannel,
   } = nav
+
+  // ---------------------------------------------------------------------------
+  // Subscriptions Refactor Phase 2 Wiring
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (actions.setActiveSubscriptions) {
+      actions.setActiveSubscriptions(selectedTextChannelId, selectedDmChannelId)
+    }
+  }, [selectedTextChannelId, selectedDmChannelId, actions])
 
   // ---------------------------------------------------------------------------
   // Voice Chat

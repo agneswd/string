@@ -1,6 +1,6 @@
 import type { Identity } from 'spacetimedb/sdk'
 
-import type { DbConnection } from '../module_bindings'
+import type { DbConnection, SubscriptionHandle } from '../module_bindings'
 import type {
   Channel,
   DmCallRequest,
@@ -116,6 +116,24 @@ const TABLE_KEYS = [
 
 const PREFERRED_VOICE_TABLE_KEYS = ['my_voice_states'] as const
 
+const CORE_SUBSCRIPTION_QUERIES = [
+  'SELECT * FROM user',
+  'SELECT * FROM user_presence',
+  'SELECT * FROM my_friend_edges',
+  'SELECT * FROM my_profile',
+  'SELECT * FROM my_guilds',
+  'SELECT * FROM my_guild_members',
+  'SELECT * FROM my_channels',
+  'SELECT * FROM guild_invite',
+  'SELECT * FROM my_friend_requests_incoming',
+  'SELECT * FROM my_friend_requests_outgoing',
+  'SELECT * FROM my_dm_channels',
+  'SELECT * FROM my_dm_participants',
+  'SELECT * FROM my_rtc_signals',
+  'SELECT * FROM my_voice_states',
+  'SELECT * FROM dm_call_request',
+] as const
+
 export type StringState = {
   connectionStatus: ConnectionStatus
   identity: Identity | null
@@ -169,9 +187,12 @@ class StringStore {
 
   private listeners = new Set<StringStoreListener>()
   private connectionInitialized = false
-  private subscriptionStarted = false
   private attachedTables: { table: TableLike; handler: () => void }[] = []
-  private currentSubscription: unknown = null
+  private coreSubscription: SubscriptionHandle | null = null
+  private activeGuildChannelSubscription: SubscriptionHandle | null = null
+  private activeDmChannelSubscription: SubscriptionHandle | null = null
+  private selectedTextChannelId: string | null = null
+  private selectedDmChannelId: string | null = null
   private realtimeAttached = false
 
   private syncScheduled = false
@@ -219,8 +240,7 @@ class StringStore {
       },
       onDisconnect: () => {
         this.connectionInitialized = false
-        this.subscriptionStarted = false
-        this.currentSubscription = null
+        this.unsubscribeAllSubscriptionHandles()
         this.detachRealtimeListeners()
         this.updateState({
           connectionStatus: 'disconnected',
@@ -247,8 +267,7 @@ class StringStore {
       },
       onConnectError: (err) => {
         this.connectionInitialized = false
-        this.subscriptionStarted = false
-        this.currentSubscription = null
+        this.unsubscribeAllSubscriptionHandles()
         this.detachRealtimeListeners()
         this.updateState({
           connectionStatus: 'error',
@@ -262,21 +281,10 @@ class StringStore {
 
   disconnect(): void {
     this.connectionInitialized = false
-    this.subscriptionStarted = false
     this.realtimeAttached = false
     this.syncScheduled = false
     this.pendingMutatedTables.clear()
-
-    // Unsubscribe from the active subscription to release its emitter/callbacks
-    if (this.currentSubscription) {
-      try {
-        const sub = this.currentSubscription as { isActive?: () => boolean; unsubscribe?: () => void }
-        if (sub.isActive?.() && sub.unsubscribe) {
-          sub.unsubscribe()
-        }
-      } catch { /* ignore — subscription may already be ended */ }
-      this.currentSubscription = null
-    }
+    this.unsubscribeAllSubscriptionHandles()
 
     this.detachRealtimeListeners()
 
@@ -443,6 +451,30 @@ class StringStore {
     return this.callReducer('declineDmCall', params)
   }
 
+  setActiveSubscriptions(selectedTextChannelId?: string, selectedDmChannelId?: string): void {
+    const nextTextChannelId = this.normalizeSubscriptionId(selectedTextChannelId)
+    const nextDmChannelId = this.normalizeSubscriptionId(selectedDmChannelId)
+
+    const shouldSwapGuild =
+      nextTextChannelId !== this.selectedTextChannelId
+      || (!!nextTextChannelId && this.activeGuildChannelSubscription === null)
+
+    const shouldSwapDm =
+      nextDmChannelId !== this.selectedDmChannelId
+      || (!!nextDmChannelId && this.activeDmChannelSubscription === null)
+
+    this.selectedTextChannelId = nextTextChannelId
+    this.selectedDmChannelId = nextDmChannelId
+
+    if (shouldSwapGuild) {
+      this.swapGuildChannelSubscription(nextTextChannelId)
+    }
+
+    if (shouldSwapDm) {
+      this.swapDmChannelSubscription(nextDmChannelId)
+    }
+  }
+
   private trySyncFromExistingConnection(): void {
     try {
       const conn = getConn()
@@ -461,19 +493,8 @@ class StringStore {
     // Always detach old handlers before reattaching to prevent duplicates on reconnect
     this.detachRealtimeListeners()
 
-    if (!this.subscriptionStarted) {
-      // Unsubscribe from any previous subscription to release its emitter/callbacks
-      if (this.currentSubscription) {
-        try {
-          const sub = this.currentSubscription as { isActive?: () => boolean; unsubscribe?: () => void }
-          if (sub.isActive?.() && sub.unsubscribe) {
-            sub.unsubscribe()
-          }
-        } catch { /* ignore — subscription may already be ended */ }
-        this.currentSubscription = null
-      }
-
-      this.currentSubscription = conn
+    if (!this.coreSubscription || this.coreSubscription.isEnded()) {
+      this.coreSubscription = conn
         .subscriptionBuilder()
         .onApplied(() => {
           this.syncFromCache()
@@ -481,9 +502,10 @@ class StringStore {
         .onError(() => {
           this.updateState({ connectionStatus: 'error', error: 'Subscription error' })
         })
-        .subscribeToAllTables()
-      this.subscriptionStarted = true
+        .subscribe(CORE_SUBSCRIPTION_QUERIES as string[])
     }
+
+    this.setActiveSubscriptions(this.selectedTextChannelId ?? undefined, this.selectedDmChannelId ?? undefined)
 
     const db = conn.db as unknown as Record<string, TableLike>
     const missingTableKeys: string[] = []
@@ -516,6 +538,121 @@ class StringStore {
     }
 
     this.realtimeAttached = true;
+  }
+
+  private unsubscribeHandle(handle: SubscriptionHandle | null): null {
+    if (!handle) {
+      return null
+    }
+
+    try {
+      if (!handle.isEnded()) {
+        handle.unsubscribe()
+      }
+    } catch {
+      // ignore — subscription may already be ended
+    }
+
+    return null
+  }
+
+  private unsubscribeAllSubscriptionHandles(): void {
+    this.coreSubscription = this.unsubscribeHandle(this.coreSubscription)
+    this.activeGuildChannelSubscription = this.unsubscribeHandle(this.activeGuildChannelSubscription)
+    this.activeDmChannelSubscription = this.unsubscribeHandle(this.activeDmChannelSubscription)
+  }
+
+  private normalizeSubscriptionId(id?: string): string | null {
+    if (!id) {
+      return null
+    }
+
+    const trimmed = id.trim()
+    return trimmed.length > 0 ? trimmed : null
+  }
+
+  private toU64Literal(id: string): string | null {
+    return /^\d+$/.test(id) ? id : null
+  }
+
+  private clearGuildChannelState(): void {
+    this.pendingMutatedTables.delete('my_messages')
+    this.pendingMutatedTables.delete('my_reactions')
+    this.updateState({ messages: [], reactions: [] })
+  }
+
+  private clearDmChannelState(): void {
+    this.pendingMutatedTables.delete('my_dm_messages')
+    this.pendingMutatedTables.delete('dm_reaction')
+    this.updateState({ dmMessages: [], dmReactions: [] })
+  }
+
+  private swapGuildChannelSubscription(selectedTextChannelId: string | null): void {
+    this.activeGuildChannelSubscription = this.unsubscribeHandle(this.activeGuildChannelSubscription)
+    this.clearGuildChannelState()
+
+    if (!selectedTextChannelId) {
+      return
+    }
+
+    const channelIdLiteral = this.toU64Literal(selectedTextChannelId)
+    if (!channelIdLiteral) {
+      return
+    }
+
+    let conn: DbConnection
+    try {
+      conn = getConn()
+    } catch {
+      return
+    }
+
+    this.activeGuildChannelSubscription = conn
+      .subscriptionBuilder()
+      .onApplied(() => {
+        this.syncFromCache()
+      })
+      .onError(() => {
+        this.updateState({ connectionStatus: 'error', error: 'Guild channel subscription error' })
+      })
+      .subscribe([
+        `SELECT * FROM my_messages WHERE channel_id = ${channelIdLiteral}`,
+        `SELECT * FROM my_reactions WHERE channel_id = ${channelIdLiteral}`,
+      ])
+  }
+
+  private swapDmChannelSubscription(selectedDmChannelId: string | null): void {
+    this.activeDmChannelSubscription = this.unsubscribeHandle(this.activeDmChannelSubscription)
+    this.clearDmChannelState()
+
+    if (!selectedDmChannelId) {
+      return
+    }
+
+    const dmChannelIdLiteral = this.toU64Literal(selectedDmChannelId)
+    if (!dmChannelIdLiteral) {
+      return
+    }
+
+    let conn: DbConnection
+    try {
+      conn = getConn()
+    } catch {
+      return
+    }
+
+    this.activeDmChannelSubscription = conn
+      .subscriptionBuilder()
+      .onApplied(() => {
+        this.syncFromCache()
+      })
+      .onError(() => {
+        this.updateState({ connectionStatus: 'error', error: 'DM channel subscription error' })
+      })
+      .subscribe([
+        `SELECT * FROM my_dm_messages WHERE dm_channel_id = ${dmChannelIdLiteral}`,
+        `SELECT * FROM dm_reaction WHERE dm_channel_id = ${dmChannelIdLiteral}`,
+      ])
   }
 
   private detachRealtimeListeners(): void {
