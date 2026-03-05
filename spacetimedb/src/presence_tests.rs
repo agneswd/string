@@ -1,6 +1,7 @@
 use crate::{
-    restore_status_after_reconnect, should_apply_offline_transition, should_emit_presence_change,
-    snapshot_status_before_disconnect, status_after_login_identity_transfer, UserStatus,
+    restore_status_after_reconnect, should_apply_offline_transition,
+    should_update_user_status_transition, snapshot_status_before_disconnect,
+    status_after_login_identity_transfer, UserStatus,
 };
 
 #[test]
@@ -75,16 +76,16 @@ fn login_identity_transfer_does_not_override_non_offline_status() {
 }
 
 #[test]
-fn status_change_emits_presence_event_when_new_status_differs() {
-    assert!(should_emit_presence_change(
+fn status_change_updates_presence_when_new_status_differs() {
+    assert!(should_update_user_status_transition(
         &UserStatus::Online,
         &UserStatus::DoNotDisturb
     ));
 }
 
 #[test]
-fn status_change_does_not_emit_presence_event_when_status_is_unchanged() {
-    assert!(!should_emit_presence_change(
+fn status_change_does_not_update_presence_when_status_is_unchanged() {
+    assert!(!should_update_user_status_transition(
         &UserStatus::Away,
         &UserStatus::Away
     ));

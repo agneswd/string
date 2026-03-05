@@ -206,6 +206,20 @@ pub fn my_friends(ctx: &ViewContext) -> Vec<User> {
         .collect()
 }
 
+#[spacetimedb::view(accessor = my_friend_edges, public)]
+pub fn my_friend_edges(ctx: &ViewContext) -> Vec<Friend> {
+    let who = ctx.sender();
+
+    let mut edges: Vec<Friend> = ctx
+        .db
+        .friend()
+        .friend_by_identity_low()
+        .filter(&who)
+        .collect();
+    edges.extend(ctx.db.friend().friend_by_identity_high().filter(&who));
+    edges
+}
+
 #[spacetimedb::view(accessor = my_friend_requests_incoming, public)]
 pub fn my_friend_requests_incoming(ctx: &ViewContext) -> Vec<FriendRequest> {
     let who = ctx.sender();

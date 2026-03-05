@@ -6,15 +6,15 @@ pub use types::{ChannelType, MemberRole, RtcSignalType, UserStatus};
 
 pub mod tables;
 pub use tables::{
-    Channel, DmCallRequest, Guild, GuildInvite, GuildMember, Message, PresenceChangeEvent,
-    PresenceOfflineJob, PresenceState, RtcSignal, User, VoiceState,
+    Channel, DmCallRequest, Guild, GuildInvite, GuildMember, Message, PresenceOfflineJob,
+    PresenceState, RtcSignal, User, UserPresence, VoiceState,
 };
 pub mod helpers;
 pub mod reducers;
 
 use crate::tables::{
-    dm_call_request, presence_change_event, presence_offline_job, presence_state, rtc_signal,
-    user, voice_state,
+    dm_call_request, presence_offline_job, presence_state, rtc_signal, user, user_presence,
+    voice_state,
 };
 use spacetimedb::{Identity, ReducerContext, ScheduleAt, Table};
 use std::time::Duration;
@@ -50,7 +50,7 @@ pub(crate) fn should_apply_offline_transition(
     online_session_count == 0 && state_generation == expected_generation
 }
 
-pub(crate) fn should_emit_presence_change(
+pub(crate) fn should_update_user_status_transition(
     current_status: &UserStatus,
     next_status: &UserStatus,
 ) -> bool {
@@ -91,13 +91,18 @@ pub(crate) fn cancel_offline_jobs_for(ctx: &ReducerContext, who: Identity) -> us
     canceled_count
 }
 
-pub(crate) fn emit_presence_change(ctx: &ReducerContext, who: Identity, status: UserStatus) {
-    ctx.db.presence_change_event().insert(PresenceChangeEvent {
-        event_id: 0,
+pub(crate) fn upsert_user_presence(ctx: &ReducerContext, who: Identity, status: UserStatus) {
+    let presence_row = UserPresence {
         identity: who,
         status,
         changed_at: ctx.timestamp,
-    });
+    };
+
+    if ctx.db.user_presence().identity().find(who).is_some() {
+        ctx.db.user_presence().identity().update(presence_row);
+    } else {
+        ctx.db.user_presence().insert(presence_row);
+    }
 }
 
 pub(crate) fn update_user_status_if_changed(
@@ -105,13 +110,13 @@ pub(crate) fn update_user_status_if_changed(
     user: &mut User,
     next_status: UserStatus,
 ) {
-    if !should_emit_presence_change(&user.status, &next_status) {
+    if !should_update_user_status_transition(&user.status, &next_status) {
         return;
     }
 
     user.status = next_status.clone();
     ctx.db.user().identity().update(user.clone());
-    emit_presence_change(ctx, user.identity, next_status);
+    upsert_user_presence(ctx, user.identity, next_status);
 }
 
 fn cleanup_ephemeral_presence(ctx: &ReducerContext, who: Identity) {

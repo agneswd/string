@@ -145,16 +145,6 @@ export const Message = __t.object("Message", {
 });
 export type Message = __Infer<typeof Message>;
 
-export const PresenceChangeEvent = __t.object("PresenceChangeEvent", {
-  eventId: __t.u64(),
-  identity: __t.identity(),
-  get status() {
-    return UserStatus;
-  },
-  changedAt: __t.timestamp(),
-});
-export type PresenceChangeEvent = __Infer<typeof PresenceChangeEvent>;
-
 export const PresenceOfflineJob = __t.object("PresenceOfflineJob", {
   scheduledId: __t.u64(),
   scheduledAt: __t.scheduleAt(),
@@ -219,6 +209,15 @@ export const User = __t.object("User", {
   profileColor: __t.option(__t.string()),
 });
 export type User = __Infer<typeof User>;
+
+export const UserPresence = __t.object("UserPresence", {
+  identity: __t.identity(),
+  get status() {
+    return UserStatus;
+  },
+  changedAt: __t.timestamp(),
+});
+export type UserPresence = __Infer<typeof UserPresence>;
 
 // The tagged union or sum type for the algebraic type `UserStatus`.
 export const UserStatus = __t.enum("UserStatus", {

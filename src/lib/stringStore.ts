@@ -15,6 +15,8 @@ import type {
   Reaction,
   RtcSignal,
   User,
+  UserPresence,
+  Friend,
   VoiceState,
 } from '../module_bindings/types'
 import type {
@@ -91,8 +93,9 @@ type PreferredReducerName =
   | 'toggleDmReaction'
 
 const TABLE_KEYS = [
-  'presence_change_event',
-  'my_visible_users',
+  'user',
+  'user_presence',
+  'my_friend_edges',
   'my_profile',
   'my_guilds',
   'my_guild_members',
@@ -101,7 +104,6 @@ const TABLE_KEYS = [
   'my_reactions',
   'dm_reaction',
   'guild_invite',
-  'my_friends',
   'my_friend_requests_incoming',
   'my_friend_requests_outgoing',
   'my_dm_channels',
@@ -542,23 +544,72 @@ class StringStore {
     // When called directly (initial load, onApplied, reconnect) there are no pending
     // mutations — sync every table.
     const syncAll = mutated.size === 0
-    const presenceEventChanged = mutated.has('presence_change_event')
 
     const identity = getMyIdentity()
     const prev = this.state
     const next: Partial<StringState> = { identity }
 
-    const usersChanged = syncAll || presenceEventChanged || mutated.has('my_visible_users')
-    const profileChanged = syncAll || presenceEventChanged || mutated.has('my_profile')
-    const friendsChanged = syncAll || presenceEventChanged || mutated.has('my_friends')
+    const presenceMutated = mutated.has('user_presence')
+    const userMutated = mutated.has('user') || mutated.has('my_profile') || mutated.has('my_friend_edges')
+    const usersChanged = syncAll || presenceMutated || userMutated || mutated.has('my_guild_members')
+    const profileChanged = syncAll || presenceMutated || mutated.has('my_profile')
+    const friendsChanged = syncAll || presenceMutated || userMutated
 
-    const users = usersChanged ? this.readRows<User>(db, 'my_visible_users') : prev.users
-    if (usersChanged) next.users = users
+    let updatedUsers = prev.users
+    let myFriends: User[] = []
+
+    if (usersChanged) {
+      const presenceMap = new Map<string, UserPresence>()
+      const presences = syncAll || presenceMutated ? this.readRows<UserPresence>(db, 'user_presence') : []
+      for (const p of presences) {
+        presenceMap.set(String(p.identity), p)
+      }
+
+      // Compute visible identities
+      const visibleIdentities = new Set<string>()
+
+      const profileRows = this.readRows<User>(db, 'my_profile')
+      if (profileRows.length > 0) {
+        visibleIdentities.add(String(profileRows[0].identity))
+      }
+
+      const edges = this.readRows<Friend>(db, 'my_friend_edges')
+      const friendIdentities = new Set<string>()
+      for (const edge of edges) {
+        const low = String(edge.identityLow)
+        const high = String(edge.identityHigh)
+        friendIdentities.add(low)
+        friendIdentities.add(high)
+        visibleIdentities.add(low)
+        visibleIdentities.add(high)
+      }
+      if (identity) {
+        friendIdentities.delete(String(identity))
+        visibleIdentities.add(String(identity))
+      }
+
+      const guildMembers = this.readRows<GuildMember>(db, 'my_guild_members')
+      for (const gm of guildMembers) {
+        visibleIdentities.add(String(gm.identity))
+      }
+
+      const rawUsers = this.readRows<User>(db, 'user')
+
+      updatedUsers = rawUsers
+        .filter(u => visibleIdentities.has(String(u.identity)))
+        .map(u => {
+          const presence = presenceMap.get(String(u.identity))
+          return presence ? { ...u, status: presence.status } : u
+        })
+
+      next.users = updatedUsers
+      myFriends = updatedUsers.filter(u => friendIdentities.has(String(u.identity)))
+    }
 
     if (profileChanged || usersChanged) {
       const profileRows = this.readRows<User>(db, 'my_profile')
       const identityKey = identity ? String(identity) : ''
-      next.myProfile = profileRows[0] ?? (identityKey ? users.find((user) => String(user.identity) === identityKey) ?? null : null)
+      next.myProfile = profileRows[0] ?? (identityKey ? updatedUsers.find((user) => String(user.identity) === identityKey) ?? null : null)
     }
 
     if (syncAll || mutated.has('my_guilds')) next.guilds = this.readRows<Guild>(db, 'my_guilds')
@@ -571,7 +622,7 @@ class StringStore {
     if (syncAll || mutated.has('my_reactions')) next.reactions = this.readRows<Reaction>(db, 'my_reactions')
     if (syncAll || mutated.has('dm_reaction')) next.dmReactions = this.readRows<DmReaction>(db, 'dm_reaction')
     if (syncAll || mutated.has('guild_invite')) next.guildInvites = this.readRows<GuildInvite>(db, 'guild_invite')
-    if (friendsChanged) next.friends = this.readRows<User>(db, 'my_friends')
+    if (friendsChanged) next.friends = myFriends
     if (syncAll || mutated.has('my_friend_requests_incoming')) next.incomingFriendRequests = this.readRows<FriendRequest>(db, 'my_friend_requests_incoming')
     if (syncAll || mutated.has('my_friend_requests_outgoing')) next.outgoingFriendRequests = this.readRows<FriendRequest>(db, 'my_friend_requests_outgoing')
     if (syncAll || mutated.has('my_voice_states')) next.voiceStates = this.readRows<VoiceState>(db, PREFERRED_VOICE_TABLE_KEYS[0])

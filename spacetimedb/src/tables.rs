@@ -2,7 +2,7 @@ use crate::{ChannelType, MemberRole, RtcSignalType, UserStatus};
 use spacetimedb::{Identity, ScheduleAt, Timestamp};
 
 /// Registered user profile. Upserted on connect.
-#[spacetimedb::table(accessor = user)]
+#[spacetimedb::table(accessor = user, public)]
 #[derive(Clone)]
 pub struct User {
     #[primary_key]
@@ -28,13 +28,11 @@ pub struct PresenceState {
     pub generation: u64,
 }
 
-/// Public event stream for user status transitions.
-#[spacetimedb::table(accessor = presence_change_event, public)]
+/// Public snapshot of each user's current presence.
+#[spacetimedb::table(accessor = user_presence, public)]
 #[derive(Clone)]
-pub struct PresenceChangeEvent {
+pub struct UserPresence {
     #[primary_key]
-    #[auto_inc]
-    pub event_id: u64,
     pub identity: Identity,
     pub status: UserStatus,
     pub changed_at: Timestamp,

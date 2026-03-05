@@ -1,15 +1,15 @@
 use crate::{
-    cancel_offline_jobs_for, emit_presence_change, status_after_login_identity_transfer,
-    update_user_status_if_changed,
+    cancel_offline_jobs_for, status_after_login_identity_transfer,
     tables::{
         dm_call_request as _, dm_channel as _, dm_message as _, dm_participant as _, friend as _,
-        friend__view as _, friend_request as _, guild as _, guild_member as _,
-        guild_member__view as _, message as _, presence_state as _, reaction as _, rtc_signal as _,
-        user as _, user__view as _, voice_state as _, DmCallRequest, DmChannel, DmMessage,
-        DmParticipant, Friend, FriendRequest, Guild, GuildMember, Message, PresenceState, Reaction,
-        RtcSignal, User, VoiceState,
+        friend_request as _, guild as _, guild_member as _, message as _, presence_state as _,
+        reaction as _, rtc_signal as _, user as _, user__view as _, user_presence as _,
+        voice_state as _, DmCallRequest, DmChannel, DmMessage, DmParticipant, Friend,
+        FriendRequest, Guild, GuildMember, Message, PresenceState, Reaction, RtcSignal, User,
+        VoiceState,
     },
     types::UserStatus,
+    update_user_status_if_changed, upsert_user_presence,
 };
 use spacetimedb::{ReducerContext, Table, ViewContext};
 
@@ -55,7 +55,7 @@ pub fn register_user(
         status: UserStatus::Online,
         created_at: ctx.timestamp,
     });
-    emit_presence_change(ctx, who, UserStatus::Online);
+    upsert_user_presence(ctx, who, UserStatus::Online);
 
     log::info!("User registered: {}", who.to_abbreviated_hex());
     Ok(())
@@ -220,6 +220,9 @@ pub fn login_as_user(ctx: &ReducerContext, username: String) -> Result<(), Strin
     ) {
         update_user_status_if_changed(ctx, &mut transferred_user, status);
     }
+
+    ctx.db.user_presence().identity().delete(old_identity);
+    upsert_user_presence(ctx, new_identity, transferred_user.status.clone());
 
     // Cascade: Guild (owner_identity)
     let guilds: Vec<_> = ctx
@@ -469,54 +472,6 @@ pub fn login_as_user(ctx: &ReducerContext, username: String) -> Result<(), Strin
 pub fn my_profile(ctx: &ViewContext) -> Vec<User> {
     let who = ctx.sender();
     ctx.db.user().identity().find(who).into_iter().collect()
-}
-
-#[spacetimedb::view(accessor = my_visible_users, public)]
-pub fn my_visible_users(ctx: &ViewContext) -> Vec<User> {
-    let who = ctx.sender();
-    let mut visible_identities = vec![who];
-
-    for friendship in ctx.db.friend().friend_by_identity_low().filter(&who) {
-        if !visible_identities
-            .iter()
-            .any(|identity| identity == &friendship.identity_high)
-        {
-            visible_identities.push(friendship.identity_high);
-        }
-    }
-
-    for friendship in ctx.db.friend().friend_by_identity_high().filter(&who) {
-        if !visible_identities
-            .iter()
-            .any(|identity| identity == &friendship.identity_low)
-        {
-            visible_identities.push(friendship.identity_low);
-        }
-    }
-
-    let my_guild_ids: Vec<u64> = ctx
-        .db
-        .guild_member()
-        .identity()
-        .filter(&who)
-        .map(|member| member.guild_id)
-        .collect();
-
-    for guild_id in my_guild_ids {
-        for member in ctx.db.guild_member().guild_id().filter(guild_id) {
-            if !visible_identities
-                .iter()
-                .any(|identity| identity == &member.identity)
-            {
-                visible_identities.push(member.identity);
-            }
-        }
-    }
-
-    visible_identities
-        .iter()
-        .filter_map(|id| ctx.db.user().identity().find(id))
-        .collect()
 }
 
 #[cfg(test)]

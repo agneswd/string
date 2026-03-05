@@ -90,6 +90,7 @@ import MyChannelsRow from "./my_channels_table";
 import MyDmChannelsRow from "./my_dm_channels_table";
 import MyDmMessagesRow from "./my_dm_messages_table";
 import MyDmParticipantsRow from "./my_dm_participants_table";
+import MyFriendEdgesRow from "./my_friend_edges_table";
 import MyFriendRequestsIncomingRow from "./my_friend_requests_incoming_table";
 import MyFriendRequestsOutgoingRow from "./my_friend_requests_outgoing_table";
 import MyFriendsRow from "./my_friends_table";
@@ -99,9 +100,9 @@ import MyMessagesRow from "./my_messages_table";
 import MyProfileRow from "./my_profile_table";
 import MyReactionsRow from "./my_reactions_table";
 import MyRtcSignalsRow from "./my_rtc_signals_table";
-import MyVisibleUsersRow from "./my_visible_users_table";
 import MyVoiceStatesRow from "./my_voice_states_table";
-import PresenceChangeEventRow from "./presence_change_event_table";
+import UserRow from "./user_table";
+import UserPresenceRow from "./user_presence_table";
 
 /** Type-only namespace exports for generated type groups. */
 
@@ -161,17 +162,32 @@ const tablesSchema = __schema({
       { name: 'guild_invite_invite_id_key', constraint: 'unique', columns: ['inviteId'] },
     ],
   }, GuildInviteRow),
-  presence_change_event: __table({
-    name: 'presence_change_event',
+  user: __table({
+    name: 'user',
     indexes: [
-      { name: 'event_id', algorithm: 'btree', columns: [
-        'eventId',
+      { name: 'identity', algorithm: 'btree', columns: [
+        'identity',
+      ] },
+      { name: 'username', algorithm: 'btree', columns: [
+        'username',
       ] },
     ],
     constraints: [
-      { name: 'presence_change_event_event_id_key', constraint: 'unique', columns: ['eventId'] },
+      { name: 'user_identity_key', constraint: 'unique', columns: ['identity'] },
+      { name: 'user_username_key', constraint: 'unique', columns: ['username'] },
     ],
-  }, PresenceChangeEventRow),
+  }, UserRow),
+  user_presence: __table({
+    name: 'user_presence',
+    indexes: [
+      { name: 'identity', algorithm: 'btree', columns: [
+        'identity',
+      ] },
+    ],
+    constraints: [
+      { name: 'user_presence_identity_key', constraint: 'unique', columns: ['identity'] },
+    ],
+  }, UserPresenceRow),
   my_channels: __table({
     name: 'my_channels',
     indexes: [
@@ -200,6 +216,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyDmParticipantsRow),
+  my_friend_edges: __table({
+    name: 'my_friend_edges',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyFriendEdgesRow),
   my_friend_requests_incoming: __table({
     name: 'my_friend_requests_incoming',
     indexes: [
@@ -263,13 +286,6 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyRtcSignalsRow),
-  my_visible_users: __table({
-    name: 'my_visible_users',
-    indexes: [
-    ],
-    constraints: [
-    ],
-  }, MyVisibleUsersRow),
   my_voice_states: __table({
     name: 'my_voice_states',
     indexes: [

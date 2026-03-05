@@ -9,20 +9,11 @@ import {
   type AlgebraicTypeType as __AlgebraicTypeType,
   type Infer as __Infer,
 } from "spacetimedb";
-import {
-  UserStatus,
-} from "./types";
-
 
 export default __t.row({
-  identity: __t.identity(),
-  username: __t.string(),
-  displayName: __t.string().name("display_name"),
-  avatarBytes: __t.option(__t.byteArray()).name("avatar_bytes"),
-  get status() {
-    return UserStatus;
-  },
+  friendId: __t.u64().name("friend_id"),
+  identityLow: __t.identity().name("identity_low"),
+  identityHigh: __t.identity().name("identity_high"),
+  friendshipKey: __t.string().name("friendship_key"),
   createdAt: __t.timestamp().name("created_at"),
-  bio: __t.option(__t.string()),
-  profileColor: __t.option(__t.string()).name("profile_color"),
 });

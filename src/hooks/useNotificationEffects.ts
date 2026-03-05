@@ -34,7 +34,7 @@ interface UseNotificationEffectsParams {
 }
 
 const OFFLINE_NOTIFICATION_DELAY_MS = 900
-const ONLINE_STATUSES = new Set(['online', 'idle', 'dnd', 'away', 'do not disturb'])
+const ONLINE_STATUSES = new Set(['online', 'idle', 'dnd', 'away', 'do not disturb', 'donotdisturb'])
 
 const isOnlineStatus = (status: string): boolean => ONLINE_STATUSES.has(status.toLowerCase())
 

@@ -15,10 +15,14 @@ import {
 
 
 export default __t.row({
-  eventId: __t.u64().primaryKey().name("event_id"),
-  identity: __t.identity(),
+  identity: __t.identity().primaryKey(),
+  username: __t.string(),
+  displayName: __t.string().name("display_name"),
+  avatarBytes: __t.option(__t.byteArray()).name("avatar_bytes"),
   get status() {
     return UserStatus;
   },
-  changedAt: __t.timestamp().name("changed_at"),
+  createdAt: __t.timestamp().name("created_at"),
+  bio: __t.option(__t.string()),
+  profileColor: __t.option(__t.string()).name("profile_color"),
 });
