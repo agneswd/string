@@ -13,6 +13,10 @@ use crate::{
 };
 use spacetimedb::{ReducerContext, Table, ViewContext};
 
+fn can_transfer_login_identity(target_online_session_count: u32) -> bool {
+    target_online_session_count == 0
+}
+
 /// Register a new user profile. Must be called once after first connection.
 /// Errors if the username is already taken or the identity already exists.
 #[spacetimedb::reducer]
@@ -149,6 +153,15 @@ pub fn login_as_user(ctx: &ReducerContext, username: String) -> Result<(), Strin
     let old_identity = target.identity;
 
     let old_presence_state = ctx.db.presence_state().identity().find(old_identity);
+    let target_online_session_count = old_presence_state
+        .as_ref()
+        .map(|state| state.online_session_count)
+        .unwrap_or(0);
+
+    if !can_transfer_login_identity(target_online_session_count) {
+        return Err("Cannot login as this user while they are currently connected".to_string());
+    }
+
     let new_presence_state = ctx.db.presence_state().identity().find(new_identity);
 
     let old_status_before_disconnect = old_presence_state
@@ -504,4 +517,20 @@ pub fn my_visible_users(ctx: &ViewContext) -> Vec<User> {
         .iter()
         .filter_map(|id| ctx.db.user().identity().find(id))
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::can_transfer_login_identity;
+
+    #[test]
+    fn login_identity_transfer_rejected_when_target_has_active_sessions() {
+        assert!(!can_transfer_login_identity(1));
+        assert!(!can_transfer_login_identity(5));
+    }
+
+    #[test]
+    fn login_identity_transfer_allowed_when_target_has_no_active_sessions() {
+        assert!(can_transfer_login_identity(0));
+    }
 }

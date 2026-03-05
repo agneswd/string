@@ -12,6 +12,7 @@ export interface RegisterOverlayProps {
 }
 
 export function RegisterOverlay({ onRegister, onLoginAsUser }: RegisterOverlayProps) {
+  const isDevBuild = import.meta.env.DEV
   const [username, setUsername] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [showLoginForm, setShowLoginForm] = useState(false)
@@ -54,55 +55,59 @@ export function RegisterOverlay({ onRegister, onLoginAsUser }: RegisterOverlayPr
           </button>
         </form>
 
-        {/* Divider */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255,255,255,0.08)' }} />
-          <span style={{ fontSize: '12px', color: 'var(--text-muted, #949ba4)', textTransform: 'uppercase', fontWeight: 600 }}>or</span>
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255,255,255,0.08)' }} />
-        </div>
+        {isDevBuild && (
+          <>
+            {/* Divider */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255,255,255,0.08)' }} />
+              <span style={{ fontSize: '12px', color: 'var(--text-muted, #949ba4)', textTransform: 'uppercase', fontWeight: 600 }}>or</span>
+              <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255,255,255,0.08)' }} />
+            </div>
 
-        {/* Login as existing user */}
-        <div>
-          <button
-            type="button"
-            onClick={() => { setShowLoginForm(!showLoginForm); setLoginError(null); }}
-            style={{
-              background: 'none', border: 'none', color: 'var(--accent-primary, #5865f2)',
-              cursor: 'pointer', fontSize: '13px', padding: 0, textAlign: 'center', width: '100%',
-            }}
-          >
-            {showLoginForm ? 'Back to Register' : 'Login as existing user'}
-          </button>
-          {showLoginForm && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
-              <label style={S_labelCol}>
-                <span style={S_labelSpan}>USERNAME</span>
-                <input
-                  value={loginUsername}
-                  onChange={e => setLoginUsername(e.target.value)}
-                  placeholder="Enter your username"
-                  style={S_input}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleLogin(); } }}
-                />
-              </label>
-              {loginError && (
-                <div style={{ color: '#ed4245', fontSize: '13px' }}>{loginError}</div>
-              )}
+            {/* Login as existing user */}
+            <div>
               <button
                 type="button"
-                onClick={handleLogin}
-                disabled={!loginUsername.trim()}
+                onClick={() => { setShowLoginForm(!showLoginForm); setLoginError(null); }}
                 style={{
-                  padding: '10px 16px', borderRadius: '4px', border: 'none',
-                  backgroundColor: loginUsername.trim() ? '#3ba55d' : 'rgba(59,165,93,0.4)',
-                  color: '#fff', fontWeight: 600, cursor: loginUsername.trim() ? 'pointer' : 'not-allowed', fontSize: '14px',
+                  background: 'none', border: 'none', color: 'var(--accent-primary, #5865f2)',
+                  cursor: 'pointer', fontSize: '13px', padding: 0, textAlign: 'center', width: '100%',
                 }}
               >
-                Login
+                {showLoginForm ? 'Back to Register' : 'Login as existing user'}
               </button>
+              {showLoginForm && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
+                  <label style={S_labelCol}>
+                    <span style={S_labelSpan}>USERNAME</span>
+                    <input
+                      value={loginUsername}
+                      onChange={e => setLoginUsername(e.target.value)}
+                      placeholder="Enter your username"
+                      style={S_input}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleLogin(); } }}
+                    />
+                  </label>
+                  {loginError && (
+                    <div style={{ color: '#ed4245', fontSize: '13px' }}>{loginError}</div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleLogin}
+                    disabled={!loginUsername.trim()}
+                    style={{
+                      padding: '10px 16px', borderRadius: '4px', border: 'none',
+                      backgroundColor: loginUsername.trim() ? '#3ba55d' : 'rgba(59,165,93,0.4)',
+                      color: '#fff', fontWeight: 600, cursor: loginUsername.trim() ? 'pointer' : 'not-allowed', fontSize: '14px',
+                    }}
+                  >
+                    Login
+                  </button>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
     </div>
   )
