@@ -201,11 +201,16 @@ export function useRtcSignaling({
             signalType: signal.signalType,
             payload: signal.payload,
           })
+        } catch (error) {
+          console.error('[useRtcSignaling] Signal processing failed:', error)
+          setActionError(errorToString(error))
+        }
+
+        try {
           await actions.ackRtcSignal({ signalId: signal.signalId })
           handledRtcSignalIdsRef.current.add(signalKey)
-        } catch (error) {
-          setActionError(errorToString(error))
-          return
+        } catch (ackError) {
+          console.error('[useRtcSignaling] Failed to ack signal:', ackError)
         } finally {
           processingRtcSignalIdsRef.current.delete(signalKey)
         }

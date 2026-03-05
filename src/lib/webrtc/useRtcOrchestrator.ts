@@ -149,6 +149,7 @@ function createPeerState(
 
 export function createRtcOrchestrator(options: UseRtcOrchestratorOptions = {}): RtcOrchestrator {
   const localIdentity = options.localIdentity ?? '';
+  const localIdentityKey = toIdentityKey(localIdentity);
   const sendSignal = options.sendSignal ?? NOOP_SEND_SIGNAL;
   const peerManager = new PeerManager();
   const listeners = new Set<(snapshot: RtcSnapshot) => void>();
@@ -156,6 +157,9 @@ export function createRtcOrchestrator(options: UseRtcOrchestratorOptions = {}): 
   const peerStates = new Map<string, PeerState>();
   const knownKeys = new Set<string>();
   const pendingIceCandidates = new Map<string, RTCIceCandidateInit[]>();
+  const makingOfferByKey = new Map<string, boolean>();
+  const ignoreOfferByKey = new Map<string, boolean>();
+  const isSettingRemoteAnswerPendingByKey = new Map<string, boolean>();
 
   let localAudioStream: MediaStream | null = null;
   let localScreenStream: MediaStream | null = null;
@@ -219,6 +223,60 @@ export function createRtcOrchestrator(options: UseRtcOrchestratorOptions = {}): 
     await sendSignal({ peerId, signalType, payload, kind });
   };
 
+  const isExpectedRemoteDescriptionRaceError = (error: unknown): boolean => {
+    if (error instanceof DOMException && error.name === 'InvalidStateError') {
+      return true;
+    }
+
+    const message = error instanceof Error ? error.message.toLowerCase() : '';
+    return message.includes('invalid state') || message.includes('wrong state');
+  };
+
+  const isExpectedIceRaceError = (error: unknown): boolean => {
+    if (error instanceof DOMException && (error.name === 'InvalidStateError' || error.name === 'OperationError')) {
+      return true;
+    }
+
+    const message = error instanceof Error ? error.message.toLowerCase() : '';
+    return (
+      message.includes('remote description')
+      || message.includes('m-line')
+      || message.includes('ufrag')
+      || message.includes('invalid state')
+      || message.includes('wrong state')
+    );
+  };
+
+  const setRemoteDescriptionSafe = async (
+    connection: RTCPeerConnection,
+    description: RTCSessionDescriptionInit,
+  ): Promise<boolean> => {
+    try {
+      await connection.setRemoteDescription(description);
+      return true;
+    } catch (error) {
+      if (isExpectedRemoteDescriptionRaceError(error)) {
+        return false;
+      }
+      throw error;
+    }
+  };
+
+  const addIceCandidateSafe = async (
+    key: string,
+    connection: RTCPeerConnection,
+    candidate: RTCIceCandidateInit,
+  ): Promise<void> => {
+    try {
+      await connection.addIceCandidate(candidate);
+    } catch (error) {
+      if (ignoreOfferByKey.get(key) || isExpectedIceRaceError(error)) {
+        return;
+      }
+      throw error;
+    }
+  };
+
   const flushPendingIce = async (key: string, connection: RTCPeerConnection): Promise<void> => {
     if (!connection.remoteDescription) {
       return;
@@ -231,7 +289,7 @@ export function createRtcOrchestrator(options: UseRtcOrchestratorOptions = {}): 
 
     pendingIceCandidates.delete(key);
     for (const candidate of pending) {
-      await connection.addIceCandidate(candidate);
+      await addIceCandidateSafe(key, connection, candidate);
     }
   };
 
@@ -264,6 +322,9 @@ export function createRtcOrchestrator(options: UseRtcOrchestratorOptions = {}): 
       peerStates.delete(key);
       knownKeys.delete(key);
       pendingIceCandidates.delete(key);
+      makingOfferByKey.delete(key);
+      ignoreOfferByKey.delete(key);
+      isSettingRemoteAnswerPendingByKey.delete(key);
       publish();
       return;
     }
@@ -288,6 +349,9 @@ export function createRtcOrchestrator(options: UseRtcOrchestratorOptions = {}): 
       peerStates.delete(key);
       knownKeys.delete(key);
       pendingIceCandidates.delete(key);
+      makingOfferByKey.delete(key);
+      ignoreOfferByKey.delete(key);
+      isSettingRemoteAnswerPendingByKey.delete(key);
       publish();
     }
   };
@@ -372,8 +436,21 @@ export function createRtcOrchestrator(options: UseRtcOrchestratorOptions = {}): 
     };
 
     connection.onnegotiationneeded = async () => {
+      if (connection.signalingState !== 'stable' || makingOfferByKey.get(key)) {
+        return;
+      }
+
+      makingOfferByKey.set(key, true);
       try {
+        if (connection.signalingState !== 'stable') {
+          return;
+        }
+
         const offer = await connection.createOffer();
+        if (connection.signalingState !== 'stable') {
+          return;
+        }
+
         if (offer.sdp) {
           offer.sdp = enhanceOpusSdp(offer.sdp);
         }
@@ -384,6 +461,8 @@ export function createRtcOrchestrator(options: UseRtcOrchestratorOptions = {}): 
         }
       } catch (err) {
         console.error('Failed to create offer:', err);
+      } finally {
+        makingOfferByKey.set(key, false);
       }
     };
 
@@ -528,20 +607,37 @@ export function createRtcOrchestrator(options: UseRtcOrchestratorOptions = {}): 
     const connection = ensureConnection(peerId, kind);
 
     if (parsedPayload?.type === 'offer') {
-      const isPolite = localIdentity < peerId;
-      const offerCollision = connection.signalingState !== 'stable';
+      const isPolite = localIdentityKey < peerId;
+      const makingOffer = makingOfferByKey.get(key) === true;
+      const isSettingRemoteAnswerPending = isSettingRemoteAnswerPendingByKey.get(key) === true;
+      const readyForOffer = !makingOffer && (connection.signalingState === 'stable' || isSettingRemoteAnswerPending);
+      const offerCollision = !readyForOffer;
+      const shouldIgnoreOffer = !isPolite && offerCollision;
 
-      if (offerCollision && !isPolite) {
+      ignoreOfferByKey.set(key, shouldIgnoreOffer);
+
+      if (shouldIgnoreOffer) {
         // Impolite peer ignores incoming offer during collision
         return;
       }
 
       if (offerCollision && isPolite) {
         // Polite peer rolls back and accepts incoming offer
-        await connection.setLocalDescription({ type: 'rollback' });
+        if (connection.signalingState !== 'stable') {
+          try {
+            await connection.setLocalDescription({ type: 'rollback' });
+          } catch {
+            // Non-fatal: proceed and let remote-description race handling decide
+          }
+        }
       }
 
-      await connection.setRemoteDescription({ type: 'offer', sdp: parsedPayload.sdp });
+      const applied = await setRemoteDescriptionSafe(connection, { type: 'offer', sdp: parsedPayload.sdp });
+      if (!applied) {
+        setPeerState(key, connection);
+        return;
+      }
+
       attachLocalTracks(connection, kind);
       await flushPendingIce(key, connection);
 
@@ -561,13 +657,29 @@ export function createRtcOrchestrator(options: UseRtcOrchestratorOptions = {}): 
     }
 
     if (parsedPayload?.type === 'answer') {
-      await connection.setRemoteDescription({ type: 'answer', sdp: parsedPayload.sdp });
+      isSettingRemoteAnswerPendingByKey.set(key, true);
+      let applied = false;
+      try {
+        applied = await setRemoteDescriptionSafe(connection, { type: 'answer', sdp: parsedPayload.sdp });
+      } finally {
+        isSettingRemoteAnswerPendingByKey.set(key, false);
+      }
+      if (!applied) {
+        setPeerState(key, connection);
+        return;
+      }
+
+      ignoreOfferByKey.set(key, false);
       await flushPendingIce(key, connection);
       setPeerState(key, connection);
       return;
     }
 
     if (parsedPayload?.type === 'ice') {
+      if (ignoreOfferByKey.get(key)) {
+        return;
+      }
+
       const candidate: RTCIceCandidateInit = {
         candidate: parsedPayload.candidate,
         sdpMid: parsedPayload.sdpMid,
@@ -576,7 +688,7 @@ export function createRtcOrchestrator(options: UseRtcOrchestratorOptions = {}): 
       };
 
       if (connection.remoteDescription) {
-        await connection.addIceCandidate(candidate);
+        await addIceCandidateSafe(key, connection, candidate);
       } else {
         const pending = pendingIceCandidates.get(key) ?? [];
         pending.push(candidate);
@@ -627,6 +739,9 @@ export function createRtcOrchestrator(options: UseRtcOrchestratorOptions = {}): 
     peerStates.clear();
     knownKeys.clear();
     pendingIceCandidates.clear();
+    makingOfferByKey.clear();
+    ignoreOfferByKey.clear();
+    isSettingRemoteAnswerPendingByKey.clear();
   };
 
   const connectToPeers = (peerIds: string[], kind: SignalKind = 'audio'): void => {

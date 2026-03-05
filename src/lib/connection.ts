@@ -159,6 +159,7 @@ export function runAllCleanups(): void {
 const _audioContexts = new Set<AudioContext>();
 const _audioCtxListeners = new Map<AudioContext, () => void>();
 const _mediaStreams = new Set<MediaStream>();
+const _mediaStreamListeners = new Map<MediaStream, { track: MediaStreamTrack, listener: () => void }[]>();
 const _peerConnections = new Set<RTCPeerConnection>();
 
 export function trackAudioContext(ctx: AudioContext): void {
@@ -178,7 +179,23 @@ export function trackAudioContext(ctx: AudioContext): void {
 }
 
 export function trackMediaStream(stream: MediaStream): void {
+  if (_mediaStreams.has(stream)) return;
   _mediaStreams.add(stream);
+
+  const checkAllEnded = () => {
+    if (stream.getTracks().every(t => t.readyState === 'ended')) {
+      untrackMediaStream(stream);
+    }
+  };
+
+  const listeners: { track: MediaStreamTrack, listener: () => void }[] = [];
+  stream.getTracks().forEach(track => {
+    const listener = () => checkAllEnded();
+    track.addEventListener('ended', listener);
+    listeners.push({ track, listener });
+  });
+  
+  _mediaStreamListeners.set(stream, listeners);
 }
 
 export function trackPeerConnection(pc: RTCPeerConnection): void {
@@ -195,6 +212,13 @@ export function untrackAudioContext(ctx: AudioContext): void {
 }
 
 export function untrackMediaStream(stream: MediaStream): void {
+  const listeners = _mediaStreamListeners.get(stream);
+  if (listeners) {
+    listeners.forEach(({ track, listener }) => {
+      track.removeEventListener('ended', listener);
+    });
+    _mediaStreamListeners.delete(stream);
+  }
   _mediaStreams.delete(stream);
 }
 
@@ -214,11 +238,13 @@ export function closeAllTrackedResources(): void {
   _audioContexts.clear();
   _audioCtxListeners.clear();
 
-  // Stop all MediaStream tracks
-  for (const stream of _mediaStreams) {
-    try { stream.getTracks().forEach(t => t.stop()); } catch { /* ignore */ }
+  // Stop all MediaStream tracks and clear listeners
+  for (const stream of Array.from(_mediaStreams)) {
+    try {
+      stream.getTracks().forEach(t => t.stop());
+      untrackMediaStream(stream);
+    } catch { /* ignore */ }
   }
-  _mediaStreams.clear();
 
   // Close all PeerConnections
   for (const pc of _peerConnections) {
