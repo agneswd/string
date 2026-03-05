@@ -1,8 +1,6 @@
 use crate::{
     helpers::require_role,
-    tables::{
-        channel, channel__view, guild_member__view, message, message__view, Message,
-    },
+    tables::{channel, channel__view, guild_member__view, message, message__view, Message},
     types::MemberRole,
 };
 use spacetimedb::{ReducerContext, Table, ViewContext};

@@ -1,6 +1,6 @@
 import { type FormEvent, useState, useMemo, useCallback, type CSSProperties } from 'react'
 import { MessageSquare, Check, X, Trash2, Search, Users } from 'lucide-react'
-import { getAvatarColor } from '../lib/avatarUtils'
+import { getAvatarColor } from '../../lib/avatarUtils'
 
 export type FriendRequestItemId = string | number
 export type FriendUserId = string | number
@@ -181,7 +181,7 @@ const s = {
 
   /* Search bar */
   searchWrap: {
-    padding: '0 20px 0 30px',
+    padding: '8px 20px 0 30px',
     position: 'relative',
     flexShrink: 0,
   } satisfies CSSProperties,
@@ -384,6 +384,13 @@ const s = {
     color: success ? 'var(--text-success)' : 'var(--text-danger)',
   }),
 }
+
+const hoverStyles = `
+  .frp-tab:hover { background-color: var(--bg-modifier-hover); color: var(--text-interactive-hover) !important; }
+  .frp-tab-active:hover { background-color: var(--bg-modifier-selected); color: var(--text-interactive-active) !important; }
+  .frp-add-btn:hover { opacity: 0.85; }
+  .frp-add-btn-active:hover { opacity: 1; }
+`
 
 export function FriendRequestPanel({
   requestUsername,
@@ -758,6 +765,7 @@ export function FriendRequestPanel({
       style={s.root}
       aria-label="Friends"
     >
+      <style>{hoverStyles}</style>
       {/* ---- Tab bar ---- */}
       <div style={s.toolbar}>
         <span style={s.toolbarTitle}>
@@ -771,15 +779,8 @@ export function FriendRequestPanel({
           <button
             key={tab}
             type="button"
+            className={activeTab === tab ? 'frp-tab-active' : 'frp-tab'}
             style={s.tab(activeTab === tab)}
-            onMouseEnter={(e) => {
-              if (activeTab !== tab) e.currentTarget.style.backgroundColor = 'var(--bg-modifier-hover)'
-              e.currentTarget.style.color = 'var(--text-interactive-hover)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = activeTab === tab ? 'var(--bg-modifier-selected)' : 'transparent'
-              e.currentTarget.style.color = activeTab === tab ? 'var(--text-interactive-active)' : 'var(--text-interactive-normal)'
-            }}
             onClick={() => setActiveTab(tab)}
           >
             {tab === 'online' && 'Online'}
@@ -795,13 +796,8 @@ export function FriendRequestPanel({
 
         <button
           type="button"
+          className={activeTab === 'add' ? 'frp-add-btn-active' : 'frp-add-btn'}
           style={s.addFriendTab(activeTab === 'add')}
-          onMouseEnter={(e) => {
-            if (activeTab !== 'add') e.currentTarget.style.opacity = '0.85'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.opacity = '1'
-          }}
           onClick={() => setActiveTab('add')}
         >
           Add Friend

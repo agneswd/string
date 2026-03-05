@@ -1,8 +1,20 @@
 import React, { useState, useCallback, useMemo } from 'react'
 import type { GuildId } from './ServerListPane'
-import { VoiceUserContextMenu } from './VoiceUserContextMenu'
-import { getAvatarColor, getInitial } from '../lib/avatarUtils'
+import { VoiceUserContextMenu } from '../voice/VoiceUserContextMenu'
+import { getAvatarColor, getInitial } from '../../lib/avatarUtils'
 import { Volume2, Monitor, Mic, MicOff, HeadphoneOff, Headphones, ChevronDown, Plus, Clipboard } from 'lucide-react'
+
+/* ── Inject hover styles once ── */
+if (typeof document !== 'undefined' && !document.getElementById('channel-list-hover-styles')) {
+  const style = document.createElement('style')
+  style.id = 'channel-list-hover-styles'
+  style.textContent = `
+    .clp-header:hover { background-color: rgba(79,84,92,0.24) !important; }
+    .clp-create-btn:hover { color: #dbdee1 !important; }
+    .clp-control-btn:hover { background-color: rgba(79,84,92,0.32) !important; }
+  `
+  document.head.appendChild(style)
+}
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -516,13 +528,8 @@ export function ChannelListPane({
     >
       {/* ── Server header ── */}
       <header
+        className="clp-header"
         style={S.header}
-        onMouseEnter={(e) =>
-          ((e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(79,84,92,0.24)')
-        }
-        onMouseLeave={(e) =>
-          ((e.currentTarget as HTMLElement).style.backgroundColor = colors.bgHeader)
-        }
       >
         <span style={S.headerName}>{guildName ?? 'Guild'}</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -546,12 +553,11 @@ export function ChannelListPane({
                 padding: 0,
                 transition: 'color 0.15s',
               }}
+              className="clp-create-btn"
               onClick={(e) => {
                 e.stopPropagation()
                 onCreateChannel()
               }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = colors.textChannelHover)}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = colors.textCategory)}
               title="Create Channel"
               aria-label="Create Channel"
             >
@@ -637,12 +643,11 @@ export function ChannelListPane({
                           flexShrink: 0,
                           transition: 'color 0.15s',
                         }}
+                        className="clp-create-btn"
                         onClick={(e) => {
                           e.stopPropagation()
                           onCreateChannel()
                         }}
-                        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = colors.textChannelHover)}
-                        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = colors.textCategory)}
                         title="Create Channel"
                         aria-label={`Create channel in ${group.label}`}
                       >
@@ -688,16 +693,11 @@ export function ChannelListPane({
           {onMuteToggle && (
             <button
               type="button"
+              className="clp-control-btn"
               style={S.controlBtn(isMuted)}
               onClick={onMuteToggle}
               title={isMuted ? 'Unmute' : 'Mute'}
               aria-label={isMuted ? 'Unmute' : 'Mute'}
-              onMouseEnter={(e) =>
-                ((e.currentTarget as HTMLElement).style.backgroundColor = colors.bgHover)
-              }
-              onMouseLeave={(e) =>
-                ((e.currentTarget as HTMLElement).style.backgroundColor = 'transparent')
-              }
             >
   {isMuted ? (
                 <MicOff size={20} />
@@ -709,16 +709,11 @@ export function ChannelListPane({
           {onDeafenToggle && (
             <button
               type="button"
+              className="clp-control-btn"
               style={S.controlBtn(isDeafened)}
               onClick={onDeafenToggle}
               title={isDeafened ? 'Undeafen' : 'Deafen'}
               aria-label={isDeafened ? 'Undeafen' : 'Deafen'}
-              onMouseEnter={(e) =>
-                ((e.currentTarget as HTMLElement).style.backgroundColor = colors.bgHover)
-              }
-              onMouseLeave={(e) =>
-                ((e.currentTarget as HTMLElement).style.backgroundColor = 'transparent')
-              }
             >
               {isDeafened ? (
                 <HeadphoneOff size={20} />

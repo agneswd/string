@@ -1,7 +1,7 @@
 import React, { type FormEvent, useEffect, useRef, useState, useMemo, useCallback, type CSSProperties } from 'react'
 import { Phone, Trash2, Pencil, Check, X } from 'lucide-react'
 import { ReactionBar, QuickReactBar, type ReactionBarItem } from './ReactionBar'
-import { getAvatarColor, getInitial } from '../lib/avatarUtils'
+import { getAvatarColor, getInitial } from '../../lib/avatarUtils'
 
 export interface ChatMessageItem {
   id: string | number
@@ -207,16 +207,17 @@ export const ChatViewPane = React.memo(function ChatViewPane({
 }: ChatViewPaneProps) {
   const listRef = useRef<HTMLUListElement>(null)
   const bottomRef = useRef<HTMLLIElement>(null)
-  const [hoveredId, setHoveredId] = useState<string | number | null>(null)
 
-  /* auto-scroll to bottom when new messages arrive */
-  const prevLenRef = useRef(messages.length)
+  /* auto-scroll to bottom when new messages arrive (track last message ID, not count) */
+  const prevLastMsgId = useRef<string | number | undefined>(undefined)
   useEffect(() => {
-    if (messages.length !== prevLenRef.current) {
-      prevLenRef.current = messages.length
+    const msgs = messages
+    const lastId = msgs?.[msgs.length - 1]?.id
+    if (lastId !== prevLastMsgId.current && prevLastMsgId.current !== undefined) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [messages.length])
+    prevLastMsgId.current = lastId
+  }, [messages])
 
   const handleSubmit = useCallback((event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -240,8 +241,6 @@ export const ChatViewPane = React.memo(function ChatViewPane({
           message={message}
           isGrouped={isGrouped}
           isOwnMessage={currentUserId !== undefined && String(message.authorId) === String(currentUserId)}
-          hoveredId={hoveredId}
-          onHover={setHoveredId}
           getReactionsForMessage={getReactionsForMessage}
           onToggleReaction={onToggleReaction}
           shouldRenderReactions={shouldRenderReactions}
@@ -252,7 +251,7 @@ export const ChatViewPane = React.memo(function ChatViewPane({
         />
       )
     })
-  }, [messages, currentUserId, hoveredId, getReactionsForMessage, onToggleReaction, shouldRenderReactions, onViewProfile, getAvatarUrl, onDeleteMessage, onEditMessage])
+  }, [messages, currentUserId, getReactionsForMessage, onToggleReaction, shouldRenderReactions, onViewProfile, getAvatarUrl, onDeleteMessage, onEditMessage])
 
   const sendBtnStyle = useMemo<CSSProperties>(() => ({
     ...S.sendBtn,
@@ -344,8 +343,6 @@ interface ChatMessageRowProps {
   message: ChatMessageItem
   isGrouped: boolean
   isOwnMessage: boolean
-  hoveredId: string | number | null
-  onHover: (id: string | number | null) => void
   getReactionsForMessage?: (messageId: ChatMessageItem['id']) => ReadonlyArray<ReactionBarItem>
   onToggleReaction?: (messageId: ChatMessageItem['id'], emoji: string) => void
   shouldRenderReactions: boolean
@@ -371,8 +368,6 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
   message,
   isGrouped,
   isOwnMessage,
-  hoveredId,
-  onHover,
   getReactionsForMessage,
   onToggleReaction,
   shouldRenderReactions,
@@ -381,10 +376,13 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
   onDeleteMessage,
   onEditMessage,
 }: ChatMessageRowProps) {
-  const hovered = hoveredId === message.id
+  const [hovered, setHovered] = useState(false)
   const hashColor = getAvatarColor(message.authorName)
   const color = message.profileColor || hashColor
-  const reactions = getReactionsForMessage?.(message.id) ?? []
+  const reactions = useMemo(
+    () => getReactionsForMessage?.(message.id) ?? [],
+    [getReactionsForMessage, message.id]
+  )
   const avatarUrl = message.authorId ? getAvatarUrl?.(String(message.authorId)) : undefined
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState('')
@@ -408,8 +406,8 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
   return (
     <li
       style={rowStyle}
-      onMouseEnter={() => onHover(message.id)}
-      onMouseLeave={() => onHover(null)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       data-own={isOwnMessage || undefined}
     >
       {isGrouped && (

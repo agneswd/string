@@ -1,5 +1,5 @@
 use crate::{ChannelType, MemberRole, RtcSignalType, UserStatus};
-use spacetimedb::{Identity, Timestamp};
+use spacetimedb::{Identity, ScheduleAt, Timestamp};
 
 /// Registered user profile. Upserted on connect.
 #[spacetimedb::table(accessor = user)]
@@ -15,6 +15,49 @@ pub struct User {
     pub created_at: Timestamp,
     pub bio: Option<String>,
     pub profile_color: Option<String>,
+}
+
+/// Presence bookkeeping for per-identity active sessions.
+#[spacetimedb::table(accessor = presence_state)]
+#[derive(Clone)]
+pub struct PresenceState {
+    #[primary_key]
+    pub identity: Identity,
+    pub online_session_count: u32,
+    pub status_before_disconnect: Option<UserStatus>,
+    pub generation: u64,
+}
+
+/// Public event stream for user status transitions.
+#[spacetimedb::table(accessor = presence_change_event, public)]
+#[derive(Clone)]
+pub struct PresenceChangeEvent {
+    #[primary_key]
+    #[auto_inc]
+    pub event_id: u64,
+    pub identity: Identity,
+    pub status: UserStatus,
+    pub changed_at: Timestamp,
+}
+
+/// Deferred offline transition job to absorb transient reconnects.
+#[spacetimedb::table(
+    accessor = presence_offline_job,
+    scheduled(crate::presence_offline_job_due),
+    index(
+        name = "presence_offline_job_by_identity",
+        accessor = presence_offline_job_by_identity,
+        btree(columns = [identity])
+    )
+)]
+#[derive(Clone)]
+pub struct PresenceOfflineJob {
+    #[primary_key]
+    #[auto_inc]
+    pub scheduled_id: u64,
+    pub scheduled_at: ScheduleAt,
+    pub identity: Identity,
+    pub expected_generation: u64,
 }
 
 /// A guild (server/community).

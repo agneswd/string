@@ -1,7 +1,5 @@
-use crate::tables::{
-    dm_message as _, dm_participant as _, dm_reaction as _, DmReaction,
-};
 use super::reaction::normalize_and_validate_emoji;
+use crate::tables::{dm_message as _, dm_participant as _, dm_reaction as _, DmReaction};
 use spacetimedb::{ReducerContext, Table};
 
 fn require_dm_participant(ctx: &ReducerContext, dm_channel_id: u64) -> Result<(), String> {

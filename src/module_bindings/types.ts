@@ -145,6 +145,34 @@ export const Message = __t.object("Message", {
 });
 export type Message = __Infer<typeof Message>;
 
+export const PresenceChangeEvent = __t.object("PresenceChangeEvent", {
+  eventId: __t.u64(),
+  identity: __t.identity(),
+  get status() {
+    return UserStatus;
+  },
+  changedAt: __t.timestamp(),
+});
+export type PresenceChangeEvent = __Infer<typeof PresenceChangeEvent>;
+
+export const PresenceOfflineJob = __t.object("PresenceOfflineJob", {
+  scheduledId: __t.u64(),
+  scheduledAt: __t.scheduleAt(),
+  identity: __t.identity(),
+  expectedGeneration: __t.u64(),
+});
+export type PresenceOfflineJob = __Infer<typeof PresenceOfflineJob>;
+
+export const PresenceState = __t.object("PresenceState", {
+  identity: __t.identity(),
+  onlineSessionCount: __t.u32(),
+  get statusBeforeDisconnect() {
+    return __t.option(UserStatus);
+  },
+  generation: __t.u64(),
+});
+export type PresenceState = __Infer<typeof PresenceState>;
+
 export const Reaction = __t.object("Reaction", {
   reactionId: __t.u64(),
   messageId: __t.u64(),

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react'
 import { Circle } from 'lucide-react'
-import { getAvatarColor, getInitial, getProfileColor } from '../lib/avatarUtils'
+import { getAvatarColor, getInitial, getProfileColor } from '../../lib/avatarUtils'
 
 export interface ProfilePopupUser {
   displayName: string

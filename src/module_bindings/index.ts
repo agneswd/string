@@ -101,6 +101,7 @@ import MyReactionsRow from "./my_reactions_table";
 import MyRtcSignalsRow from "./my_rtc_signals_table";
 import MyVisibleUsersRow from "./my_visible_users_table";
 import MyVoiceStatesRow from "./my_voice_states_table";
+import PresenceChangeEventRow from "./presence_change_event_table";
 
 /** Type-only namespace exports for generated type groups. */
 
@@ -160,6 +161,17 @@ const tablesSchema = __schema({
       { name: 'guild_invite_invite_id_key', constraint: 'unique', columns: ['inviteId'] },
     ],
   }, GuildInviteRow),
+  presence_change_event: __table({
+    name: 'presence_change_event',
+    indexes: [
+      { name: 'event_id', algorithm: 'btree', columns: [
+        'eventId',
+      ] },
+    ],
+    constraints: [
+      { name: 'presence_change_event_event_id_key', constraint: 'unique', columns: ['eventId'] },
+    ],
+  }, PresenceChangeEventRow),
   my_channels: __table({
     name: 'my_channels',
     indexes: [

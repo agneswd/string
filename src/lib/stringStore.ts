@@ -91,6 +91,7 @@ type PreferredReducerName =
   | 'toggleDmReaction'
 
 const TABLE_KEYS = [
+  'presence_change_event',
   'my_visible_users',
   'my_profile',
   'my_guilds',
@@ -535,13 +536,15 @@ class StringStore {
     // When called directly (initial load, onApplied, reconnect) there are no pending
     // mutations — sync every table.
     const syncAll = mutated.size === 0
+    const presenceEventChanged = mutated.has('presence_change_event')
 
     const identity = getMyIdentity()
     const prev = this.state
     const next: Partial<StringState> = { identity }
 
-    const usersChanged = syncAll || mutated.has('my_visible_users')
-    const profileChanged = syncAll || mutated.has('my_profile')
+    const usersChanged = syncAll || presenceEventChanged || mutated.has('my_visible_users')
+    const profileChanged = syncAll || presenceEventChanged || mutated.has('my_profile')
+    const friendsChanged = syncAll || presenceEventChanged || mutated.has('my_friends')
 
     const users = usersChanged ? this.readRows<User>(db, 'my_visible_users') : prev.users
     if (usersChanged) next.users = users
@@ -562,7 +565,7 @@ class StringStore {
     if (syncAll || mutated.has('my_reactions')) next.reactions = this.readRows<Reaction>(db, 'my_reactions')
     if (syncAll || mutated.has('dm_reaction')) next.dmReactions = this.readRows<DmReaction>(db, 'dm_reaction')
     if (syncAll || mutated.has('guild_invite')) next.guildInvites = this.readRows<GuildInvite>(db, 'guild_invite')
-    if (syncAll || mutated.has('my_friends')) next.friends = this.readRows<User>(db, 'my_friends')
+    if (friendsChanged) next.friends = this.readRows<User>(db, 'my_friends')
     if (syncAll || mutated.has('my_friend_requests_incoming')) next.incomingFriendRequests = this.readRows<FriendRequest>(db, 'my_friend_requests_incoming')
     if (syncAll || mutated.has('my_friend_requests_outgoing')) next.outgoingFriendRequests = this.readRows<FriendRequest>(db, 'my_friend_requests_outgoing')
     if (syncAll || mutated.has('my_voice_states')) next.voiceStates = this.readRows<VoiceState>(db, PREFERRED_VOICE_TABLE_KEYS[0])

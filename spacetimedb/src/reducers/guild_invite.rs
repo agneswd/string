@@ -1,16 +1,17 @@
 use crate::{
     helpers::find_member,
-    tables::{
-        guild as _, guild_invite as _, guild_member as _,
-        GuildMember,
-    },
+    tables::{guild as _, guild_invite as _, guild_member as _, GuildMember},
     types::MemberRole,
 };
 use spacetimedb::{ReducerContext, Table};
 
 #[spacetimedb::reducer]
 pub fn accept_guild_invite(ctx: &ReducerContext, invite_id: u64) -> Result<(), String> {
-    let invite = ctx.db.guild_invite().invite_id().find(invite_id)
+    let invite = ctx
+        .db
+        .guild_invite()
+        .invite_id()
+        .find(invite_id)
         .ok_or("Invite not found")?;
 
     if invite.invitee_identity != ctx.sender() {
@@ -18,7 +19,10 @@ pub fn accept_guild_invite(ctx: &ReducerContext, invite_id: u64) -> Result<(), S
     }
 
     // Verify guild still exists
-    ctx.db.guild().guild_id().find(invite.guild_id)
+    ctx.db
+        .guild()
+        .guild_id()
+        .find(invite.guild_id)
         .ok_or("Guild no longer exists")?;
 
     // Check not already a member (could have joined via another route)
@@ -45,7 +49,11 @@ pub fn accept_guild_invite(ctx: &ReducerContext, invite_id: u64) -> Result<(), S
 
 #[spacetimedb::reducer]
 pub fn decline_guild_invite(ctx: &ReducerContext, invite_id: u64) -> Result<(), String> {
-    let invite = ctx.db.guild_invite().invite_id().find(invite_id)
+    let invite = ctx
+        .db
+        .guild_invite()
+        .invite_id()
+        .find(invite_id)
         .ok_or("Invite not found")?;
 
     if invite.invitee_identity != ctx.sender() {

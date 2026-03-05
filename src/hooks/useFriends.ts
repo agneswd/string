@@ -5,7 +5,6 @@ import type { AppData } from './useAppData'
 import {
   toIdKey,
   identityToString,
-  readRuntimeRows,
   getObjectField,
   statusToLabel,
 } from '../lib/helpers'
@@ -60,48 +59,26 @@ export function useFriends(
     params: TParams,
   ) => Promise<void>,
 ): FriendsData {
-  const { extendedState, extendedActions, identityString, usersByIdentity, state } = appData
+  const { extendedState, extendedActions, identityString, usersByIdentity } = appData
 
   const [friendRequestUsername, setFriendRequestUsername] = useState('')
 
   // -- Raw rows -----------------------------------------------------------
 
-  const friendRows = useMemo(() => {
-    const fromState = extendedState.myFriends ?? extendedState.friends
-    if (Array.isArray(fromState)) {
-      return fromState
-    }
+  const friendRows = useMemo(
+    () => extendedState.friends ?? [],
+    [extendedState.friends],
+  )
 
-    return readRuntimeRows('my_friends')
-  }, [extendedState.friends, extendedState.myFriends, state.connectionStatus, state.users])
+  const incomingFriendRequestRows = useMemo(
+    () => extendedState.incomingFriendRequests ?? [],
+    [extendedState.incomingFriendRequests],
+  )
 
-  const incomingFriendRequestRows = useMemo(() => {
-    const fromState = extendedState.myFriendRequestsIncoming ?? extendedState.incomingFriendRequests
-    if (Array.isArray(fromState)) {
-      return fromState
-    }
-
-    return readRuntimeRows('my_friend_requests_incoming')
-  }, [
-    extendedState.incomingFriendRequests,
-    extendedState.myFriendRequestsIncoming,
-    state.connectionStatus,
-    state.users,
-  ])
-
-  const outgoingFriendRequestRows = useMemo(() => {
-    const fromState = extendedState.myFriendRequestsOutgoing ?? extendedState.outgoingFriendRequests
-    if (Array.isArray(fromState)) {
-      return fromState
-    }
-
-    return readRuntimeRows('my_friend_requests_outgoing')
-  }, [
-    extendedState.myFriendRequestsOutgoing,
-    extendedState.outgoingFriendRequests,
-    state.connectionStatus,
-    state.users,
-  ])
+  const outgoingFriendRequestRows = useMemo(
+    () => extendedState.outgoingFriendRequests ?? [],
+    [extendedState.outgoingFriendRequests],
+  )
 
   // -- Processed lists ----------------------------------------------------
 

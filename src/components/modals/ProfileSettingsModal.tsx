@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useEffect, useMemo, type CSSPrope
 import { Check } from 'lucide-react'
 
 import { Modal } from './Modal'
-import { getAvatarColor, getInitial, avatarBytesToUrl, setProfileColor as persistProfileColor } from '../lib/avatarUtils'
+import { getAvatarColor, getInitial, avatarBytesToUrl, setProfileColor as persistProfileColor } from '../../lib/avatarUtils'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -95,21 +95,15 @@ export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
   const [editBio, setEditBio] = useState('')
   const [editStatus, setEditStatus] = useState('Online')
   const [uploadedPreview, setUploadedPreview] = useState<string | null>(null)
+  const uploadedPreviewRef = useRef<string | null>(null)
   const [avatarBytes, setAvatarBytes] = useState<Uint8Array | null>(null)
   const [saving, setSaving] = useState(false)
   const [avatarError, setAvatarError] = useState<string | null>(null)
   const [focusedField, setFocusedField] = useState<string | null>(null)
   const [profileColor, setProfileColor] = useState<string>('')
   const initialProfileColor = useRef('')
-
-  // Sync profile color from server data when modal opens
-  useEffect(() => {
-    if (isOpen && currentUser) {
-      const serverColor = (currentUser as any).profileColor ?? ''
-      setProfileColor(serverColor)
-      initialProfileColor.current = serverColor
-    }
-  }, [isOpen, currentUser])
+  const wasOpenRef = useRef(false)
+  const avatarDirtyRef = useRef(false)
 
   // Stable data URL from current user's avatar (no blob lifecycle issues)
   const existingAvatarUrl = useMemo(
@@ -120,24 +114,51 @@ export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
   // The preview to display: uploaded file takes priority, then existing avatar
   const avatarPreview = uploadedPreview ?? existingAvatarUrl ?? null
 
-  // Sync form with currentUser when modal opens
+  // Sync form with currentUser — full reset only on modal open transition;
+  // while already open, only update fields the user hasn't locally modified.
   useEffect(() => {
     if (isOpen && currentUser) {
-      setEditDisplayName(currentUser.displayName ?? '')
-      setEditBio((currentUser.bio as string) ?? '')
-      setEditStatus(getStatusTag(currentUser.status))
-      setAvatarBytes(null)
-      setAvatarError(null)
-      setUploadedPreview(null)
+      const justOpened = !wasOpenRef.current
+      if (justOpened) {
+        // Modal just opened — populate all fields from server state
+        setEditDisplayName(currentUser.displayName ?? '')
+        setEditBio((currentUser.bio as string) ?? '')
+        setEditStatus(getStatusTag(currentUser.status))
+        setAvatarBytes(null)
+        setAvatarError(null)
+        if (uploadedPreviewRef.current) {
+          URL.revokeObjectURL(uploadedPreviewRef.current)
+          uploadedPreviewRef.current = null
+        }
+        setUploadedPreview(null)
+        avatarDirtyRef.current = false
+        const serverColor = (currentUser as any).profileColor ?? ''
+        setProfileColor(serverColor)
+        initialProfileColor.current = serverColor
+      } else {
+        // Server pushed an update while modal is open —
+        // only refresh fields the user hasn't touched locally.
+        if (!avatarDirtyRef.current) {
+          setAvatarBytes(null)
+          if (uploadedPreviewRef.current) {
+            URL.revokeObjectURL(uploadedPreviewRef.current)
+            uploadedPreviewRef.current = null
+          }
+          setUploadedPreview(null)
+        }
+        // displayName / bio / status / profileColor are left as-is so the
+        // user doesn't lose in-progress edits.
+      }
     }
+    wasOpenRef.current = isOpen
   }, [isOpen, currentUser])
 
   // Revoke uploaded blob URL on unmount
   useEffect(() => {
     return () => {
-      if (uploadedPreview) URL.revokeObjectURL(uploadedPreview)
+      if (uploadedPreviewRef.current) URL.revokeObjectURL(uploadedPreviewRef.current)
     }
-  }, [uploadedPreview])
+  }, [])
 
   const handleAvatarUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -158,9 +179,12 @@ export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
       const arrayBuffer = reader.result as ArrayBuffer
       const bytes = new Uint8Array(arrayBuffer)
       setAvatarBytes(bytes)
+      avatarDirtyRef.current = true
       // Revoke previous uploaded preview before setting new one
-      if (uploadedPreview) URL.revokeObjectURL(uploadedPreview)
-      setUploadedPreview(URL.createObjectURL(file))
+      if (uploadedPreviewRef.current) URL.revokeObjectURL(uploadedPreviewRef.current)
+      const newUrl = URL.createObjectURL(file)
+      uploadedPreviewRef.current = newUrl
+      setUploadedPreview(newUrl)
     }
     reader.readAsArrayBuffer(file)
   }, [])

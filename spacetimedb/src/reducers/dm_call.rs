@@ -61,18 +61,18 @@ pub fn initiate_dm_call(ctx: &ReducerContext, dm_channel_id: u64) -> Result<(), 
         return Err("The other person is already calling you".into());
     }
 
-    // If either party is already in a voice call, reject
-    if ctx
-        .db
-        .voice_state()
-        .identity()
-        .find(ctx.sender())
-        .is_some()
-    {
-        return Err("You are already in a voice call".into());
+    // If caller is already in a voice call for a different channel, reject
+    if let Some(caller_vs) = ctx.db.voice_state().identity().find(ctx.sender()) {
+        if !(caller_vs.guild_id == 0 && caller_vs.channel_id == dm_channel_id) {
+            return Err("You are already in a voice call".into());
+        }
     }
-    if ctx.db.voice_state().identity().find(callee).is_some() {
-        return Err("The other person is already in a voice call".into());
+
+    // If callee is already in a voice call for a different channel, reject
+    if let Some(callee_vs) = ctx.db.voice_state().identity().find(callee) {
+        if !(callee_vs.guild_id == 0 && callee_vs.channel_id == dm_channel_id) {
+            return Err("The other person is already in a voice call".into());
+        }
     }
 
     ctx.db.dm_call_request().insert(DmCallRequest {
@@ -106,13 +106,7 @@ pub fn accept_dm_call(ctx: &ReducerContext, call_id: u64) -> Result<(), String> 
     ctx.db.dm_call_request().call_id().delete(call_id);
 
     // Clean up any existing voice states for both parties
-    if ctx
-        .db
-        .voice_state()
-        .identity()
-        .find(ctx.sender())
-        .is_some()
-    {
+    if ctx.db.voice_state().identity().find(ctx.sender()).is_some() {
         ctx.db.voice_state().identity().delete(ctx.sender());
     }
     if ctx.db.voice_state().identity().find(caller).is_some() {

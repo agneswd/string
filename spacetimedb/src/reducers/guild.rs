@@ -1,10 +1,11 @@
 use crate::{
-    helpers::{cleanup_member_voice_and_signals_in_guild, delete_channel_cascade, find_member, require_role},
+    helpers::{
+        cleanup_member_voice_and_signals_in_guild, delete_channel_cascade, find_member,
+        require_role,
+    },
     tables::{
-        channel as _, guild as _, guild__view as _, guild_invite as _,
-        guild_member as _, guild_member__view as _,
-        user as _, Channel, Guild,
-        GuildInvite, GuildMember,
+        channel as _, guild as _, guild__view as _, guild_invite as _, guild_member as _,
+        guild_member__view as _, user as _, Channel, Guild, GuildInvite, GuildMember,
     },
     types::{ChannelType, MemberRole},
 };
@@ -32,11 +33,17 @@ pub fn create_guild(ctx: &ReducerContext, name: String) -> Result<(), String> {
         return Err("You must register before creating a guild".into());
     }
 
-    let owned_count = ctx.db.guild().iter()
+    let owned_count = ctx
+        .db
+        .guild()
+        .iter()
         .filter(|g| g.owner_identity == who)
         .count();
     if owned_count > 0 {
-        return Err("You can only own one guild. Delete your existing guild to create a new one.".to_string());
+        return Err(
+            "You can only own one guild. Delete your existing guild to create a new one."
+                .to_string(),
+        );
     }
 
     let guild = ctx.db.guild().insert(Guild {
@@ -86,10 +93,16 @@ pub fn invite_member(
 ) -> Result<(), String> {
     require_role(ctx, guild_id, MemberRole::Admin)?;
 
-    ctx.db.guild().guild_id().find(guild_id)
+    ctx.db
+        .guild()
+        .guild_id()
+        .find(guild_id)
         .ok_or("Guild not found")?;
 
-    ctx.db.user().identity().find(target_identity)
+    ctx.db
+        .user()
+        .identity()
+        .find(target_identity)
         .ok_or("Target user is not registered")?;
 
     if find_member(ctx, guild_id, &target_identity).is_some() {
@@ -97,7 +110,11 @@ pub fn invite_member(
     }
 
     // Check no pending invite exists
-    let already_invited = ctx.db.guild_invite().invitee_identity().filter(target_identity)
+    let already_invited = ctx
+        .db
+        .guild_invite()
+        .invitee_identity()
+        .filter(target_identity)
         .any(|i| i.guild_id == guild_id);
     if already_invited {
         return Err("User already has a pending invite to this guild".into());
@@ -122,8 +139,13 @@ pub fn join_guild(ctx: &ReducerContext, guild_name: String) -> Result<(), String
     if ctx.db.user().identity().find(who).is_none() {
         return Err("You must register before joining a guild".into());
     }
-    
-    let guild = ctx.db.guild().iter().find(|g| g.name == guild_name).ok_or("Guild not found")?;
+
+    let guild = ctx
+        .db
+        .guild()
+        .iter()
+        .find(|g| g.name == guild_name)
+        .ok_or("Guild not found")?;
     let guild_id = guild.guild_id;
 
     if find_member(ctx, guild_id, &who).is_some() {

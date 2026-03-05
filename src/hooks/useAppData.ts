@@ -111,7 +111,7 @@ export function useAppData(): AppData {
     [identityString, state.myProfile, usersByIdentity],
   )
 
-  return {
+  return useMemo(() => ({
     state,
     actions,
     extendedState,
@@ -126,7 +126,7 @@ export function useAppData(): AppData {
     reactions,
     guildInvites,
     dmCallRequests,
-  }
+  }), [state, actions, extendedState, extendedActions, identityString, usersByIdentity, me, dmChannels, dmParticipants, dmMessages, dmReactions, reactions, guildInvites, dmCallRequests])
 }
 
 export { identityToString }

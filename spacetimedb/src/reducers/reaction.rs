@@ -1,8 +1,8 @@
 use crate::{
     helpers::require_role,
     tables::{
-        channel as _, channel__view as _, guild_member__view as _, message as _, message__view as _,
-        reaction as _, reaction__view as _, Reaction,
+        channel as _, channel__view as _, guild_member__view as _, message as _,
+        message__view as _, reaction as _, reaction__view as _, Reaction,
     },
     types::MemberRole,
 };

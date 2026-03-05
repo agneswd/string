@@ -199,9 +199,10 @@ pub fn my_friends(ctx: &ViewContext) -> Vec<User> {
         identities.insert(friendship.identity_low);
     }
 
+    // Look up each friend's User row individually via the unique identity index.
     identities
-        .into_iter()
-        .filter_map(|identity| ctx.db.user().identity().find(identity))
+        .iter()
+        .filter_map(|id| ctx.db.user().identity().find(id))
         .collect()
 }
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, type CSSProperties } from 'react'
+import React, { useEffect, useRef, useState, useCallback, type CSSProperties } from 'react'
 import { Phone, PhoneOff } from 'lucide-react'
 
 export interface IncomingCallModalProps {
@@ -114,6 +114,13 @@ export const IncomingCallModal = React.memo(function IncomingCallModal({
   onDecline,
   onIgnore,
 }: IncomingCallModalProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Auto-focus the container so keyboard shortcuts work immediately
+  useEffect(() => {
+    containerRef.current?.focus()
+  }, [])
+
   // Toggle pulse for animation (CSS transition-driven)
   const [pulse, setPulse] = useState(true)
 
@@ -171,7 +178,7 @@ export const IncomingCallModal = React.memo(function IncomingCallModal({
   )
 
   return (
-    <div style={overlay} role="dialog" aria-label={`Incoming call from ${callerName}`} onKeyDown={handleKeyDown}>
+    <div ref={containerRef} tabIndex={-1} style={overlay} role="dialog" aria-label={`Incoming call from ${callerName}`} onKeyDown={handleKeyDown}>
       <div style={card}>
         {/* Avatar with pulse ring */}
         <div style={avatarOuter(pulse)}>

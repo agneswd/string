@@ -1,6 +1,6 @@
 import { useMemo, memo } from 'react'
 import { Crown } from 'lucide-react'
-import { getAvatarColor, getInitial } from '../lib/avatarUtils'
+import { getAvatarColor, getInitial } from '../../lib/avatarUtils'
 
 export type MemberId = string | number
 

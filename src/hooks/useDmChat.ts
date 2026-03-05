@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import type { Identity } from 'spacetimedb/sdk'
 
 import type { AppData } from './useAppData'
@@ -226,6 +226,8 @@ export function useDmChat({
         return
       }
 
+      pendingDmWithRef.current = friendIdentityStr
+
       void runAction(
         () =>
           callActionOrReducer(extendedActions.createDmChannel, 'createDmChannel', {
@@ -247,6 +249,32 @@ export function useDmChat({
       extendedActions,
     ],
   )
+
+  // Auto-select newly created DM channel after reducer completes
+  const pendingDmWithRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    const pendingIdentity = pendingDmWithRef.current
+    if (!pendingIdentity || !identityString) return
+
+    const participantsByChannel = new Map<string, string[]>()
+    for (const p of dmParticipants) {
+      const channelId = toIdKey(p.dmChannelId)
+      const list = participantsByChannel.get(channelId) ?? []
+      list.push(identityToString(p.identity))
+      participantsByChannel.set(channelId, list)
+    }
+
+    for (const channel of myDmChannels) {
+      const channelId = toIdKey(channel.dmChannelId)
+      const pList = participantsByChannel.get(channelId) || []
+      if (pList.length === 2 && pList.includes(identityString) && pList.includes(pendingIdentity)) {
+        pendingDmWithRef.current = null
+        setSelectedDmChannelId(channelId)
+        return
+      }
+    }
+  }, [myDmChannels, dmParticipants, identityString])
 
   const onLeaveDmChannel = useCallback(
     (dmChannelId: string | number): void => {

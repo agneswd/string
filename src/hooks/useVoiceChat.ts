@@ -414,7 +414,7 @@ export function useVoiceChat({
     return () => {
       cancelled = true
     }
-  }, [currentVoiceState, startScreenShare, stopScreenShare, setActionError])
+  }, [currentVoiceState?.isStreaming, startScreenShare, stopScreenShare, setActionError])
 
   // Play join/leave sounds when other users enter/leave our voice channel
   useEffect(() => {

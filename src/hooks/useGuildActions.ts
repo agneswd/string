@@ -1,10 +1,12 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 
 import { getConn } from '../lib/connection'
 import { toChannelType } from '../lib/helpers'
 import type { ChannelTypeTag } from '../lib/helpers'
-import type { Guild } from '../module_bindings/types'
+import type { Guild, GuildInvite, User } from '../module_bindings/types'
 import type { ActionFeedback } from './useActionFeedback'
+import { identityToString } from './useAppData'
+import type { AppExtendedActions } from './useAppData'
 
 // Re-export for convenience
 export type { ChannelTypeTag }
@@ -22,6 +24,16 @@ export interface GuildActionsParams {
   setActionError: ActionFeedback['setActionError']
   setActionStatus: ActionFeedback['setActionStatus']
   setSelectedGuildId: (id: string | undefined) => void
+  identityString: string
+  guildInvites: GuildInvite[]
+  usersByIdentity: Map<string, User>
+  extendedActions: AppExtendedActions
+}
+
+export interface GuildInviteItem {
+  id: string
+  guildId: string
+  inviterName: string
 }
 
 export interface GuildActions {
@@ -44,6 +56,9 @@ export interface GuildActions {
   onInviteFriend: (friendIdentity: unknown) => void
   onLeaveGuild: (guildId: number | bigint | string) => void
   onDeleteGuild: (guildId: number | bigint | string) => void
+  myGuildInvites: GuildInviteItem[]
+  onAcceptGuildInvite: (inviteId: string) => void
+  onDeclineGuildInvite: (inviteId: string) => void
 }
 
 export function useGuildActions({
@@ -54,6 +69,10 @@ export function useGuildActions({
   setActionError,
   setActionStatus,
   setSelectedGuildId,
+  identityString,
+  guildInvites,
+  usersByIdentity,
+  extendedActions,
 }: GuildActionsParams): GuildActions {
   const [newGuildName, setNewGuildName] = useState('')
   const [newChannelName, setNewChannelName] = useState('')
@@ -133,13 +152,36 @@ export function useGuildActions({
     if (!confirm('Are you sure you want to delete this server? This action cannot be undone.')) return;
     void runAction(async () => {
       const conn = getConn();
-      const reducers = conn.reducers as unknown as Record<string, ((...args: unknown[]) => void) | undefined>;
+      const reducers = conn.reducers as unknown as Record<string, ((...args: unknown[]) => Promise<void>) | undefined>;
       const fn = reducers['deleteGuild'] ?? reducers['delete_guild'];
       if (!fn) throw new Error('deleteGuild reducer not available');
-      fn({ guildId: typeof guildId === 'string' ? BigInt(guildId) : guildId });
+      await fn({ guildId: typeof guildId === 'string' ? BigInt(guildId) : guildId });
     }, 'Server deleted');
     setSelectedGuildId(undefined);
   }, [runAction, setSelectedGuildId]);
+
+  const myGuildInvites = useMemo(() => {
+    if (!identityString) return []
+    return guildInvites
+      .filter((inv) => identityToString(inv.inviteeIdentity) === identityString)
+      .map((inv) => ({
+        id: String(inv.inviteId),
+        guildId: String(inv.guildId),
+        inviterName: usersByIdentity.get(identityToString(inv.inviterIdentity))?.username ?? 'Unknown',
+      }))
+  }, [guildInvites, identityString, usersByIdentity])
+
+  const onAcceptGuildInvite = useCallback((inviteId: string) => {
+    void runAction(async () => {
+      await extendedActions.acceptGuildInvite?.({ inviteId: BigInt(inviteId) })
+    }, 'Invite accepted')
+  }, [runAction, extendedActions])
+
+  const onDeclineGuildInvite = useCallback((inviteId: string) => {
+    void runAction(async () => {
+      await extendedActions.declineGuildInvite?.({ inviteId: BigInt(inviteId) })
+    }, 'Invite declined')
+  }, [runAction, extendedActions])
 
   return {
     newGuildName,
@@ -161,5 +203,8 @@ export function useGuildActions({
     onInviteFriend,
     onLeaveGuild,
     onDeleteGuild,
+    myGuildInvites,
+    onAcceptGuildInvite,
+    onDeclineGuildInvite,
   }
 }

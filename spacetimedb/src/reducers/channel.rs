@@ -1,6 +1,4 @@
-use crate::tables::{
-    channel as _, channel__view as _, guild_member__view as _,
-};
+use crate::tables::{channel as _, channel__view as _, guild_member__view as _};
 use crate::{
     helpers::{delete_channel_cascade, require_role},
     tables::Channel,

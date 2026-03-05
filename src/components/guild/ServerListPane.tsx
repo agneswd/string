@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, memo, type CSSProperties } from 'react'
-import { Plus, UserPlus, LogOut, Clipboard, Trash2, MessageCircle } from 'lucide-react'
+import { Plus, UserPlus, LogOut, Clipboard, Trash2, LineSquiggle } from 'lucide-react'
 
 export type GuildId = string | number
 
@@ -398,12 +398,12 @@ export const ServerListPane = memo(function ServerListPane({
           bgHover={ICON_BG_HOVER}
           onClick={onHomeClick}
         >
-          <MessageCircle size={28} />
+          <LineSquiggle size={32} />
         </ServerIcon>
       </div>
 
       {/* ── separator ────────────────────────────────── */}
-      <div style={separatorStyle} />
+      <div style={{ ...separatorStyle, margin: '8px 0' }} />
 
       {/* ── server list (scrollable region) ──────────── */}
       <div style={scrollRegionStyle}>
@@ -487,7 +487,7 @@ export const ServerListPane = memo(function ServerListPane({
       </div>
 
       {/* ── separator ────────────────────────────────── */}
-      <div style={separatorStyle} />
+      <div style={{ ...separatorStyle, margin: '8px 0' }} />
 
       {/* ── Add Server button ────────────────────────── */}
       <div style={addServerWrapStyle}>

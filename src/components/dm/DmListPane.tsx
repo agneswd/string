@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, memo } from 'react'
-import { getAvatarColor } from '../lib/avatarUtils'
+import { getAvatarColor } from '../../lib/avatarUtils'
 import { Users, Phone, X } from 'lucide-react'
 
 export type DmChannelId = string | number
@@ -264,20 +264,6 @@ export const DmListPane = memo(function DmListPane({
       style={rootStyle}
       aria-label="Direct Messages"
     >
-      {/* ── Search bar header ── */}
-      <header style={headerStyle}>
-        <div style={searchWrapStyle}>
-          <input
-            type="text"
-            placeholder="Find or start a conversation"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            style={searchInputStyle}
-            aria-label="Search direct messages"
-          />
-        </div>
-      </header>
-
       {/* ── Nav buttons ── */}
       <div style={navBtnPadStyle}>
         <button
@@ -451,6 +437,20 @@ export const DmListPane = memo(function DmListPane({
           )
         })}
       </ul>
+
+      {/* ── Search bar ── */}
+      <header style={headerStyle}>
+        <div style={searchWrapStyle}>
+          <input
+            type="text"
+            placeholder="Search Direct Messages"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            style={searchInputStyle}
+            aria-label="Search direct messages"
+          />
+        </div>
+      </header>
     </nav>
   )
 })

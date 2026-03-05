@@ -54,8 +54,13 @@ pub fn join_voice_channel(ctx: &ReducerContext, channel_id: u64) -> Result<(), S
 
 /// Leave current voice channel.
 #[spacetimedb::reducer]
-pub fn leave_voice_channel(ctx: &ReducerContext) {
-    ctx.db.voice_state().identity().delete(ctx.sender());
+pub fn leave_voice_channel(ctx: &ReducerContext) -> Result<(), String> {
+    let who = ctx.sender();
+
+    // Just delete — if no voice state exists, this is a no-op which is fine
+    ctx.db.voice_state().identity().delete(who);
+
+    Ok(())
 }
 
 /// Update mute/deafen/stream flags for current voice state.

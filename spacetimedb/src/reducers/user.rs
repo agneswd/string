@@ -1,10 +1,13 @@
 use crate::{
+    cancel_offline_jobs_for, emit_presence_change, status_after_login_identity_transfer,
+    update_user_status_if_changed,
     tables::{
-        dm_channel as _, dm_message as _, dm_participant as _, friend as _, friend__view as _,
-        friend_request as _, guild as _, guild_member as _, guild_member__view as _,
-        message as _, reaction as _, rtc_signal as _, user as _, user__view as _,
-        voice_state as _, DmChannel, DmMessage, DmParticipant, Friend, FriendRequest, Guild,
-        GuildMember, Message, Reaction, RtcSignal, User, VoiceState,
+        dm_call_request as _, dm_channel as _, dm_message as _, dm_participant as _, friend as _,
+        friend__view as _, friend_request as _, guild as _, guild_member as _,
+        guild_member__view as _, message as _, presence_state as _, reaction as _, rtc_signal as _,
+        user as _, user__view as _, voice_state as _, DmCallRequest, DmChannel, DmMessage,
+        DmParticipant, Friend, FriendRequest, Guild, GuildMember, Message, PresenceState, Reaction,
+        RtcSignal, User, VoiceState,
     },
     types::UserStatus,
 };
@@ -48,6 +51,7 @@ pub fn register_user(
         status: UserStatus::Online,
         created_at: ctx.timestamp,
     });
+    emit_presence_change(ctx, who, UserStatus::Online);
 
     log::info!("User registered: {}", who.to_abbreviated_hex());
     Ok(())
@@ -101,11 +105,7 @@ pub fn update_profile(
         if color.len() > 7 {
             return Err("Profile color must be a valid hex color".into());
         }
-        user.profile_color = if color.is_empty() {
-            None
-        } else {
-            Some(color)
-        };
+        user.profile_color = if color.is_empty() { None } else { Some(color) };
     }
 
     ctx.db.user().identity().update(user);
@@ -116,14 +116,8 @@ pub fn update_profile(
 #[spacetimedb::reducer]
 pub fn set_status(ctx: &ReducerContext, status: UserStatus) -> Result<(), String> {
     let who = ctx.sender();
-    let mut user = ctx
-        .db
-        .user()
-        .identity()
-        .find(who)
-        .ok_or("User not found")?;
-    user.status = status;
-    ctx.db.user().identity().update(user);
+    let mut user = ctx.db.user().identity().find(who).ok_or("User not found")?;
+    update_user_status_if_changed(ctx, &mut user, status);
     Ok(())
 }
 
@@ -154,12 +148,65 @@ pub fn login_as_user(ctx: &ReducerContext, username: String) -> Result<(), Strin
 
     let old_identity = target.identity;
 
+    let old_presence_state = ctx.db.presence_state().identity().find(old_identity);
+    let new_presence_state = ctx.db.presence_state().identity().find(new_identity);
+
+    let old_status_before_disconnect = old_presence_state
+        .as_ref()
+        .and_then(|state| state.status_before_disconnect.clone());
+    let new_status_before_disconnect = new_presence_state
+        .as_ref()
+        .and_then(|state| state.status_before_disconnect.clone());
+    let presence_state_migrations = usize::from(old_presence_state.is_some());
+
+    let canceled_offline_jobs =
+        cancel_offline_jobs_for(ctx, old_identity) + cancel_offline_jobs_for(ctx, new_identity);
+
+    let mut reconciled_presence_state = new_presence_state.clone().unwrap_or(PresenceState {
+        identity: new_identity,
+        online_session_count: 0,
+        status_before_disconnect: None,
+        generation: 0,
+    });
+    reconciled_presence_state.online_session_count =
+        reconciled_presence_state.online_session_count.max(1);
+    if reconciled_presence_state.status_before_disconnect.is_none() {
+        reconciled_presence_state.status_before_disconnect = old_status_before_disconnect.clone();
+    }
+    if let Some(old_state) = old_presence_state.as_ref() {
+        reconciled_presence_state.generation = reconciled_presence_state
+            .generation
+            .max(old_state.generation);
+    }
+    reconciled_presence_state.generation = reconciled_presence_state.generation.wrapping_add(1);
+
+    if let Some(_old_state) = old_presence_state {
+        ctx.db.presence_state().identity().delete(old_identity);
+    }
+
+    if new_presence_state.is_some() {
+        ctx.db
+            .presence_state()
+            .identity()
+            .update(reconciled_presence_state);
+    } else {
+        ctx.db.presence_state().insert(reconciled_presence_state);
+    }
+
     // Delete old user row, insert with new identity
     ctx.db.user().identity().delete(old_identity);
-    ctx.db.user().insert(User {
+    let mut transferred_user = ctx.db.user().insert(User {
         identity: new_identity,
         ..target
     });
+
+    if let Some(status) = status_after_login_identity_transfer(
+        &transferred_user.status,
+        new_status_before_disconnect.as_ref(),
+        old_status_before_disconnect.as_ref(),
+    ) {
+        update_user_status_if_changed(ctx, &mut transferred_user, status);
+    }
 
     // Cascade: Guild (owner_identity)
     let guilds: Vec<_> = ctx
@@ -280,10 +327,7 @@ pub fn login_as_user(ctx: &ReducerContext, username: String) -> Result<(), Strin
         .filter(&old_identity)
         .collect();
     for dc in dm_channels {
-        ctx.db
-            .dm_channel()
-            .dm_channel_id()
-            .delete(dc.dm_channel_id);
+        ctx.db.dm_channel().dm_channel_id().delete(dc.dm_channel_id);
         ctx.db.dm_channel().insert(DmChannel {
             created_by_identity: new_identity,
             ..dc
@@ -298,10 +342,7 @@ pub fn login_as_user(ctx: &ReducerContext, username: String) -> Result<(), Strin
         .filter(&old_identity)
         .collect();
     for m in dms {
-        ctx.db
-            .dm_message()
-            .dm_message_id()
-            .delete(m.dm_message_id);
+        ctx.db.dm_message().dm_message_id().delete(m.dm_message_id);
         ctx.db.dm_message().insert(DmMessage {
             author_identity: new_identity,
             ..m
@@ -323,6 +364,31 @@ pub fn login_as_user(ctx: &ReducerContext, username: String) -> Result<(), Strin
         ctx.db.dm_participant().insert(DmParticipant {
             identity: new_identity,
             ..p
+        });
+    }
+
+    // Cascade: DmCallRequest (caller_identity + callee_identity)
+    let call_requests: Vec<_> = ctx
+        .db
+        .dm_call_request()
+        .iter()
+        .filter(|call| call.caller_identity == old_identity || call.callee_identity == old_identity)
+        .collect();
+    let dm_call_request_migrations = call_requests.len();
+    for call in call_requests {
+        ctx.db.dm_call_request().call_id().delete(call.call_id);
+        ctx.db.dm_call_request().insert(DmCallRequest {
+            caller_identity: if call.caller_identity == old_identity {
+                new_identity
+            } else {
+                call.caller_identity
+            },
+            callee_identity: if call.callee_identity == old_identity {
+                new_identity
+            } else {
+                call.callee_identity
+            },
+            ..call
         });
     }
 
@@ -375,10 +441,13 @@ pub fn login_as_user(ctx: &ReducerContext, username: String) -> Result<(), Strin
     }
 
     log::info!(
-        "User '{}' identity transferred from {:?} to {:?}",
+        "User '{}' identity transferred from {:?} to {:?} (presence_state_migrations={}, presence_offline_jobs_canceled={}, dm_call_request_migrations={})",
         username,
         old_identity,
-        new_identity
+        new_identity,
+        presence_state_migrations,
+        canceled_offline_jobs,
+        dm_call_request_migrations,
     );
     Ok(())
 }
@@ -432,7 +501,7 @@ pub fn my_visible_users(ctx: &ViewContext) -> Vec<User> {
     }
 
     visible_identities
-        .into_iter()
-        .filter_map(|identity| ctx.db.user().identity().find(identity))
+        .iter()
+        .filter_map(|id| ctx.db.user().identity().find(id))
         .collect()
 }
