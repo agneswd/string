@@ -152,7 +152,7 @@ export function useDmChat({
       const myParticipant = dmParticipants.find((p) => toIdKey(p.dmChannelId) === dmChannelKey && identityToString(p.identity) === identityString)
       const lastReadId = myParticipant?.lastReadMessageId ? toSortableBigInt(myParticipant.lastReadMessageId) : null
       const latestMessageId = latestDmMessage?.dmMessageId ? toSortableBigInt(latestDmMessage.dmMessageId) : null
-      const hasUnread = latestMessageId && latestDmMessage?.sender && identityToString(latestDmMessage.sender) !== identityString && (!lastReadId || latestMessageId > lastReadId) ? 1 : 0
+      const hasUnread = latestMessageId && latestDmMessage?.authorIdentity && identityToString(latestDmMessage.authorIdentity) !== identityString && (!lastReadId || latestMessageId > lastReadId) ? 1 : 0
 
       return {
         id: dmChannelKey,

@@ -363,7 +363,6 @@ function App() {
     addNotification,
     friends,
     identityString,
-    dmMessagesHydrated: state.dmMessagesHydrated,
     dmParticipants: appData.dmParticipants,
     dmLastMessageByChannel: appData.dmLastMessageByChannel,
     selectedDmChannelId,

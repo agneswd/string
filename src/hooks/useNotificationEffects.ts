@@ -1,10 +1,11 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import type { DmMessage, DmParticipant, User } from '../module_bindings/types'
 import type { NotificationItem } from '../components/ui/NotificationToast'
 import type { FriendEntry } from './useFriends'
 import { identityToString } from './useAppData'
 import { playSound } from '../lib/sfx'
+import { toIdKey, toSortableBigInt } from '../lib/helpers'
 
 // ---------------------------------------------------------------------------
 // Params
@@ -16,7 +17,6 @@ interface UseNotificationEffectsParams {
   addNotification: (notif: Omit<NotificationItem, 'id'>) => void
   friends: FriendEntry[]
   identityString: string
-  dmMessagesHydrated: boolean
   dmParticipants: DmParticipant[]
   dmLastMessageByChannel: Map<string, DmMessage>
   selectedDmChannelId: string | undefined
@@ -40,7 +40,6 @@ export function useNotificationEffects({
   addNotification,
   friends,
   identityString,
-  dmMessagesHydrated,
   dmParticipants,
   dmLastMessageByChannel,
   selectedDmChannelId,
@@ -131,72 +130,74 @@ export function useNotificationEffects({
     }
   }, [])
 
-  // DM notifications for messages in non-selected channels
+  // ---------------------------------------------------------
+  // DM Notifications
+  // ---------------------------------------------------------
+  
+  // 1. Create a 1.5s silent window on mount to swallow the initial database sync flood
+  const [isReadyToNotify, setIsReadyToNotify] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setIsReadyToNotify(true), 1500)
+    return () => clearTimeout(timer)
+  }, [])
+
   const prevDmLastMessageIdByChannel = useRef<Map<string, bigint>>(new Map())
   const notifiedDmMessageIds = useRef<Set<string>>(new Set())
-  const dmNotificationsInitialized = useRef(false)
+  
   useEffect(() => {
     const prev = prevDmLastMessageIdByChannel.current
     const notified = notifiedDmMessageIds.current
 
-    if (!dmMessagesHydrated) {
-      prev.clear()
-      notified.clear()
-      dmNotificationsInitialized.current = false
-      return
-    }
-
+    // Convert the current cache to a manageable map of Channel ID -> Message ID
     const currentLastMessageIdByChannel = new Map<string, bigint>()
     for (const [channelId, message] of dmLastMessageByChannel) {
-      currentLastMessageIdByChannel.set(channelId, message.dmMessageId)
+      const msgId = toSortableBigInt(message.dmMessageId)
+      if (msgId !== null) currentLastMessageIdByChannel.set(channelId, msgId)
     }
 
-    if (!dmNotificationsInitialized.current) {
+    // 2. If we are in the initial loading window, update our trackers silently and abort
+    if (!isReadyToNotify) {
       prev.clear()
       for (const [channelId, messageId] of currentLastMessageIdByChannel) {
         prev.set(channelId, messageId)
       }
-      dmNotificationsInitialized.current = true
       return
     }
 
+    // 3. Normal notification processing
     const myLastReadMessageIdByChannel = new Map<string, bigint | null>()
     for (const participant of dmParticipants) {
-      if (identityToString(participant.identity) !== identityString) {
-        continue
-      }
-      myLastReadMessageIdByChannel.set(String(participant.dmChannelId), participant.lastReadMessageId ?? null)
+      if (identityToString(participant.identity) !== identityString) continue
+      const chKey = toIdKey(participant.dmChannelId)
+      myLastReadMessageIdByChannel.set(chKey, participant.lastReadMessageId ? toSortableBigInt(participant.lastReadMessageId) : null)
     }
 
     for (const [channelId, lastMessage] of dmLastMessageByChannel) {
-      const messageId = lastMessage.dmMessageId
-      const previousMessageId = prev.get(channelId)
-      const hasNewLatestMessage = previousMessageId === undefined || messageId > previousMessageId
+      const messageId = toSortableBigInt(lastMessage.dmMessageId)
+      if (messageId === null) continue
 
-      if (!hasNewLatestMessage) {
-        continue
-      }
+      const previousMessageId = prev.get(channelId)
+      
+      // Check if this message physically arrived in this exact render cycle
+      const hasNewLatestMessage = previousMessageId === undefined || messageId > previousMessageId
+      if (!hasNewLatestMessage) continue
 
       const senderId = identityToString(lastMessage.authorIdentity)
-      if (senderId === identityString || channelId === selectedDmChannelId) {
-        continue
-      }
+      if (senderId === identityString || channelId === selectedDmChannelId) continue
 
       const lastReadMessageId = myLastReadMessageIdByChannel.get(channelId) ?? null
       const isUnread = lastReadMessageId === null || messageId > lastReadMessageId
-      if (!isUnread) {
-        continue
-      }
+      if (!isUnread) continue
 
       const notificationKey = `${channelId}:${messageId.toString()}`
-      if (notified.has(notificationKey)) {
-        continue
-      }
+      if (notified.has(notificationKey)) continue
+      
       notified.add(notificationKey)
 
       const senderUser = usersByIdentity.get(senderId)
       const senderName = senderUser?.displayName ?? senderUser?.username ?? 'Someone'
       playSound('message-received')
+      
       addNotification({
         message: `${senderName}`,
         subtitle: String(lastMessage.content ?? '').slice(0, 100),
@@ -208,9 +209,10 @@ export function useNotificationEffects({
       })
     }
 
+    // Update the tracker for the next render tick
     prev.clear()
     for (const [channelId, messageId] of currentLastMessageIdByChannel) {
       prev.set(channelId, messageId)
     }
-  }, [dmMessagesHydrated, dmParticipants, dmLastMessageByChannel, identityString, selectedDmChannelId, addNotification, usersByIdentity, setSelectedDmChannelId, setSelectedGuildId])
+  }, [isReadyToNotify, dmParticipants, dmLastMessageByChannel, identityString, selectedDmChannelId, addNotification, usersByIdentity, setSelectedDmChannelId, setSelectedGuildId])
 }

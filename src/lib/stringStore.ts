@@ -144,6 +144,7 @@ const CORE_SUBSCRIPTION_QUERIES = [
   'SELECT * FROM my_friend_requests_outgoing',
   'SELECT * FROM my_dm_channels',
   'SELECT * FROM my_dm_participants',
+  'SELECT * FROM dm_message',
   'SELECT * FROM my_dm_call_events',
   'SELECT * FROM my_rtc_signals',
   'SELECT * FROM my_voice_states',
@@ -747,7 +748,6 @@ class StringStore {
         this.updateState({ connectionStatus: 'error', error: 'DM channel subscription error' })
       })
       .subscribe([
-        `SELECT * FROM dm_message WHERE dm_channel_id = ${dmChannelIdLiteral}`,
         `SELECT * FROM dm_reaction WHERE dm_channel_id = ${dmChannelIdLiteral}`,
       ])
   }
