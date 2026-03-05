@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 
-import type { DmMessage, User } from '../module_bindings/types'
+import type { DmMessage, DmParticipant, User } from '../module_bindings/types'
 import type { NotificationItem } from '../components/ui/NotificationToast'
 import type { FriendEntry } from './useFriends'
 import { identityToString } from './useAppData'
@@ -17,7 +17,7 @@ interface UseNotificationEffectsParams {
   friends: FriendEntry[]
   identityString: string
   dmMessagesHydrated: boolean
-  dmMessageCountsByChannel: Map<string, number>
+  dmParticipants: DmParticipant[]
   dmLastMessageByChannel: Map<string, DmMessage>
   selectedDmChannelId: string | undefined
   usersByIdentity: Map<string, User>
@@ -41,7 +41,7 @@ export function useNotificationEffects({
   friends,
   identityString,
   dmMessagesHydrated,
-  dmMessageCountsByChannel,
+  dmParticipants,
   dmLastMessageByChannel,
   selectedDmChannelId,
   usersByIdentity,
@@ -132,60 +132,85 @@ export function useNotificationEffects({
   }, [])
 
   // DM notifications for messages in non-selected channels
-  const prevDmMsgCounts = useRef<Map<string, number>>(new Map())
-  const dmCountsInitialized = useRef(false)
+  const prevDmLastMessageIdByChannel = useRef<Map<string, bigint>>(new Map())
+  const notifiedDmMessageIds = useRef<Set<string>>(new Set())
+  const dmNotificationsInitialized = useRef(false)
   useEffect(() => {
-    const prev = prevDmMsgCounts.current
+    const prev = prevDmLastMessageIdByChannel.current
+    const notified = notifiedDmMessageIds.current
 
     if (!dmMessagesHydrated) {
       prev.clear()
-      for (const [chId, count] of dmMessageCountsByChannel) {
-        prev.set(chId, count)
-      }
-      dmCountsInitialized.current = false
+      notified.clear()
+      dmNotificationsInitialized.current = false
       return
     }
 
-    if (!dmCountsInitialized.current) {
+    const currentLastMessageIdByChannel = new Map<string, bigint>()
+    for (const [channelId, message] of dmLastMessageByChannel) {
+      currentLastMessageIdByChannel.set(channelId, message.dmMessageId)
+    }
+
+    if (!dmNotificationsInitialized.current) {
       prev.clear()
-      for (const [chId, count] of dmMessageCountsByChannel) {
-        prev.set(chId, count)
+      for (const [channelId, messageId] of currentLastMessageIdByChannel) {
+        prev.set(channelId, messageId)
       }
-      dmCountsInitialized.current = true
+      dmNotificationsInitialized.current = true
       return
     }
 
-    for (const [chId, count] of dmMessageCountsByChannel) {
-      const prevCount = prev.get(chId) ?? 0
-      if (count > prevCount) {
-        // New message(s) in this channel
-        const lastMsg = dmLastMessageByChannel.get(chId)
-        if (lastMsg) {
-          const senderId = identityToString(lastMsg.authorIdentity)
-          if (senderId !== identityString && chId !== selectedDmChannelId) {
-            // Not from us, and not in the currently open channel
-            const senderUser = usersByIdentity.get(senderId)
-            const senderName = senderUser?.displayName ?? senderUser?.username ?? 'Someone'
-            playSound('message-received')
-            addNotification({
-              message: `${senderName}`,
-              subtitle: String(lastMsg.content ?? '').slice(0, 100),
-              type: 'message' as const,
-              onClick: () => {
-                setSelectedDmChannelId(chId)
-                setSelectedGuildId(undefined)
-              },
-            })
-          }
-        }
+    const myLastReadMessageIdByChannel = new Map<string, bigint | null>()
+    for (const participant of dmParticipants) {
+      if (identityToString(participant.identity) !== identityString) {
+        continue
       }
-      prev.set(chId, count)
+      myLastReadMessageIdByChannel.set(String(participant.dmChannelId), participant.lastReadMessageId ?? null)
     }
 
-    for (const channelId of Array.from(prev.keys())) {
-      if (!dmMessageCountsByChannel.has(channelId)) {
-        prev.delete(channelId)
+    for (const [channelId, lastMessage] of dmLastMessageByChannel) {
+      const messageId = lastMessage.dmMessageId
+      const previousMessageId = prev.get(channelId)
+      const hasNewLatestMessage = previousMessageId === undefined || messageId > previousMessageId
+
+      if (!hasNewLatestMessage) {
+        continue
       }
+
+      const senderId = identityToString(lastMessage.authorIdentity)
+      if (senderId === identityString || channelId === selectedDmChannelId) {
+        continue
+      }
+
+      const lastReadMessageId = myLastReadMessageIdByChannel.get(channelId) ?? null
+      const isUnread = lastReadMessageId === null || messageId > lastReadMessageId
+      if (!isUnread) {
+        continue
+      }
+
+      const notificationKey = `${channelId}:${messageId.toString()}`
+      if (notified.has(notificationKey)) {
+        continue
+      }
+      notified.add(notificationKey)
+
+      const senderUser = usersByIdentity.get(senderId)
+      const senderName = senderUser?.displayName ?? senderUser?.username ?? 'Someone'
+      playSound('message-received')
+      addNotification({
+        message: `${senderName}`,
+        subtitle: String(lastMessage.content ?? '').slice(0, 100),
+        type: 'message' as const,
+        onClick: () => {
+          setSelectedDmChannelId(channelId)
+          setSelectedGuildId(undefined)
+        },
+      })
     }
-  }, [dmMessagesHydrated, dmMessageCountsByChannel, dmLastMessageByChannel, identityString, selectedDmChannelId, addNotification, usersByIdentity, setSelectedDmChannelId, setSelectedGuildId])
+
+    prev.clear()
+    for (const [channelId, messageId] of currentLastMessageIdByChannel) {
+      prev.set(channelId, messageId)
+    }
+  }, [dmMessagesHydrated, dmParticipants, dmLastMessageByChannel, identityString, selectedDmChannelId, addNotification, usersByIdentity, setSelectedDmChannelId, setSelectedGuildId])
 }

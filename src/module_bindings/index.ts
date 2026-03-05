@@ -86,8 +86,10 @@ import UpdateVoiceStateReducer from "./update_voice_state_reducer";
 // Import all table schema definitions
 import DmCallEventRow from "./dm_call_event_table";
 import DmCallRequestRow from "./dm_call_request_table";
+import DmMessageRow from "./dm_message_table";
 import DmReactionRow from "./dm_reaction_table";
 import GuildInviteRow from "./guild_invite_table";
+import MessageRow from "./message_table";
 import MyChannelsRow from "./my_channels_table";
 import MyDmCallEventsRow from "./my_dm_call_events_table";
 import MyDmChannelsRow from "./my_dm_channels_table";
@@ -145,6 +147,23 @@ const tablesSchema = __schema({
       { name: 'dm_call_request_call_id_key', constraint: 'unique', columns: ['callId'] },
     ],
   }, DmCallRequestRow),
+  dm_message: __table({
+    name: 'dm_message',
+    indexes: [
+      { name: 'dm_message_by_author_identity', algorithm: 'btree', columns: [
+        'authorIdentity',
+      ] },
+      { name: 'dm_message_by_dm_channel_id', algorithm: 'btree', columns: [
+        'dmChannelId',
+      ] },
+      { name: 'dm_message_id', algorithm: 'btree', columns: [
+        'dmMessageId',
+      ] },
+    ],
+    constraints: [
+      { name: 'dm_message_dm_message_id_key', constraint: 'unique', columns: ['dmMessageId'] },
+    ],
+  }, DmMessageRow),
   dm_reaction: __table({
     name: 'dm_reaction',
     indexes: [
@@ -182,6 +201,20 @@ const tablesSchema = __schema({
       { name: 'guild_invite_invite_id_key', constraint: 'unique', columns: ['inviteId'] },
     ],
   }, GuildInviteRow),
+  message: __table({
+    name: 'message',
+    indexes: [
+      { name: 'channel_id', algorithm: 'btree', columns: [
+        'channelId',
+      ] },
+      { name: 'message_id', algorithm: 'btree', columns: [
+        'messageId',
+      ] },
+    ],
+    constraints: [
+      { name: 'message_message_id_key', constraint: 'unique', columns: ['messageId'] },
+    ],
+  }, MessageRow),
   user: __table({
     name: 'user',
     indexes: [

@@ -364,7 +364,7 @@ function App() {
     friends,
     identityString,
     dmMessagesHydrated: state.dmMessagesHydrated,
-    dmMessageCountsByChannel: appData.dmMessageCountsByChannel,
+    dmParticipants: appData.dmParticipants,
     dmLastMessageByChannel: appData.dmLastMessageByChannel,
     selectedDmChannelId,
     usersByIdentity,

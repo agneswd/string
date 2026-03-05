@@ -92,7 +92,6 @@ export function useDmChat({
     dmMessages,
     dmReactions,
     dmCallEvents,
-    dmUnreadCountsByChannel,
     dmLastMessageByChannel,
     identityString,
     usersByIdentity,
@@ -149,18 +148,21 @@ export function useDmChat({
         }
       }
 
-      const unreadCount = dmUnreadCountsByChannel.get(dmChannelKey) ?? 0
       const latestDmMessage = dmLastMessageByChannel.get(dmChannelKey)
+      const myParticipant = dmParticipants.find((p) => toIdKey(p.dmChannelId) === dmChannelKey && identityToString(p.identity) === identityString)
+      const lastReadId = myParticipant?.lastReadMessageId ? toSortableBigInt(myParticipant.lastReadMessageId) : null
+      const latestMessageId = latestDmMessage?.dmMessageId ? toSortableBigInt(latestDmMessage.dmMessageId) : null
+      const hasUnread = latestMessageId && latestDmMessage?.sender && identityToString(latestDmMessage.sender) !== identityString && (!lastReadId || latestMessageId > lastReadId) ? 1 : 0
 
       return {
         id: dmChannelKey,
         name: names.length > 0 ? names.join(', ') : `dm-${dmChannelKey}`,
         status,
-        unreadCount,
+        unreadCount: hasUnread,
         lastMessage: latestDmMessage ? String(latestDmMessage.content ?? '') : undefined,
       }
     })
-  }, [dmParticipants, identityString, myDmChannels, usersByIdentity, dmUnreadCountsByChannel, dmLastMessageByChannel])
+  }, [dmParticipants, identityString, myDmChannels, usersByIdentity, dmLastMessageByChannel])
 
   const selectedDmChannel = useMemo(
     () => myDmChannels.find((channel) => toIdKey(channel.dmChannelId) === selectedDmChannelId) ?? null,
