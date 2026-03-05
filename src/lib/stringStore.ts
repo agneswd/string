@@ -57,12 +57,25 @@ type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'disconnected' | '
 
 type TableLike = {
   iter?: () => IterableIterator<unknown>
-  onInsert?: (cb: (...args: unknown[]) => void) => void
-  onDelete?: (cb: (...args: unknown[]) => void) => void
-  onUpdate?: (cb: (...args: unknown[]) => void) => void
-  removeOnInsert?: (cb: (...args: unknown[]) => void) => void
-  removeOnDelete?: (cb: (...args: unknown[]) => void) => void
-  removeOnUpdate?: (cb: (...args: unknown[]) => void) => void
+  onInsert?: (cb: TableMutationHandler) => void
+  onDelete?: (cb: TableMutationHandler) => void
+  onUpdate?: (cb: TableMutationHandler) => void
+  removeOnInsert?: (cb: TableMutationHandler) => void
+  removeOnDelete?: (cb: TableMutationHandler) => void
+  removeOnUpdate?: (cb: TableMutationHandler) => void
+}
+
+type TableMutationHandler = (...args: unknown[]) => void
+
+type HotTableKey = 'my_messages' | 'my_reactions' | 'my_dm_messages' | 'dm_reaction'
+
+const HOT_TABLE_KEYS = new Set<HotTableKey>(['my_messages', 'my_reactions', 'my_dm_messages', 'dm_reaction'])
+
+type AttachedTableHandlers = {
+  table: TableLike
+  insertHandler?: TableMutationHandler
+  deleteHandler?: TableMutationHandler
+  updateHandler?: TableMutationHandler
 }
 
 type ReducerFn<TParams> = (params: TParams) => Promise<void>
@@ -155,6 +168,10 @@ export type StringState = {
   voiceStates: VoiceState[]
   myRtcSignals: RtcSignal[]
   dmCallRequests: DmCallRequest[]
+  guildMessagesVersion: number
+  guildReactionsVersion: number
+  dmMessagesVersion: number
+  dmReactionsVersion: number
   error: string | null
 }
 
@@ -182,12 +199,16 @@ class StringStore {
     voiceStates: [],
     myRtcSignals: [],
     dmCallRequests: [],
+    guildMessagesVersion: 0,
+    guildReactionsVersion: 0,
+    dmMessagesVersion: 0,
+    dmReactionsVersion: 0,
     error: null,
   }
 
   private listeners = new Set<StringStoreListener>()
   private connectionInitialized = false
-  private attachedTables: { table: TableLike; handler: () => void }[] = []
+  private attachedTables: AttachedTableHandlers[] = []
   private coreSubscription: SubscriptionHandle | null = null
   private activeGuildChannelSubscription: SubscriptionHandle | null = null
   private activeDmChannelSubscription: SubscriptionHandle | null = null
@@ -198,7 +219,15 @@ class StringStore {
   private syncScheduled = false
   private pendingMutatedTables = new Set<string>()
 
-  private createTableMutationHandler(tableKey: string): () => void {
+  private messagesById = new Map<string, Message>()
+  private messageOrderByChannel = new Map<string, string[]>()
+  private reactionsByMessage = new Map<string, Map<string, Reaction>>()
+
+  private dmMessagesById = new Map<string, DmMessage>()
+  private dmMessageOrderByChannel = new Map<string, string[]>()
+  private dmReactionsByMessage = new Map<string, Map<string, DmReaction>>()
+
+  private createTableMutationHandler(tableKey: string): TableMutationHandler {
     return () => {
       this.pendingMutatedTables.add(tableKey)
       if (!this.syncScheduled) {
@@ -242,6 +271,7 @@ class StringStore {
         this.connectionInitialized = false
         this.unsubscribeAllSubscriptionHandles()
         this.detachRealtimeListeners()
+        this.clearHotIndexes()
         this.updateState({
           connectionStatus: 'disconnected',
           identity: null,
@@ -263,12 +293,17 @@ class StringStore {
           voiceStates: [],
           myRtcSignals: [],
           dmCallRequests: [],
+          guildMessagesVersion: this.state.guildMessagesVersion + 1,
+          guildReactionsVersion: this.state.guildReactionsVersion + 1,
+          dmMessagesVersion: this.state.dmMessagesVersion + 1,
+          dmReactionsVersion: this.state.dmReactionsVersion + 1,
         })
       },
       onConnectError: (err) => {
         this.connectionInitialized = false
         this.unsubscribeAllSubscriptionHandles()
         this.detachRealtimeListeners()
+        this.clearHotIndexes()
         this.updateState({
           connectionStatus: 'error',
           error: err.message,
@@ -284,6 +319,7 @@ class StringStore {
     this.realtimeAttached = false
     this.syncScheduled = false
     this.pendingMutatedTables.clear()
+    this.clearHotIndexes()
     this.unsubscribeAllSubscriptionHandles()
 
     this.detachRealtimeListeners()
@@ -517,11 +553,22 @@ class StringStore {
         continue
       }
 
+      if (this.isHotTableKey(key)) {
+        const insertHandler = this.createHotInsertHandler(key)
+        const deleteHandler = this.createHotDeleteHandler(key)
+        const updateHandler = this.createHotUpdateHandler(key)
+        table.onInsert?.(insertHandler)
+        table.onDelete?.(deleteHandler)
+        table.onUpdate?.(updateHandler)
+        this.attachedTables.push({ table, insertHandler, deleteHandler, updateHandler })
+        continue
+      }
+
       const handler = this.createTableMutationHandler(key)
       table.onInsert?.(handler)
       table.onDelete?.(handler)
       table.onUpdate?.(handler)
-      this.attachedTables.push({ table, handler })
+      this.attachedTables.push({ table, insertHandler: handler, deleteHandler: handler, updateHandler: handler })
     }
 
     if (missingTableKeys.length > 0) {
@@ -534,7 +581,7 @@ class StringStore {
       preferredVoiceTable.onInsert?.(handler)
       preferredVoiceTable.onDelete?.(handler)
       preferredVoiceTable.onUpdate?.(handler)
-      this.attachedTables.push({ table: preferredVoiceTable, handler })
+      this.attachedTables.push({ table: preferredVoiceTable, insertHandler: handler, deleteHandler: handler, updateHandler: handler })
     }
 
     this.realtimeAttached = true;
@@ -578,13 +625,29 @@ class StringStore {
   private clearGuildChannelState(): void {
     this.pendingMutatedTables.delete('my_messages')
     this.pendingMutatedTables.delete('my_reactions')
-    this.updateState({ messages: [], reactions: [] })
+    this.messagesById.clear()
+    this.messageOrderByChannel.clear()
+    this.reactionsByMessage.clear()
+    this.updateState({
+      messages: [],
+      reactions: [],
+      guildMessagesVersion: this.state.guildMessagesVersion + 1,
+      guildReactionsVersion: this.state.guildReactionsVersion + 1,
+    })
   }
 
   private clearDmChannelState(): void {
     this.pendingMutatedTables.delete('my_dm_messages')
     this.pendingMutatedTables.delete('dm_reaction')
-    this.updateState({ dmMessages: [], dmReactions: [] })
+    this.dmMessagesById.clear()
+    this.dmMessageOrderByChannel.clear()
+    this.dmReactionsByMessage.clear()
+    this.updateState({
+      dmMessages: [],
+      dmReactions: [],
+      dmMessagesVersion: this.state.dmMessagesVersion + 1,
+      dmReactionsVersion: this.state.dmReactionsVersion + 1,
+    })
   }
 
   private swapGuildChannelSubscription(selectedTextChannelId: string | null): void {
@@ -656,10 +719,10 @@ class StringStore {
   }
 
   private detachRealtimeListeners(): void {
-    for (const { table, handler } of this.attachedTables) {
-      table.removeOnInsert?.(handler)
-      table.removeOnDelete?.(handler)
-      table.removeOnUpdate?.(handler)
+    for (const { table, insertHandler, deleteHandler, updateHandler } of this.attachedTables) {
+      if (insertHandler) table.removeOnInsert?.(insertHandler)
+      if (deleteHandler) table.removeOnDelete?.(deleteHandler)
+      if (updateHandler) table.removeOnUpdate?.(updateHandler)
     }
     this.attachedTables = []
     this.realtimeAttached = false
@@ -752,12 +815,34 @@ class StringStore {
     if (syncAll || mutated.has('my_guilds')) next.guilds = this.readRows<Guild>(db, 'my_guilds')
     if (syncAll || mutated.has('my_guild_members')) next.guildMembers = this.readRows<GuildMember>(db, 'my_guild_members')
     if (syncAll || mutated.has('my_channels')) next.channels = this.readRows<Channel>(db, 'my_channels')
-    if (syncAll || mutated.has('my_messages')) next.messages = this.readRows<Message>(db, 'my_messages')
+
+    const shouldSyncGuildMessages = syncAll || mutated.has('my_messages')
+    const shouldSyncGuildReactions = syncAll || mutated.has('my_reactions')
+    if (shouldSyncGuildMessages || shouldSyncGuildReactions) {
+      const messages = this.readRows<Message>(db, 'my_messages')
+      const reactions = this.readRows<Reaction>(db, 'my_reactions')
+      this.rebuildGuildHotIndexes(messages, reactions)
+      next.messages = this.getSelectedGuildMessages()
+      next.reactions = this.getSelectedGuildReactions(next.messages)
+      if (shouldSyncGuildMessages) next.guildMessagesVersion = prev.guildMessagesVersion + 1
+      if (shouldSyncGuildReactions) next.guildReactionsVersion = prev.guildReactionsVersion + 1
+    }
+
     if (syncAll || mutated.has('my_dm_channels')) next.dmChannels = this.readRows<DmChannel>(db, 'my_dm_channels')
     if (syncAll || mutated.has('my_dm_participants')) next.dmParticipants = this.readRows<DmParticipant>(db, 'my_dm_participants')
-    if (syncAll || mutated.has('my_dm_messages')) next.dmMessages = this.readRows<DmMessage>(db, 'my_dm_messages')
-    if (syncAll || mutated.has('my_reactions')) next.reactions = this.readRows<Reaction>(db, 'my_reactions')
-    if (syncAll || mutated.has('dm_reaction')) next.dmReactions = this.readRows<DmReaction>(db, 'dm_reaction')
+
+    const shouldSyncDmMessages = syncAll || mutated.has('my_dm_messages')
+    const shouldSyncDmReactions = syncAll || mutated.has('dm_reaction')
+    if (shouldSyncDmMessages || shouldSyncDmReactions) {
+      const dmMessages = this.readRows<DmMessage>(db, 'my_dm_messages')
+      const dmReactions = this.readRows<DmReaction>(db, 'dm_reaction')
+      this.rebuildDmHotIndexes(dmMessages, dmReactions)
+      next.dmMessages = this.getSelectedDmMessages()
+      next.dmReactions = this.getSelectedDmReactions(next.dmMessages)
+      if (shouldSyncDmMessages) next.dmMessagesVersion = prev.dmMessagesVersion + 1
+      if (shouldSyncDmReactions) next.dmReactionsVersion = prev.dmReactionsVersion + 1
+    }
+
     if (syncAll || mutated.has('guild_invite')) next.guildInvites = this.readRows<GuildInvite>(db, 'guild_invite')
     if (friendsChanged) next.friends = myFriends
     if (syncAll || mutated.has('my_friend_requests_incoming')) next.incomingFriendRequests = this.readRows<FriendRequest>(db, 'my_friend_requests_incoming')
@@ -776,6 +861,705 @@ class StringStore {
     }
 
     return Array.from(table.iter() as IterableIterator<T>)
+  }
+
+  private isHotTableKey(key: string): key is HotTableKey {
+    return HOT_TABLE_KEYS.has(key as HotTableKey)
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null
+  }
+
+  private isMessageRow(value: unknown): value is Message {
+    if (!this.isRecord(value)) return false
+    return 'messageId' in value && 'channelId' in value
+  }
+
+  private isReactionRow(value: unknown): value is Reaction {
+    if (!this.isRecord(value)) return false
+    return 'reactionId' in value && 'messageId' in value && 'channelId' in value
+  }
+
+  private isDmMessageRow(value: unknown): value is DmMessage {
+    if (!this.isRecord(value)) return false
+    return 'dmMessageId' in value && 'dmChannelId' in value
+  }
+
+  private isDmReactionRow(value: unknown): value is DmReaction {
+    if (!this.isRecord(value)) return false
+    return 'dmReactionId' in value && 'dmMessageId' in value && 'dmChannelId' in value
+  }
+
+  private findLastMatchingArg<T>(args: unknown[], guard: (value: unknown) => value is T): T | null {
+    for (let index = args.length - 1; index >= 0; index -= 1) {
+      if (guard(args[index])) {
+        return args[index]
+      }
+    }
+    return null
+  }
+
+  private getUpdateRows<T>(args: unknown[], guard: (value: unknown) => value is T): { oldRow: T | null; newRow: T | null } {
+    const matchingRows = args.filter(guard)
+    if (matchingRows.length === 0) {
+      return { oldRow: null, newRow: null }
+    }
+    if (matchingRows.length === 1) {
+      return { oldRow: null, newRow: matchingRows[0] }
+    }
+    return {
+      oldRow: matchingRows[matchingRows.length - 2],
+      newRow: matchingRows[matchingRows.length - 1],
+    }
+  }
+
+  private createHotInsertHandler(tableKey: HotTableKey): TableMutationHandler {
+    return (...args: unknown[]) => {
+      switch (tableKey) {
+        case 'my_messages': {
+          const row = this.findLastMatchingArg(args, this.isMessageRow.bind(this))
+          if (!row) {
+            this.syncFromCache()
+            return
+          }
+          this.applyGuildMessageInsert(row)
+          return
+        }
+        case 'my_reactions': {
+          const row = this.findLastMatchingArg(args, this.isReactionRow.bind(this))
+          if (!row) {
+            this.syncFromCache()
+            return
+          }
+          this.applyGuildReactionInsert(row)
+          return
+        }
+        case 'my_dm_messages': {
+          const row = this.findLastMatchingArg(args, this.isDmMessageRow.bind(this))
+          if (!row) {
+            this.syncFromCache()
+            return
+          }
+          this.applyDmMessageInsert(row)
+          return
+        }
+        case 'dm_reaction': {
+          const row = this.findLastMatchingArg(args, this.isDmReactionRow.bind(this))
+          if (!row) {
+            this.syncFromCache()
+            return
+          }
+          this.applyDmReactionInsert(row)
+          return
+        }
+      }
+    }
+  }
+
+  private createHotDeleteHandler(tableKey: HotTableKey): TableMutationHandler {
+    return (...args: unknown[]) => {
+      switch (tableKey) {
+        case 'my_messages': {
+          const row = this.findLastMatchingArg(args, this.isMessageRow.bind(this))
+          if (!row) {
+            this.syncFromCache()
+            return
+          }
+          this.applyGuildMessageDelete(row)
+          return
+        }
+        case 'my_reactions': {
+          const row = this.findLastMatchingArg(args, this.isReactionRow.bind(this))
+          if (!row) {
+            this.syncFromCache()
+            return
+          }
+          this.applyGuildReactionDelete(row)
+          return
+        }
+        case 'my_dm_messages': {
+          const row = this.findLastMatchingArg(args, this.isDmMessageRow.bind(this))
+          if (!row) {
+            this.syncFromCache()
+            return
+          }
+          this.applyDmMessageDelete(row)
+          return
+        }
+        case 'dm_reaction': {
+          const row = this.findLastMatchingArg(args, this.isDmReactionRow.bind(this))
+          if (!row) {
+            this.syncFromCache()
+            return
+          }
+          this.applyDmReactionDelete(row)
+          return
+        }
+      }
+    }
+  }
+
+  private createHotUpdateHandler(tableKey: HotTableKey): TableMutationHandler {
+    return (...args: unknown[]) => {
+      switch (tableKey) {
+        case 'my_messages': {
+          const { oldRow, newRow } = this.getUpdateRows(args, this.isMessageRow.bind(this))
+          if (!newRow) {
+            this.syncFromCache()
+            return
+          }
+          this.applyGuildMessageUpdate(oldRow, newRow)
+          return
+        }
+        case 'my_reactions': {
+          const { oldRow, newRow } = this.getUpdateRows(args, this.isReactionRow.bind(this))
+          if (!newRow) {
+            this.syncFromCache()
+            return
+          }
+          this.applyGuildReactionUpdate(oldRow, newRow)
+          return
+        }
+        case 'my_dm_messages': {
+          const { oldRow, newRow } = this.getUpdateRows(args, this.isDmMessageRow.bind(this))
+          if (!newRow) {
+            this.syncFromCache()
+            return
+          }
+          this.applyDmMessageUpdate(oldRow, newRow)
+          return
+        }
+        case 'dm_reaction': {
+          const { oldRow, newRow } = this.getUpdateRows(args, this.isDmReactionRow.bind(this))
+          if (!newRow) {
+            this.syncFromCache()
+            return
+          }
+          this.applyDmReactionUpdate(oldRow, newRow)
+          return
+        }
+      }
+    }
+  }
+
+  private clearHotIndexes(): void {
+    this.messagesById.clear()
+    this.messageOrderByChannel.clear()
+    this.reactionsByMessage.clear()
+    this.dmMessagesById.clear()
+    this.dmMessageOrderByChannel.clear()
+    this.dmReactionsByMessage.clear()
+  }
+
+  private rebuildGuildHotIndexes(messages: Message[], reactions: Reaction[]): void {
+    this.messagesById.clear()
+    this.messageOrderByChannel.clear()
+    this.reactionsByMessage.clear()
+
+    for (const message of messages) {
+      const messageId = String(message.messageId)
+      const channelKey = String(message.channelId)
+      this.messagesById.set(messageId, message)
+      const order = this.messageOrderByChannel.get(channelKey)
+      if (order) {
+        order.push(messageId)
+      } else {
+        this.messageOrderByChannel.set(channelKey, [messageId])
+      }
+    }
+
+    for (const reaction of reactions) {
+      const messageKey = String(reaction.messageId)
+      const reactionId = String(reaction.reactionId)
+      const bucket = this.reactionsByMessage.get(messageKey)
+      if (bucket) {
+        bucket.set(reactionId, reaction)
+      } else {
+        this.reactionsByMessage.set(messageKey, new Map([[reactionId, reaction]]))
+      }
+    }
+  }
+
+  private rebuildDmHotIndexes(dmMessages: DmMessage[], dmReactions: DmReaction[]): void {
+    this.dmMessagesById.clear()
+    this.dmMessageOrderByChannel.clear()
+    this.dmReactionsByMessage.clear()
+
+    for (const message of dmMessages) {
+      const dmMessageId = String(message.dmMessageId)
+      const channelKey = String(message.dmChannelId)
+      this.dmMessagesById.set(dmMessageId, message)
+      const order = this.dmMessageOrderByChannel.get(channelKey)
+      if (order) {
+        order.push(dmMessageId)
+      } else {
+        this.dmMessageOrderByChannel.set(channelKey, [dmMessageId])
+      }
+    }
+
+    for (const reaction of dmReactions) {
+      const messageKey = String(reaction.dmMessageId)
+      const reactionId = String(reaction.dmReactionId)
+      const bucket = this.dmReactionsByMessage.get(messageKey)
+      if (bucket) {
+        bucket.set(reactionId, reaction)
+      } else {
+        this.dmReactionsByMessage.set(messageKey, new Map([[reactionId, reaction]]))
+      }
+    }
+  }
+
+  private getSelectedGuildMessages(): Message[] {
+    if (!this.selectedTextChannelId) {
+      return []
+    }
+    const order = this.messageOrderByChannel.get(this.selectedTextChannelId) ?? []
+    const rows: Message[] = []
+    for (const messageId of order) {
+      const message = this.messagesById.get(messageId)
+      if (message) {
+        rows.push(message)
+      }
+    }
+    return rows
+  }
+
+  private getSelectedGuildReactions(selectedMessages: Message[]): Reaction[] {
+    if (!this.selectedTextChannelId) {
+      return []
+    }
+
+    const selectedMessageIds = new Set(selectedMessages.map((message) => String(message.messageId)))
+    const selectedReactions: Reaction[] = []
+    const seenReactionIds = new Set<string>()
+
+    for (const messageId of selectedMessageIds) {
+      const reactions = this.reactionsByMessage.get(messageId)
+      if (!reactions) {
+        continue
+      }
+      for (const reaction of reactions.values()) {
+        const reactionId = String(reaction.reactionId)
+        if (seenReactionIds.has(reactionId)) {
+          continue
+        }
+        seenReactionIds.add(reactionId)
+        selectedReactions.push(reaction)
+      }
+    }
+
+    for (const reactions of this.reactionsByMessage.values()) {
+      for (const reaction of reactions.values()) {
+        if (String(reaction.channelId) !== this.selectedTextChannelId) {
+          continue
+        }
+        const reactionId = String(reaction.reactionId)
+        if (seenReactionIds.has(reactionId)) {
+          continue
+        }
+        seenReactionIds.add(reactionId)
+        selectedReactions.push(reaction)
+      }
+    }
+
+    return selectedReactions
+  }
+
+  private getSelectedDmMessages(): DmMessage[] {
+    if (!this.selectedDmChannelId) {
+      return []
+    }
+    const order = this.dmMessageOrderByChannel.get(this.selectedDmChannelId) ?? []
+    const rows: DmMessage[] = []
+    for (const messageId of order) {
+      const message = this.dmMessagesById.get(messageId)
+      if (message) {
+        rows.push(message)
+      }
+    }
+    return rows
+  }
+
+  private getSelectedDmReactions(selectedMessages: DmMessage[]): DmReaction[] {
+    if (!this.selectedDmChannelId) {
+      return []
+    }
+
+    const selectedMessageIds = new Set(selectedMessages.map((message) => String(message.dmMessageId)))
+    const selectedReactions: DmReaction[] = []
+    const seenReactionIds = new Set<string>()
+
+    for (const messageId of selectedMessageIds) {
+      const reactions = this.dmReactionsByMessage.get(messageId)
+      if (!reactions) {
+        continue
+      }
+      for (const reaction of reactions.values()) {
+        const reactionId = String(reaction.dmReactionId)
+        if (seenReactionIds.has(reactionId)) {
+          continue
+        }
+        seenReactionIds.add(reactionId)
+        selectedReactions.push(reaction)
+      }
+    }
+
+    for (const reactions of this.dmReactionsByMessage.values()) {
+      for (const reaction of reactions.values()) {
+        if (String(reaction.dmChannelId) !== this.selectedDmChannelId) {
+          continue
+        }
+        const reactionId = String(reaction.dmReactionId)
+        if (seenReactionIds.has(reactionId)) {
+          continue
+        }
+        seenReactionIds.add(reactionId)
+        selectedReactions.push(reaction)
+      }
+    }
+
+    return selectedReactions
+  }
+
+  private removeMessageFromChannelOrder(channelKey: string, messageId: string): void {
+    const order = this.messageOrderByChannel.get(channelKey)
+    if (!order) {
+      return
+    }
+
+    const nextOrder = order.filter((id) => id !== messageId)
+    if (nextOrder.length > 0) {
+      this.messageOrderByChannel.set(channelKey, nextOrder)
+    } else {
+      this.messageOrderByChannel.delete(channelKey)
+    }
+  }
+
+  private removeDmMessageFromChannelOrder(channelKey: string, messageId: string): void {
+    const order = this.dmMessageOrderByChannel.get(channelKey)
+    if (!order) {
+      return
+    }
+
+    const nextOrder = order.filter((id) => id !== messageId)
+    if (nextOrder.length > 0) {
+      this.dmMessageOrderByChannel.set(channelKey, nextOrder)
+    } else {
+      this.dmMessageOrderByChannel.delete(channelKey)
+    }
+  }
+
+  private applyGuildMessageInsert(row: Message): void {
+    const messageId = String(row.messageId)
+    const channelKey = String(row.channelId)
+
+    this.messagesById.set(messageId, row)
+    const order = this.messageOrderByChannel.get(channelKey)
+    if (order) {
+      if (!order.includes(messageId)) {
+        order.push(messageId)
+      }
+    } else {
+      this.messageOrderByChannel.set(channelKey, [messageId])
+    }
+
+    this.updateState({
+      messages: this.getSelectedGuildMessages(),
+      reactions: this.getSelectedGuildReactions(this.getSelectedGuildMessages()),
+      guildMessagesVersion: this.state.guildMessagesVersion + 1,
+    })
+  }
+
+  private applyGuildMessageUpdate(oldRow: Message | null, newRow: Message): void {
+    const newMessageId = String(newRow.messageId)
+    const existing = this.messagesById.get(newMessageId)
+    const previous = existing ?? oldRow
+
+    if (previous) {
+      const previousChannelKey = String(previous.channelId)
+      const newChannelKey = String(newRow.channelId)
+      if (previousChannelKey !== newChannelKey) {
+        this.removeMessageFromChannelOrder(previousChannelKey, newMessageId)
+      }
+    }
+
+    this.messagesById.set(newMessageId, newRow)
+    const channelKey = String(newRow.channelId)
+    const order = this.messageOrderByChannel.get(channelKey)
+    if (order) {
+      if (!order.includes(newMessageId)) {
+        order.push(newMessageId)
+      }
+    } else {
+      this.messageOrderByChannel.set(channelKey, [newMessageId])
+    }
+
+    this.updateState({
+      messages: this.getSelectedGuildMessages(),
+      reactions: this.getSelectedGuildReactions(this.getSelectedGuildMessages()),
+      guildMessagesVersion: this.state.guildMessagesVersion + 1,
+    })
+  }
+
+  private applyGuildMessageDelete(row: Message): void {
+    const messageId = String(row.messageId)
+    const existing = this.messagesById.get(messageId) ?? row
+    const channelKey = String(existing.channelId)
+
+    this.messagesById.delete(messageId)
+    this.removeMessageFromChannelOrder(channelKey, messageId)
+
+    const removedReactions = this.reactionsByMessage.delete(messageId)
+    const selectedMessages = this.getSelectedGuildMessages()
+    const nextState: Partial<StringState> = {
+      messages: selectedMessages,
+      reactions: this.getSelectedGuildReactions(selectedMessages),
+      guildMessagesVersion: this.state.guildMessagesVersion + 1,
+    }
+    if (removedReactions) {
+      nextState.guildReactionsVersion = this.state.guildReactionsVersion + 1
+    }
+    this.updateState(nextState)
+  }
+
+  private findGuildReactionLocation(reactionId: string): { messageId: string; bucket: Map<string, Reaction> } | null {
+    for (const [messageId, bucket] of this.reactionsByMessage.entries()) {
+      if (bucket.has(reactionId)) {
+        return { messageId, bucket }
+      }
+    }
+    return null
+  }
+
+  private applyGuildReactionInsert(row: Reaction): void {
+    const messageId = String(row.messageId)
+    const reactionId = String(row.reactionId)
+    const bucket = this.reactionsByMessage.get(messageId)
+    if (bucket) {
+      bucket.set(reactionId, row)
+    } else {
+      this.reactionsByMessage.set(messageId, new Map([[reactionId, row]]))
+    }
+
+    const selectedMessages = this.getSelectedGuildMessages()
+    this.updateState({
+      reactions: this.getSelectedGuildReactions(selectedMessages),
+      guildReactionsVersion: this.state.guildReactionsVersion + 1,
+    })
+  }
+
+  private applyGuildReactionUpdate(oldRow: Reaction | null, newRow: Reaction): void {
+    const reactionId = String(newRow.reactionId)
+    const current = this.findGuildReactionLocation(reactionId)
+    const previousMessageId = oldRow ? String(oldRow.messageId) : current?.messageId
+    const nextMessageId = String(newRow.messageId)
+
+    if (previousMessageId && previousMessageId !== nextMessageId) {
+      const previousBucket = this.reactionsByMessage.get(previousMessageId)
+      previousBucket?.delete(reactionId)
+      if (previousBucket && previousBucket.size === 0) {
+        this.reactionsByMessage.delete(previousMessageId)
+      }
+    }
+
+    const nextBucket = this.reactionsByMessage.get(nextMessageId)
+    if (nextBucket) {
+      nextBucket.set(reactionId, newRow)
+    } else {
+      this.reactionsByMessage.set(nextMessageId, new Map([[reactionId, newRow]]))
+    }
+
+    const selectedMessages = this.getSelectedGuildMessages()
+    this.updateState({
+      reactions: this.getSelectedGuildReactions(selectedMessages),
+      guildReactionsVersion: this.state.guildReactionsVersion + 1,
+    })
+  }
+
+  private applyGuildReactionDelete(row: Reaction): void {
+    const reactionId = String(row.reactionId)
+    const messageId = String(row.messageId)
+
+    let bucket = this.reactionsByMessage.get(messageId)
+    if (!bucket || !bucket.has(reactionId)) {
+      const location = this.findGuildReactionLocation(reactionId)
+      if (location) {
+        bucket = location.bucket
+      }
+    }
+
+    if (bucket) {
+      bucket.delete(reactionId)
+      if (bucket.size === 0) {
+        const emptyKey = [...this.reactionsByMessage.entries()].find(([, maybeBucket]) => maybeBucket === bucket)?.[0]
+        if (emptyKey) {
+          this.reactionsByMessage.delete(emptyKey)
+        }
+      }
+    }
+
+    const selectedMessages = this.getSelectedGuildMessages()
+    this.updateState({
+      reactions: this.getSelectedGuildReactions(selectedMessages),
+      guildReactionsVersion: this.state.guildReactionsVersion + 1,
+    })
+  }
+
+  private applyDmMessageInsert(row: DmMessage): void {
+    const messageId = String(row.dmMessageId)
+    const channelKey = String(row.dmChannelId)
+
+    this.dmMessagesById.set(messageId, row)
+    const order = this.dmMessageOrderByChannel.get(channelKey)
+    if (order) {
+      if (!order.includes(messageId)) {
+        order.push(messageId)
+      }
+    } else {
+      this.dmMessageOrderByChannel.set(channelKey, [messageId])
+    }
+
+    this.updateState({
+      dmMessages: this.getSelectedDmMessages(),
+      dmReactions: this.getSelectedDmReactions(this.getSelectedDmMessages()),
+      dmMessagesVersion: this.state.dmMessagesVersion + 1,
+    })
+  }
+
+  private applyDmMessageUpdate(oldRow: DmMessage | null, newRow: DmMessage): void {
+    const newMessageId = String(newRow.dmMessageId)
+    const existing = this.dmMessagesById.get(newMessageId)
+    const previous = existing ?? oldRow
+
+    if (previous) {
+      const previousChannelKey = String(previous.dmChannelId)
+      const newChannelKey = String(newRow.dmChannelId)
+      if (previousChannelKey !== newChannelKey) {
+        this.removeDmMessageFromChannelOrder(previousChannelKey, newMessageId)
+      }
+    }
+
+    this.dmMessagesById.set(newMessageId, newRow)
+    const channelKey = String(newRow.dmChannelId)
+    const order = this.dmMessageOrderByChannel.get(channelKey)
+    if (order) {
+      if (!order.includes(newMessageId)) {
+        order.push(newMessageId)
+      }
+    } else {
+      this.dmMessageOrderByChannel.set(channelKey, [newMessageId])
+    }
+
+    this.updateState({
+      dmMessages: this.getSelectedDmMessages(),
+      dmReactions: this.getSelectedDmReactions(this.getSelectedDmMessages()),
+      dmMessagesVersion: this.state.dmMessagesVersion + 1,
+    })
+  }
+
+  private applyDmMessageDelete(row: DmMessage): void {
+    const messageId = String(row.dmMessageId)
+    const existing = this.dmMessagesById.get(messageId) ?? row
+    const channelKey = String(existing.dmChannelId)
+
+    this.dmMessagesById.delete(messageId)
+    this.removeDmMessageFromChannelOrder(channelKey, messageId)
+
+    const removedReactions = this.dmReactionsByMessage.delete(messageId)
+    const selectedMessages = this.getSelectedDmMessages()
+    const nextState: Partial<StringState> = {
+      dmMessages: selectedMessages,
+      dmReactions: this.getSelectedDmReactions(selectedMessages),
+      dmMessagesVersion: this.state.dmMessagesVersion + 1,
+    }
+    if (removedReactions) {
+      nextState.dmReactionsVersion = this.state.dmReactionsVersion + 1
+    }
+    this.updateState(nextState)
+  }
+
+  private findDmReactionLocation(reactionId: string): { messageId: string; bucket: Map<string, DmReaction> } | null {
+    for (const [messageId, bucket] of this.dmReactionsByMessage.entries()) {
+      if (bucket.has(reactionId)) {
+        return { messageId, bucket }
+      }
+    }
+    return null
+  }
+
+  private applyDmReactionInsert(row: DmReaction): void {
+    const messageId = String(row.dmMessageId)
+    const reactionId = String(row.dmReactionId)
+    const bucket = this.dmReactionsByMessage.get(messageId)
+    if (bucket) {
+      bucket.set(reactionId, row)
+    } else {
+      this.dmReactionsByMessage.set(messageId, new Map([[reactionId, row]]))
+    }
+
+    const selectedMessages = this.getSelectedDmMessages()
+    this.updateState({
+      dmReactions: this.getSelectedDmReactions(selectedMessages),
+      dmReactionsVersion: this.state.dmReactionsVersion + 1,
+    })
+  }
+
+  private applyDmReactionUpdate(oldRow: DmReaction | null, newRow: DmReaction): void {
+    const reactionId = String(newRow.dmReactionId)
+    const current = this.findDmReactionLocation(reactionId)
+    const previousMessageId = oldRow ? String(oldRow.dmMessageId) : current?.messageId
+    const nextMessageId = String(newRow.dmMessageId)
+
+    if (previousMessageId && previousMessageId !== nextMessageId) {
+      const previousBucket = this.dmReactionsByMessage.get(previousMessageId)
+      previousBucket?.delete(reactionId)
+      if (previousBucket && previousBucket.size === 0) {
+        this.dmReactionsByMessage.delete(previousMessageId)
+      }
+    }
+
+    const nextBucket = this.dmReactionsByMessage.get(nextMessageId)
+    if (nextBucket) {
+      nextBucket.set(reactionId, newRow)
+    } else {
+      this.dmReactionsByMessage.set(nextMessageId, new Map([[reactionId, newRow]]))
+    }
+
+    const selectedMessages = this.getSelectedDmMessages()
+    this.updateState({
+      dmReactions: this.getSelectedDmReactions(selectedMessages),
+      dmReactionsVersion: this.state.dmReactionsVersion + 1,
+    })
+  }
+
+  private applyDmReactionDelete(row: DmReaction): void {
+    const reactionId = String(row.dmReactionId)
+    const messageId = String(row.dmMessageId)
+
+    let bucket = this.dmReactionsByMessage.get(messageId)
+    if (!bucket || !bucket.has(reactionId)) {
+      const location = this.findDmReactionLocation(reactionId)
+      if (location) {
+        bucket = location.bucket
+      }
+    }
+
+    if (bucket) {
+      bucket.delete(reactionId)
+      if (bucket.size === 0) {
+        const emptyKey = [...this.dmReactionsByMessage.entries()].find(([, maybeBucket]) => maybeBucket === bucket)?.[0]
+        if (emptyKey) {
+          this.dmReactionsByMessage.delete(emptyKey)
+        }
+      }
+    }
+
+    const selectedMessages = this.getSelectedDmMessages()
+    this.updateState({
+      dmReactions: this.getSelectedDmReactions(selectedMessages),
+      dmReactionsVersion: this.state.dmReactionsVersion + 1,
+    })
   }
 
   private async callReducer<TParams>(name: string, params: TParams): Promise<void> {

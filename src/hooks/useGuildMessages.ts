@@ -69,7 +69,7 @@ export function useGuildMessages(
     return messages
       .filter((message) => {
         const idKey = toIdKey(message.messageId)
-        if (toIdKey(message.channelId) === channelKey && !message.isDeleted && !seenIds.has(idKey)) {
+        if (!message.isDeleted && !seenIds.has(idKey)) {
           seenIds.add(idKey)
           return true
         }
@@ -111,10 +111,6 @@ export function useGuildMessages(
     const grouped = new Map<string, Map<string, { count: number; isActive: boolean }>>()
 
     for (const reaction of reactions) {
-      if (toIdKey(reaction.channelId) !== channelKey) {
-        continue
-      }
-
       const messageKey = toIdKey(reaction.messageId)
       const reactionEmoji = reaction.emoji
       const current = grouped.get(messageKey) ?? new Map<string, { count: number; isActive: boolean }>()

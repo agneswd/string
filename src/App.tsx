@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useEffect } from 'react'
+import { useCallback, useMemo, useEffect, useLayoutEffect } from 'react'
 
 import {
   CallBanner,
@@ -131,7 +131,7 @@ function App() {
   // ---------------------------------------------------------------------------
   // Subscriptions Refactor Phase 2 Wiring
   // ---------------------------------------------------------------------------
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (actions.setActiveSubscriptions) {
       actions.setActiveSubscriptions(selectedTextChannelId, selectedDmChannelId)
     }

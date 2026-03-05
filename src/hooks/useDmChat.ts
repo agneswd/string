@@ -110,13 +110,11 @@ export function useDmChat({
       }>
     }
 
-    const selectedDmKey = toIdKey(selectedDmChannel.dmChannelId)
-
     const seenIds = new Set<string>()
 
     return dmMessages
       .filter((message) => {
-        if (toIdKey(message.dmChannelId) !== selectedDmKey || message.isDeleted) return false
+        if (message.isDeleted) return false
         const idKey = toIdKey(message.dmMessageId)
         if (seenIds.has(idKey)) return false
         seenIds.add(idKey)
@@ -144,12 +142,9 @@ export function useDmChat({
       return new Map<string, ReactionEntry[]>()
     }
 
-    const channelKey = toIdKey(selectedDmChannel.dmChannelId)
     const grouped = new Map<string, Map<string, { count: number; isActive: boolean }>>()
 
     for (const reaction of dmReactions) {
-      if (toIdKey(reaction.dmChannelId) !== channelKey) continue
-
       const messageKey = toIdKey(reaction.dmMessageId)
       const reactionEmoji = reaction.emoji
       const current = grouped.get(messageKey) ?? new Map<string, { count: number; isActive: boolean }>()

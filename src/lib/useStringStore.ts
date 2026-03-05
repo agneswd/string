@@ -6,6 +6,47 @@ import { stringStore } from './stringStore'
 const subscribe = (onStoreChange: () => void): (() => void) =>
   stringStore.subscribe(() => onStoreChange())
 
+type EqualityFn<T> = (left: T, right: T) => boolean
+
+export const shallowEqual = <T>(left: T, right: T): boolean => {
+  if (Object.is(left, right)) {
+    return true
+  }
+
+  if (
+    typeof left !== 'object' ||
+    left === null ||
+    typeof right !== 'object' ||
+    right === null
+  ) {
+    return false
+  }
+
+  if (Array.isArray(left) !== Array.isArray(right)) {
+    return false
+  }
+
+  const leftRecord = left as Record<string, unknown>
+  const rightRecord = right as Record<string, unknown>
+  const leftKeys = Object.keys(leftRecord)
+  const rightKeys = Object.keys(rightRecord)
+
+  if (leftKeys.length !== rightKeys.length) {
+    return false
+  }
+
+  for (const key of leftKeys) {
+    if (!Object.prototype.hasOwnProperty.call(rightRecord, key)) {
+      return false
+    }
+    if (!Object.is(leftRecord[key], rightRecord[key])) {
+      return false
+    }
+  }
+
+  return true
+}
+
 const stringActions = {
   connect: () => stringStore.connect(),
   disconnect: () => stringStore.disconnect(),
@@ -53,10 +94,17 @@ const stringActions = {
 
 export function useStringStore(): StringState;
 export function useStringStore<T>(selector: (state: StringState) => T): T;
-export function useStringStore<T = StringState>(selector?: (state: StringState) => T): T {
+export function useStringStore<T>(selector: (state: StringState) => T, equalityFn: EqualityFn<T>): T;
+export function useStringStore<T = StringState>(
+  selector?: (state: StringState) => T,
+  equalityFn?: EqualityFn<T>,
+): T {
   const selectorRef = useRef(selector);
   selectorRef.current = selector;
+  const equalityRef = useRef<EqualityFn<T>>(equalityFn ?? Object.is as EqualityFn<T>);
+  equalityRef.current = equalityFn ?? Object.is as EqualityFn<T>;
   const prevRef = useRef<T | undefined>(undefined);
+  const hasPrevRef = useRef(false);
 
   const getSnapshot = useCallback((): T => {
     const state = stringStore.getState();
@@ -65,9 +113,11 @@ export function useStringStore<T = StringState>(selector?: (state: StringState) 
     const next = selectorRef.current(state);
 
     // Return previous reference if strictly equal (prevents re-renders for primitives)
-    if (prevRef.current !== undefined && Object.is(prevRef.current, next)) {
+    if (hasPrevRef.current && equalityRef.current(prevRef.current as T, next)) {
       return prevRef.current;
     }
+
+    hasPrevRef.current = true;
     prevRef.current = next;
     return next;
   }, []);
