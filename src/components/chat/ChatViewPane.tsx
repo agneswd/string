@@ -563,7 +563,7 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
         <p style={S.content}>{message.content}</p>
       )}
 
-      {hovered && (onDeleteMessage || onEditMessage) && !isEditing && (
+      {hovered && (onDeleteMessage || onEditMessage) && !isEditing && isOwnMessage && (
         <div style={{
           position: 'absolute',
           top: -8,
