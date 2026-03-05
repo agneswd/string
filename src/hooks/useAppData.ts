@@ -2,7 +2,8 @@ import { useMemo } from 'react'
 
 import { useStringActions, useStringStore } from '../lib/useStringStore'
 import type { StringState } from '../lib/stringStore'
-import type { User, DmCallRequest, DmChannel, DmMessage, DmParticipant, DmReaction, GuildInvite, Reaction } from '../module_bindings/types'
+import { toIdKey, toSortableBigInt } from '../lib/helpers'
+import type { User, DmCallRequest, DmChannel, DmMessage, DmParticipant, DmReaction, GuildInvite, GuildMember, Reaction } from '../module_bindings/types'
 
 // ---------------------------------------------------------------------------
 // Helper – identity to hex string (mirrors App.tsx logic)
@@ -75,6 +76,9 @@ export interface AppData {
   dmChannels: DmChannel[]
   dmParticipants: DmParticipant[]
   dmMessages: DmMessage[]
+  guildMembersByGuildId: Map<string, GuildMember[]>
+  dmMessageCountsByChannel: Map<string, number>
+  dmLastMessageByChannel: Map<string, DmMessage>
   dmReactions: DmReaction[]
   reactions: Reaction[]
   guildInvites: GuildInvite[]
@@ -94,6 +98,69 @@ export function useAppData(): AppData {
   const dmChannels = useMemo(() => extendedState.dmChannels ?? [], [extendedState.dmChannels])
   const dmParticipants = useMemo(() => extendedState.dmParticipants ?? [], [extendedState.dmParticipants])
   const dmMessages = useMemo(() => extendedState.dmMessages ?? [], [extendedState.dmMessages])
+
+  const guildMembersByGuildId = useMemo(() => {
+    const grouped = new Map<string, GuildMember[]>()
+
+    for (const member of state.guildMembers) {
+      const guildKey = toIdKey(member.guildId)
+      const current = grouped.get(guildKey)
+      if (current) {
+        current.push(member)
+      } else {
+        grouped.set(guildKey, [member])
+      }
+    }
+
+    return grouped
+  }, [state.guildMembers])
+
+  const toTimestampMillis = (value: unknown): number | null => {
+    if (typeof value === 'object' && value !== null) {
+      const withToDate = value as { toDate?: () => Date }
+      const maybeDate = withToDate.toDate?.()
+      if (maybeDate instanceof Date) {
+        const maybeMillis = maybeDate.getTime()
+        if (Number.isFinite(maybeMillis)) {
+          return maybeMillis
+        }
+      }
+    }
+
+    const maybeMillis = new Date(String(value)).getTime()
+    return Number.isFinite(maybeMillis) ? maybeMillis : null
+  }
+
+  const isDmMessageNewer = (candidate: DmMessage, existing: DmMessage): boolean => {
+    const candidateId = toSortableBigInt(candidate.dmMessageId)
+    const existingId = toSortableBigInt(existing.dmMessageId)
+    if (candidateId !== null && existingId !== null && candidateId !== existingId) {
+      return candidateId > existingId
+    }
+
+    const candidateSentAt = toTimestampMillis(candidate.sentAt)
+    const existingSentAt = toTimestampMillis(existing.sentAt)
+    if (candidateSentAt !== null && existingSentAt !== null && candidateSentAt !== existingSentAt) {
+      return candidateSentAt > existingSentAt
+    }
+
+    return toIdKey(candidate.dmMessageId) > toIdKey(existing.dmMessageId)
+  }
+  
+  const { dmMessageCountsByChannel, dmLastMessageByChannel } = useMemo(() => {
+    const counts = new Map<string, number>()
+    const lastMsgs = new Map<string, DmMessage>()
+    for (const msg of dmMessages) {
+      const chId = toIdKey(msg.dmChannelId)
+      counts.set(chId, (counts.get(chId) ?? 0) + 1)
+      const currentLast = lastMsgs.get(chId)
+      if (!currentLast || isDmMessageNewer(msg, currentLast)) {
+        lastMsgs.set(chId, msg)
+      }
+    }
+    return { dmMessageCountsByChannel: counts, dmLastMessageByChannel: lastMsgs }
+  }, [dmMessages])
+
   const dmReactions = useMemo(() => state.dmReactions ?? [], [state.dmReactions])
   const reactions = useMemo(() => extendedState.reactions ?? [], [extendedState.reactions])
   const guildInvites = useMemo(() => state.guildInvites ?? [], [state.guildInvites])
@@ -122,11 +189,14 @@ export function useAppData(): AppData {
     dmChannels,
     dmParticipants,
     dmMessages,
+    guildMembersByGuildId,
+    dmMessageCountsByChannel,
+    dmLastMessageByChannel,
     dmReactions,
     reactions,
     guildInvites,
     dmCallRequests,
-  }), [state, actions, extendedState, extendedActions, identityString, usersByIdentity, me, dmChannels, dmParticipants, dmMessages, dmReactions, reactions, guildInvites, dmCallRequests])
+  }), [state, actions, extendedState, extendedActions, identityString, usersByIdentity, me, dmChannels, dmParticipants, dmMessages, guildMembersByGuildId, dmMessageCountsByChannel, dmLastMessageByChannel, dmReactions, reactions, guildInvites, dmCallRequests])
 }
 
 export { identityToString }

@@ -26,7 +26,8 @@ interface UseNotificationEffectsParams {
   friends: FriendEntry[]
   dmMessagesForSelectedChannel: DmMessageView[]
   identityString: string
-  dmMessages: DmMessage[]
+  dmMessageCountsByChannel: Map<string, number>
+  dmLastMessageByChannel: Map<string, DmMessage>
   selectedDmChannelId: string | undefined
   usersByIdentity: Map<string, User>
   setSelectedDmChannelId: (id: string | undefined) => void
@@ -49,7 +50,8 @@ export function useNotificationEffects({
   friends,
   dmMessagesForSelectedChannel,
   identityString,
-  dmMessages,
+  dmMessageCountsByChannel,
+  dmLastMessageByChannel,
   selectedDmChannelId,
   usersByIdentity,
   setSelectedDmChannelId,
@@ -162,39 +164,32 @@ export function useNotificationEffects({
   // DM notifications for messages in non-selected channels
   const prevDmMsgCounts = useRef<Map<string, number>>(new Map())
   useEffect(() => {
-    const allDmMessages = dmMessages ?? []
-    // Group messages by channel
-    const msgsByChannel = new Map<string, typeof allDmMessages>()
-    for (const msg of allDmMessages) {
-      const chId = toIdKey(msg.dmChannelId)
-      if (!msgsByChannel.has(chId)) msgsByChannel.set(chId, [])
-      msgsByChannel.get(chId)!.push(msg)
-    }
-
     const prev = prevDmMsgCounts.current
-    for (const [chId, msgs] of msgsByChannel) {
+    for (const [chId, count] of dmMessageCountsByChannel) {
       const prevCount = prev.get(chId) ?? 0
-      if (msgs.length > prevCount && prevCount > 0) {
+      if (count > prevCount && prevCount > 0) {
         // New message(s) in this channel
-        const lastMsg = msgs[msgs.length - 1]
-        const senderId = identityToString(lastMsg.authorIdentity)
-        if (senderId !== identityString && chId !== selectedDmChannelId) {
-          // Not from us, and not in the currently open channel
-          const senderUser = usersByIdentity.get(senderId)
-          const senderName = senderUser?.displayName ?? senderUser?.username ?? 'Someone'
-          playSound('message-received')
-          addNotification({
-            message: `${senderName}`,
-            subtitle: String(lastMsg.content ?? '').slice(0, 100),
-            type: 'message' as const,
-            onClick: () => {
-              setSelectedDmChannelId(chId)
-              setSelectedGuildId(undefined)
-            },
-          })
+        const lastMsg = dmLastMessageByChannel.get(chId)
+        if (lastMsg) {
+          const senderId = identityToString(lastMsg.authorIdentity)
+          if (senderId !== identityString && chId !== selectedDmChannelId) {
+            // Not from us, and not in the currently open channel
+            const senderUser = usersByIdentity.get(senderId)
+            const senderName = senderUser?.displayName ?? senderUser?.username ?? 'Someone'
+            playSound('message-received')
+            addNotification({
+              message: `${senderName}`,
+              subtitle: String(lastMsg.content ?? '').slice(0, 100),
+              type: 'message' as const,
+              onClick: () => {
+                setSelectedDmChannelId(chId)
+                setSelectedGuildId(undefined)
+              },
+            })
+          }
         }
       }
-      prev.set(chId, msgs.length)
+      prev.set(chId, count)
     }
-  }, [dmMessages, identityString, selectedDmChannelId, addNotification, usersByIdentity, setSelectedDmChannelId, setSelectedGuildId])
+  }, [dmMessageCountsByChannel, dmLastMessageByChannel, identityString, selectedDmChannelId, addNotification, usersByIdentity, setSelectedDmChannelId, setSelectedGuildId])
 }

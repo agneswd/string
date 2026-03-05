@@ -34,7 +34,7 @@ type AppData = {
   reactions: Reaction[]
   identityString: string
   usersByIdentity: Map<string, User>
-  guildMembers: GuildMember[]
+  guildMembersByGuildId: Map<string, GuildMember[]>
   extendedActions: {
     toggleReaction?: (params: { messageId: unknown; emoji: string }) => Promise<void>
   }
@@ -52,7 +52,7 @@ export function useGuildMessages(
     params: TParams,
   ) => Promise<void>,
 ) {
-  const { messages, reactions, identityString, usersByIdentity, guildMembers, extendedActions } = appData
+  const { messages, reactions, identityString, usersByIdentity, guildMembersByGuildId, extendedActions } = appData
 
   const messagesForSelectedTextChannel = useMemo(() => {
     if (!selectedGuild || !selectedTextChannel) {
@@ -64,19 +64,26 @@ export function useGuildMessages(
       return []
     }
 
-    const seenIds = new Set<string>()
+    const seen = new Set<string>()
+    const scopedMessages: Message[] = []
 
-    return messages
-      .filter((message) => {
-        const idKey = toIdKey(message.messageId)
-        if (!message.isDeleted && !seenIds.has(idKey)) {
-          seenIds.add(idKey)
-          return true
-        }
-        return false
-      })
-      .slice()
-      .sort((left, right) => compareById(left.messageId, right.messageId))
+    for (const message of messages) {
+      if (message.isDeleted) {
+        continue
+      }
+
+      const messageKey = toIdKey(message.messageId)
+      if (seen.has(messageKey)) {
+        continue
+      }
+
+      seen.add(messageKey)
+      scopedMessages.push(message)
+    }
+
+    scopedMessages.sort((left, right) => compareById(left.messageId, right.messageId))
+
+    return scopedMessages
       .map((message) => {
         const authorId = identityToString(message.authorIdentity)
         const author = usersByIdentity.get(authorId)
@@ -108,9 +115,10 @@ export function useGuildMessages(
       return new Map<string, ReactionEntry[]>()
     }
 
+    const scopedReactions = reactions
     const grouped = new Map<string, Map<string, { count: number; isActive: boolean }>>()
 
-    for (const reaction of reactions) {
+    for (const reaction of scopedReactions) {
       const messageKey = toIdKey(reaction.messageId)
       const reactionEmoji = reaction.emoji
       const current = grouped.get(messageKey) ?? new Map<string, { count: number; isActive: boolean }>()
@@ -141,8 +149,10 @@ export function useGuildMessages(
     }
 
     const guildKey = toIdKey(selectedGuild.guildId)
-    return guildMembers
-      .filter((member) => toIdKey(member.guildId) === guildKey)
+    const guildOwnerIdentity = identityToString(selectedGuild.ownerIdentity)
+    const scopedMembers = guildMembersByGuildId.get(guildKey) ?? []
+
+    return scopedMembers
       .map((member) => {
         const memberIdentity = identityToString(member.identity)
         const user = usersByIdentity.get(memberIdentity)
@@ -152,13 +162,13 @@ export function useGuildMessages(
           username,
           displayName: user?.displayName ?? username,
           status: statusToLabel(user?.status),
-          isOwner: selectedGuild ? identityToString(member.identity) === identityToString(selectedGuild.ownerIdentity) : false,
+          isOwner: memberIdentity === guildOwnerIdentity,
           avatarUrl: avatarBytesToUrl(user?.avatarBytes as Uint8Array | null | undefined),
           profileColor: (user as any)?.profileColor ?? undefined,
         }
       })
       .sort((left, right) => left.displayName.localeCompare(right.displayName))
-  }, [selectedGuild, guildMembers, usersByIdentity])
+  }, [selectedGuild, guildMembersByGuildId, usersByIdentity])
 
   const onToggleReaction = useCallback(
     (messageId: string | number, emoji: string): void => {
