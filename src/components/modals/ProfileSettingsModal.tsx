@@ -79,6 +79,86 @@ const PROFILE_COLORS = [
   '#f1c40f', '#95a5a6',
 ]
 
+const MAX_AVATAR_BYTES = 102_400
+const MAX_AVATAR_DIMENSION = 256
+const MIN_COMPRESS_QUALITY = 0.45
+const DEFAULT_COMPRESS_QUALITY = 0.86
+
+const fileToDataUrl = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('Failed to read image file'))
+    reader.onload = () => resolve(String(reader.result ?? ''))
+    reader.readAsDataURL(file)
+  })
+
+const loadImage = (src: string): Promise<HTMLImageElement> =>
+  new Promise((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => resolve(image)
+    image.onerror = () => reject(new Error('Failed to load image for processing'))
+    image.src = src
+  })
+
+const canvasToBlob = (canvas: HTMLCanvasElement, mimeType: string, quality?: number): Promise<Blob | null> =>
+  new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), mimeType, quality)
+  })
+
+const resizeAvatarToCanvas = (image: HTMLImageElement): HTMLCanvasElement => {
+  const width = image.naturalWidth || image.width
+  const height = image.naturalHeight || image.height
+  const scale = Math.min(1, MAX_AVATAR_DIMENSION / Math.max(width, height))
+  const targetWidth = Math.max(1, Math.round(width * scale))
+  const targetHeight = Math.max(1, Math.round(height * scale))
+
+  const canvas = document.createElement('canvas')
+  canvas.width = targetWidth
+  canvas.height = targetHeight
+
+  const context = canvas.getContext('2d')
+  if (!context) {
+    throw new Error('Image processing is not available in this browser')
+  }
+
+  context.clearRect(0, 0, targetWidth, targetHeight)
+  context.drawImage(image, 0, 0, targetWidth, targetHeight)
+  return canvas
+}
+
+const compressAvatarFile = async (file: File): Promise<Blob> => {
+  const sourceDataUrl = await fileToDataUrl(file)
+  const image = await loadImage(sourceDataUrl)
+  const canvas = resizeAvatarToCanvas(image)
+
+  let quality = DEFAULT_COMPRESS_QUALITY
+  let bestBlob: Blob | null = null
+
+  while (quality >= MIN_COMPRESS_QUALITY) {
+    const maybeBlob = await canvasToBlob(canvas, 'image/webp', quality)
+    if (!maybeBlob) {
+      break
+    }
+
+    bestBlob = maybeBlob
+    if (maybeBlob.size <= MAX_AVATAR_BYTES) {
+      return maybeBlob
+    }
+    quality = Number((quality - 0.08).toFixed(2))
+  }
+
+  if (bestBlob && bestBlob.size <= MAX_AVATAR_BYTES) {
+    return bestBlob
+  }
+
+  const pngFallback = await canvasToBlob(canvas, 'image/png')
+  if (pngFallback && pngFallback.size <= MAX_AVATAR_BYTES) {
+    return pngFallback
+  }
+
+  throw new Error('Avatar must be ≤ 100 KB after compression')
+}
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
@@ -104,6 +184,9 @@ export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
   const initialProfileColor = useRef('')
   const wasOpenRef = useRef(false)
   const avatarDirtyRef = useRef(false)
+  const isMountedRef = useRef(true)
+  const isOpenRef = useRef(isOpen)
+  const avatarUploadTokenRef = useRef(0)
 
   // Stable data URL from current user's avatar (no blob lifecycle issues)
   const existingAvatarUrl = useMemo(
@@ -155,38 +238,70 @@ export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
 
   // Revoke uploaded blob URL on unmount
   useEffect(() => {
+    isMountedRef.current = true
     return () => {
+      isMountedRef.current = false
       if (uploadedPreviewRef.current) URL.revokeObjectURL(uploadedPreviewRef.current)
     }
   }, [])
 
-  const handleAvatarUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    isOpenRef.current = isOpen
+    if (!isOpen) {
+      avatarUploadTokenRef.current += 1
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen && uploadedPreviewRef.current) {
+      URL.revokeObjectURL(uploadedPreviewRef.current)
+      uploadedPreviewRef.current = null
+      setUploadedPreview(null)
+    }
+  }, [isOpen])
+
+  const handleAvatarUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    const uploadToken = avatarUploadTokenRef.current + 1
+    avatarUploadTokenRef.current = uploadToken
     setAvatarError(null)
 
     if (!file.type.startsWith('image/')) {
       setAvatarError('Please select an image file')
       return
     }
-    if (file.size > 102_400) {
-      setAvatarError('Avatar must be ≤ 100 KB')
-      return
-    }
 
-    const reader = new FileReader()
-    reader.onload = () => {
-      const arrayBuffer = reader.result as ArrayBuffer
-      const bytes = new Uint8Array(arrayBuffer)
+    try {
+      const processedBlob = await compressAvatarFile(file)
+      const isUploadStale =
+        !isMountedRef.current ||
+        !isOpenRef.current ||
+        uploadToken !== avatarUploadTokenRef.current
+      if (isUploadStale) {
+        return
+      }
+
+      if (processedBlob.size > MAX_AVATAR_BYTES) {
+        setAvatarError('Avatar must be ≤ 100 KB')
+        return
+      }
+
+      const bytes = new Uint8Array(await processedBlob.arrayBuffer())
       setAvatarBytes(bytes)
       avatarDirtyRef.current = true
-      // Revoke previous uploaded preview before setting new one
+
       if (uploadedPreviewRef.current) URL.revokeObjectURL(uploadedPreviewRef.current)
-      const newUrl = URL.createObjectURL(file)
+      const newUrl = URL.createObjectURL(processedBlob)
       uploadedPreviewRef.current = newUrl
       setUploadedPreview(newUrl)
+    } catch {
+      if (isMountedRef.current && uploadToken === avatarUploadTokenRef.current) {
+        setAvatarError('Could not process avatar image. Try a smaller image.')
+      }
+    } finally {
+      e.target.value = ''
     }
-    reader.readAsArrayBuffer(file)
   }, [])
 
   const handleSave = useCallback(async () => {
