@@ -238,6 +238,9 @@ class StringStore {
   private dmMessagesById = new Map<string, DmMessage>()
   private dmMessageOrderByChannel = new Map<string, string[]>()
   private dmReactionsByMessage = new Map<string, Map<string, DmReaction>>()
+  private dmMessagesHydrated = false
+  private dmHydrationStartedAtMs: number | null = null
+  private preHydrationIncomingDmMessages = new Map<string, DmMessage>()
 
   private createTableMutationHandler(tableKey: string): TableMutationHandler {
     return () => {
@@ -275,12 +278,14 @@ class StringStore {
 
     initConnection({
       onConnect: (identity) => {
+        this.beginDmHydrationReplayWindow()
         this.updateState({ identity, connectionStatus: 'connected', error: null })
         this.attachRealtime(getConn())
         this.syncFromCache()
       },
       onDisconnect: () => {
         this.connectionInitialized = false
+        this.resetDmHydrationReplayState()
         this.unsubscribeAllSubscriptionHandles()
         this.detachRealtimeListeners()
         this.clearHotIndexes()
@@ -317,6 +322,7 @@ class StringStore {
       },
       onConnectError: (err) => {
         this.connectionInitialized = false
+        this.resetDmHydrationReplayState()
         this.unsubscribeAllSubscriptionHandles()
         this.detachRealtimeListeners()
         this.clearHotIndexes()
@@ -335,6 +341,7 @@ class StringStore {
     this.realtimeAttached = false
     this.syncScheduled = false
     this.pendingMutatedTables.clear()
+    this.resetDmHydrationReplayState()
     this.clearHotIndexes()
     this.unsubscribeAllSubscriptionHandles()
 
@@ -536,6 +543,9 @@ class StringStore {
       const conn = getConn()
       const identity = getMyIdentity()
       if (conn.isActive && identity) {
+        if (!this.realtimeAttached) {
+          this.beginDmHydrationReplayWindow()
+        }
         this.updateState({ identity, connectionStatus: 'connected', error: null })
         this.attachRealtime(conn)
         this.syncFromCache()
@@ -856,7 +866,15 @@ class StringStore {
       this.rebuildDmHotIndexes(dmMessages, dmReactions)
       next.dmMessages = this.getSelectedDmMessages()
       next.dmReactions = this.getSelectedDmReactions(next.dmMessages)
-      next.dmUnreadCountsByChannel = this.getPrunedDmUnreadCountsByChannel()
+      const nextUnreadCounts = this.getPrunedDmUnreadCountsByChannel()
+      if (shouldSyncDmMessages && !this.dmMessagesHydrated) {
+        next.dmUnreadCountsByChannel = this.reconcilePreHydrationDmUnread(nextUnreadCounts)
+        this.dmMessagesHydrated = true
+        this.dmHydrationStartedAtMs = null
+        this.preHydrationIncomingDmMessages.clear()
+      } else {
+        next.dmUnreadCountsByChannel = nextUnreadCounts
+      }
       next.dmMessageCountsByChannel = this.getDmMessageCountsByChannel()
       next.dmLastMessageByChannel = this.getDmLastMessageByChannel()
       if (shouldSyncDmMessages) next.dmMessagesVersion = prev.dmMessagesVersion + 1
@@ -1071,6 +1089,61 @@ class StringStore {
     this.dmMessagesById.clear()
     this.dmMessageOrderByChannel.clear()
     this.dmReactionsByMessage.clear()
+  }
+
+  private beginDmHydrationReplayWindow(): void {
+    this.dmMessagesHydrated = false
+    this.dmHydrationStartedAtMs = Date.now()
+    this.preHydrationIncomingDmMessages.clear()
+  }
+
+  private resetDmHydrationReplayState(): void {
+    this.dmMessagesHydrated = false
+    this.dmHydrationStartedAtMs = null
+    this.preHydrationIncomingDmMessages.clear()
+  }
+
+  private resolveCurrentIdentityKey(): string | null {
+    if (this.state.identity) {
+      return String(this.state.identity)
+    }
+
+    try {
+      const identity = getMyIdentity()
+      return identity ? String(identity) : null
+    } catch {
+      return null
+    }
+  }
+
+  private reconcilePreHydrationDmUnread(baseUnreadCounts: Map<string, number>): Map<string, number> {
+    if (this.preHydrationIncomingDmMessages.size === 0) {
+      return baseUnreadCounts
+    }
+
+    const nextUnreadCounts = new Map(baseUnreadCounts)
+    const hydrationStartedAtMs = this.dmHydrationStartedAtMs
+
+    for (const row of this.preHydrationIncomingDmMessages.values()) {
+      const channelKey = String(row.dmChannelId)
+      if (this.selectedDmChannelId && channelKey === this.selectedDmChannelId) {
+        continue
+      }
+      if (!this.dmMessageOrderByChannel.has(channelKey)) {
+        continue
+      }
+
+      if (hydrationStartedAtMs !== null) {
+        const sentAtMs = this.toTimestampMillis(row.sentAt)
+        if (sentAtMs === null || sentAtMs < hydrationStartedAtMs) {
+          continue
+        }
+      }
+
+      nextUnreadCounts.set(channelKey, (nextUnreadCounts.get(channelKey) ?? 0) + 1)
+    }
+
+    return nextUnreadCounts
   }
 
   private rebuildGuildHotIndexes(messages: Message[], reactions: Reaction[]): void {
@@ -1540,13 +1613,17 @@ class StringStore {
     }
 
     const nextUnreadCounts = new Map(this.state.dmUnreadCountsByChannel)
-    const myIdentity = this.state.identity ? String(this.state.identity) : null
+    const myIdentity = this.resolveCurrentIdentityKey()
     const authorIdentity = String(row.authorIdentity)
     const isIncoming = myIdentity !== null && authorIdentity !== myIdentity
     const isSelectedChannel = this.selectedDmChannelId !== null && channelKey === this.selectedDmChannelId
 
     if (isIncoming && !isSelectedChannel) {
-      nextUnreadCounts.set(channelKey, (nextUnreadCounts.get(channelKey) ?? 0) + 1)
+      if (this.dmMessagesHydrated) {
+        nextUnreadCounts.set(channelKey, (nextUnreadCounts.get(channelKey) ?? 0) + 1)
+      } else {
+        this.preHydrationIncomingDmMessages.set(messageId, row)
+      }
     }
 
     this.updateState({

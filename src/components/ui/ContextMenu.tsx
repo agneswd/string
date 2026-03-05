@@ -68,12 +68,14 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
         }}
         onMouseEnter={e => {
           if (item.disabled) return
-          (e.target as HTMLElement).style.background = item.danger ? 'rgba(237,66,69,0.1)' : '#4752c4'
-          (e.target as HTMLElement).style.color = '#fff'
+          const target = e.currentTarget
+          target.style.background = item.danger ? 'rgba(237,66,69,0.1)' : '#4752c4';
+          target.style.color = '#fff';
         }}
         onMouseLeave={e => {
-          (e.target as HTMLElement).style.background = 'transparent'
-          (e.target as HTMLElement).style.color = item.danger ? '#ed4245' : '#b5bac1'
+          const target = e.currentTarget
+          target.style.background = 'transparent';
+          target.style.color = item.danger ? '#ed4245' : '#b5bac1';
         }}
         >
           {item.icon}

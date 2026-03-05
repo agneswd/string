@@ -408,18 +408,6 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
   onDeleteMessage,
   onEditMessage,
 }: ChatMessageRowProps) {
-  if (message.isSystem) {
-    return (
-      <li style={S.systemRow}>
-        <span style={S.systemPill}>
-          <span style={S.systemTag}>Call</span>
-          <span>{message.content}</span>
-          <span style={S.systemTimestamp}>{message.timestamp}</span>
-        </span>
-      </li>
-    )
-  }
-
   const [hovered, setHovered] = useState(false)
   const hashColor = getAvatarColor(message.authorName)
   const color = message.profileColor || hashColor
@@ -489,6 +477,23 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
       },
     },
   ], [canEditOrDelete, onEditMessage, onDeleteMessage, message.content, message.id, handleCopyMessage])
+
+  if (message.isSystem) {
+    const isCallNotification = message.authorName === 'Call'
+    const systemRowStyle: React.CSSProperties = isCallNotification
+      ? { ...S.systemRow, justifyContent: 'flex-start' }
+      : S.systemRow
+
+    return (
+      <li style={systemRowStyle}>
+        <span style={S.systemPill}>
+          <span style={S.systemTag}>{message.authorName}</span>
+          <span>{message.content}</span>
+          <span style={S.systemTimestamp}>{message.timestamp}</span>
+        </span>
+      </li>
+    )
+  }
 
   return (
     <li

@@ -45,11 +45,33 @@ fn require_dm_participant(
 }
 
 fn my_dm_channel_ids(ctx: &ViewContext, identity: &Identity) -> std::collections::BTreeSet<u64> {
-    ctx.db
+    let channel_ids = ctx
+        .db
         .dm_participant()
         .dm_participant_by_identity()
         .filter(identity)
-        .map(|participant| participant.dm_channel_id)
+        .map(|participant| participant.dm_channel_id);
+
+    collect_valid_dm_channel_ids(channel_ids, |dm_channel_id| {
+        ctx.db
+            .dm_channel()
+            .dm_channel_id()
+            .find(dm_channel_id)
+            .is_some()
+    })
+}
+
+fn collect_valid_dm_channel_ids<I, F>(
+    channel_ids: I,
+    mut channel_exists: F,
+) -> std::collections::BTreeSet<u64>
+where
+    I: IntoIterator<Item = u64>,
+    F: FnMut(u64) -> bool,
+{
+    channel_ids
+        .into_iter()
+        .filter(|channel_id| channel_exists(*channel_id))
         .collect()
 }
 
@@ -288,4 +310,26 @@ pub fn my_dm_messages(ctx: &ViewContext) -> Vec<DmMessage> {
     }
 
     messages
+}
+
+#[cfg(test)]
+mod tests {
+    use super::collect_valid_dm_channel_ids;
+
+    #[test]
+    fn collect_valid_dm_channel_ids_filters_orphaned_rows_and_dedupes() {
+        let participant_channel_ids = vec![1_u64, 2, 2, 3, 4];
+        let result = collect_valid_dm_channel_ids(participant_channel_ids, |id| id == 2 || id == 4);
+
+        let collected: Vec<u64> = result.into_iter().collect();
+        assert_eq!(collected, vec![2, 4]);
+    }
+
+    #[test]
+    fn collect_valid_dm_channel_ids_returns_empty_when_no_valid_channel_exists() {
+        let participant_channel_ids = vec![10_u64, 11, 12];
+        let result = collect_valid_dm_channel_ids(participant_channel_ids, |_| false);
+
+        assert!(result.is_empty());
+    }
 }
