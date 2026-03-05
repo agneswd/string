@@ -12,6 +12,7 @@ export interface ChatMessageItem {
   authorId?: string | number
   profileColor?: string
   canEditDelete?: boolean
+  isSystem?: boolean
 }
 
 export interface ChatViewPaneProps {
@@ -142,6 +143,35 @@ const S: Record<string, CSSProperties> = {
     color: 'var(--text-primary)',
     wordWrap: 'break-word',
     whiteSpace: 'pre-wrap',
+  },
+  systemRow: {
+    padding: '8px 16px',
+    display: 'flex',
+    justifyContent: 'center',
+  },
+  systemPill: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    background: 'var(--bg-input)',
+    border: '1px solid var(--border-subtle)',
+    color: 'var(--text-muted)',
+    borderRadius: 999,
+    padding: '4px 10px',
+    fontSize: '0.75rem',
+    lineHeight: 1.2,
+  },
+  systemTag: {
+    color: 'var(--text-secondary)',
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.03em',
+    fontSize: '0.625rem',
+  },
+  systemTimestamp: {
+    color: 'var(--text-muted)',
+    opacity: 0.8,
+    fontSize: '0.6875rem',
   },
   composerWrap: {
     padding: '0 16px 24px 16px',
@@ -378,6 +408,18 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
   onDeleteMessage,
   onEditMessage,
 }: ChatMessageRowProps) {
+  if (message.isSystem) {
+    return (
+      <li style={S.systemRow}>
+        <span style={S.systemPill}>
+          <span style={S.systemTag}>Call</span>
+          <span>{message.content}</span>
+          <span style={S.systemTimestamp}>{message.timestamp}</span>
+        </span>
+      </li>
+    )
+  }
+
   const [hovered, setHovered] = useState(false)
   const hashColor = getAvatarColor(message.authorName)
   const color = message.profileColor || hashColor

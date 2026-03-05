@@ -181,6 +181,7 @@ export function useDmChat({
         content: string
         timestamp: string
         canEditDelete: boolean
+        isSystem?: boolean
       }>
     }
 
@@ -218,6 +219,7 @@ export function useDmChat({
           content: message.content,
           timestamp: formatTimestamp(message.sentAt),
           canEditDelete: true,
+          isSystem: false,
           profileColor: (author as any)?.profileColor ?? undefined,
           sortTime: timestampToMillis(message.sentAt),
           sortId: toSortableBigInt(message.dmMessageId),
@@ -268,6 +270,7 @@ export function useDmChat({
           content,
           timestamp: formatTimestamp(event.createdAt),
           canEditDelete: false,
+          isSystem: true,
           profileColor: undefined,
           sortTime: timestampToMillis(event.createdAt),
           sortId: toSortableBigInt(event.eventId),
