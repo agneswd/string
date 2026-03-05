@@ -9,7 +9,19 @@
 import { DbConnection } from '../module_bindings';
 import type { Identity } from 'spacetimedb/sdk';
 
-const SPACETIMEDB_URL = 'ws://localhost:3000';
+// Dynamically determine SpacetimeDB URL based on environment
+const getSpacetimeDbUrl = (): string => {
+  // Use environment variable if available (for custom deployments)
+  if (import.meta.env.VITE_SPACETIMEDB_URL) {
+    return import.meta.env.VITE_SPACETIMEDB_URL;
+  }
+
+  // Connect to maincloud instance
+  // The SpacetimeDB SDK expects the realm path: https://spacetimedb.subdomain.realm/
+  return 'https://maincloud.spacetimedb.com';
+};
+
+const SPACETIMEDB_URL = getSpacetimeDbUrl();
 const DB_NAME = 'string';
 const TOKEN_KEY = 'string_auth_token';
 

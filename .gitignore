@@ -29,6 +29,6 @@ spacetimedb/target
 .github
 AGENTS.md
 CLAUDE.md
-/plans
-/patches
-/scripts
+plans
+patches
+scripts
