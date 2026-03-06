@@ -1,10 +1,12 @@
 import React from 'react'
+import type { LayoutMode } from '../../constants/theme'
 import { ChatViewPane, type ChatMessageItem } from '../chat/ChatViewPane'
 import { type ReactionBarItem } from '../chat/ReactionBar'
 import { DmCallOverlay, type CallUser } from '../voice/DmCallOverlay'
 import { FriendRequestPanel, type FriendRequestItemId, type FriendUserId, type IncomingFriendRequestItem, type OutgoingFriendRequestItem, type FriendListItem, type GuildInviteItem } from '../social/FriendRequestPanel'
 
 export interface MessageAreaProps {
+  layoutMode?: LayoutMode
   // View state
   isInDmVoice: boolean
   isDmMode: boolean
@@ -70,6 +72,7 @@ export interface MessageAreaProps {
 
 export function MessageArea(props: MessageAreaProps) {
   const {
+    layoutMode = 'classic',
     isInDmVoice, isDmMode, isHomeView, selectedDmChannelId, dmVoiceChannelId,
     localUser, remoteUser, onMute, onDeafen, onScreenShare, onHangUp,
     isMuted, isDeafened, isScreenSharing, isLocalSpeaking, isRemoteSpeaking,
@@ -93,6 +96,7 @@ export function MessageArea(props: MessageAreaProps) {
   if (isInDmVoice && isDmMode && selectedDmChannelId === dmVoiceChannelId) {
     return (
       <DmCallOverlay
+        layoutMode={layoutMode}
         localUser={localUser}
         remoteUser={remoteUser}
         onMute={onMute}
@@ -111,6 +115,7 @@ export function MessageArea(props: MessageAreaProps) {
           : undefined}
         chatPanel={
           <ChatViewPane
+            layoutMode={layoutMode}
             channelName={activeChannelName}
             showHeader={false}
             messages={dmMessages}
@@ -138,6 +143,7 @@ export function MessageArea(props: MessageAreaProps) {
   if (isHomeView) {
     return (
       <FriendRequestPanel
+        layoutMode={layoutMode}
         requestUsername={friendRequestUsername}
         onRequestUsernameChange={onRequestUsernameChange}
         onSendRequest={onSendRequest}
@@ -160,6 +166,7 @@ export function MessageArea(props: MessageAreaProps) {
   // Default — chat view
   return (
     <ChatViewPane
+      layoutMode={layoutMode}
       channelName={activeChannelName}
       showHeader={false}
       messages={activeMessages}

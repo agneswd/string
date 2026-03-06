@@ -564,6 +564,7 @@ function App() {
           }
           messageArea={
             <MessageArea
+              layoutMode={layoutMode}
               isInDmVoice={isInDmVoice}
               isDmMode={isDmMode}
               isHomeView={isHomeView}
@@ -724,6 +725,7 @@ function App() {
         />
 
         <ContextMenuOverlay
+          layoutMode={layoutMode}
           contextMenu={contextMenu}
           profilePopup={profilePopup}
           identityString={identityString}

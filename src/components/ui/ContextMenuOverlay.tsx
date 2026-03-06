@@ -6,8 +6,10 @@ import { statusToLabel } from '../../lib/helpers'
 import { identityToString } from '../../hooks/useAppData'
 import type { User as UserRow } from '../../module_bindings/types'
 import type { ProfilePopupState } from '../../hooks/useAppState'
+import type { LayoutMode } from '../../constants/theme'
 
 export interface ContextMenuOverlayProps {
+  layoutMode?: LayoutMode
   contextMenu: { x: number; y: number; userId: string; user: ProfilePopupUser } | null
   profilePopup: ProfilePopupState
   identityString: string | null
@@ -21,6 +23,7 @@ export interface ContextMenuOverlayProps {
 }
 
 export const ContextMenuOverlay: React.FC<ContextMenuOverlayProps> = ({
+  layoutMode,
   contextMenu,
   profilePopup,
   identityString,
@@ -88,6 +91,7 @@ export const ContextMenuOverlay: React.FC<ContextMenuOverlayProps> = ({
         <UserProfilePopup
           user={profilePopupUser}
           onClose={onCloseProfile}
+          layoutMode={layoutMode}
         />
       )}
     </>
