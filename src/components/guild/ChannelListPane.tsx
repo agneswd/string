@@ -1,5 +1,4 @@
 import React, { useCallback, useMemo, useState } from 'react'
-import { Clipboard } from 'lucide-react'
 import { VoiceUserContextMenu } from '../voice/VoiceUserContextMenu'
 import { VoiceUserRow } from './channel-list/VoiceUserRow'
 import { UserControlPanel } from './channel-list/UserControlPanel'
@@ -208,21 +207,6 @@ export function ChannelListPane({
               onClick={(e) => { e.stopPropagation(); onCreateChannel() }}
               baseStyle={styles.addBtn}
             />
-          )}
-          {guildName && (
-            <button
-              type="button"
-              className="clp-add-btn"
-              style={{ ...styles.addBtn, width: 22, height: 22 }}
-              onClick={(e) => {
-                e.stopPropagation()
-                void navigator.clipboard.writeText(guildName)
-              }}
-              title={'Copy guild name: ' + guildName}
-              aria-label="Copy guild name"
-            >
-              <Clipboard style={{ width: 12, height: 12 }} aria-hidden="true" />
-            </button>
           )}
         </div>
       </header>

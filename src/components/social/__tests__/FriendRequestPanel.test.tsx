@@ -58,8 +58,8 @@ describe('FriendRequestPanel', () => {
   it('defaults to All tab and shows all friends', () => {
     renderPanel()
     // Default tab is 'all'
-    expect(screen.getByText('alice')).toBeTruthy()
-    expect(screen.getByText('bob')).toBeTruthy()
+    expect(screen.getByText('Alice')).toBeTruthy()
+    expect(screen.getByText('Bob')).toBeTruthy()
   })
 
   it('switches to Online tab when clicked', () => {
@@ -123,8 +123,8 @@ describe('FriendRequestPanel', () => {
     renderPanel()
     const searchInput = screen.getByRole('textbox', { name: /search friends/i })
     fireEvent.change(searchInput, { target: { value: 'ali' } })
-    expect(screen.getByText('alice')).toBeTruthy()
-    expect(screen.queryByText('bob')).toBeNull()
+    expect(screen.getByText('Alice')).toBeTruthy()
+    expect(screen.queryByText('Bob')).toBeNull()
   })
 
   it('shows empty state when no friends and all tab has no results', () => {
@@ -136,5 +136,24 @@ describe('FriendRequestPanel', () => {
     renderPanel({ incomingRequests: [], outgoingRequests: [] })
     fireEvent.click(screen.getByRole('button', { name: /pending/i }))
     expect(screen.getByText(/no pending requests/i)).toBeTruthy()
+  })
+
+  it('renders friend avatar images when avatarUrl is provided', () => {
+    const { container } = renderPanel({
+      friends: [{ id: 'f1', username: 'alice', displayName: 'Alice', status: 'online', avatarUrl: 'https://example.com/alice.png' }],
+      layoutMode: 'string',
+    })
+    const img = container.querySelector('img')
+    expect(img).toBeTruthy()
+  })
+
+  it('uses profileColor for friend fallback avatars', () => {
+    const { container } = renderPanel({
+      friends: [{ id: 'f1', username: 'alice', displayName: 'Alice', status: 'online', profileColor: '#123456' }],
+      layoutMode: 'string',
+    })
+    const avatar = container.querySelector('div[aria-hidden="true"]') as HTMLElement | null
+    expect(avatar).toBeTruthy()
+    expect(avatar!.style.backgroundColor).toBe('rgb(18, 52, 86)')
   })
 })

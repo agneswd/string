@@ -106,7 +106,7 @@ const styles = {
   avatar: (speaking: boolean): CSSProperties => ({
     width: 24,
     height: 24,
-    borderRadius: '50%',
+    borderRadius: 'var(--radius-sm)',
     background: 'var(--bg-active, #2a2a2a)',
     display: 'flex',
     alignItems: 'center',
@@ -265,7 +265,7 @@ export const VoicePanel = React.memo(function VoicePanel({
 })
 
 /* ── Extracted per-user row to avoid re-rendering all rows ── */
-const imgStyle: CSSProperties = { width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }
+const imgStyle: CSSProperties = { width: '100%', height: '100%', borderRadius: 'var(--radius-sm)', objectFit: 'cover' }
 
 const VoiceUserRow = React.memo(function VoiceUserRow({ user }: { user: VoiceUser }) {
   const avatarStyle = useMemo(() => styles.avatar(!!user.speaking), [user.speaking])

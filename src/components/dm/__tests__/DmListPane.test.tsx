@@ -62,6 +62,13 @@ describe('DmListPane', () => {
     expect(onShowFriends).toHaveBeenCalled()
   })
 
+  it('renders the string friends button without an icon', () => {
+    renderPane({ layoutMode: 'string' })
+    const button = screen.getByRole('button', { name: /friends/i })
+    expect(button.querySelector('svg')).toBeNull()
+    expect(button.style.fontFamily).toBe('var(--font-mono)')
+  })
+
   it('renders the section title', () => {
     renderPane({ title: 'Messages' })
     expect(screen.getByText('Messages')).toBeTruthy()
@@ -110,5 +117,33 @@ describe('DmListPane', () => {
     ]
     renderPane({ channels: channelsWithUnread })
     expect(screen.getByText('3')).toBeTruthy()
+  })
+
+  it('uses rounded-square avatars in string mode', () => {
+    const channelsWithAvatar: DmListItem[] = [
+      { id: 'u1', name: 'Dave', status: 'online', avatarUrl: 'https://example.com/dave.png' },
+    ]
+    const { container } = renderPane({ channels: channelsWithAvatar, layoutMode: 'string' })
+    const img = container.querySelector('img')
+    expect(img).toBeTruthy()
+    expect(img!.style.borderRadius).toBe('var(--radius-sm)')
+  })
+
+  it('uses profileColor for fallback avatars in string mode', () => {
+    const channelsWithColor: DmListItem[] = [
+      { id: 'u1', name: 'Dave', status: 'online', profileColor: '#123456' },
+    ]
+    const { container } = renderPane({ channels: channelsWithColor, layoutMode: 'string' })
+    const avatar = container.querySelector('li button div div') as HTMLElement | null
+    expect(avatar).toBeTruthy()
+    expect(avatar!.style.background).toBe('rgb(18, 52, 86)')
+  })
+
+  it('positions the string-mode status dot into the avatar corner', () => {
+    const { container } = renderPane({ layoutMode: 'string' })
+    const statusDot = container.querySelector('[aria-label="online"]') as HTMLElement | null
+    expect(statusDot).toBeTruthy()
+    expect(statusDot!.style.right).toBe('-3px')
+    expect(statusDot!.style.bottom).toBe('-3px')
   })
 })

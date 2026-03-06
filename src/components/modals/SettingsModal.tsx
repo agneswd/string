@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import { Modal } from './Modal'
-import { S_formCol, S_labelCol, S_labelSpan } from '../../constants/appStyles'
+import { S_formCol, S_labelCol, S_labelSpan, S_stringOutlineButton } from '../../constants/appStyles'
 import { LAYOUT_MODES, type LayoutMode } from '../../constants/theme'
 
 export interface SettingsModalProps {
@@ -50,16 +50,12 @@ const S_layoutGroup: CSSProperties = {
 }
 
 const S_layoutOption = (active: boolean): CSSProperties => ({
+  ...S_stringOutlineButton,
   flex: 1,
-  padding: '8px 12px',
-  borderRadius: '6px',
-  border: `1px solid ${active ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
-  background: active ? 'var(--accent-subtle)' : 'transparent',
   color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
-  cursor: 'pointer',
-  fontWeight: active ? 600 : 400,
-  fontSize: '13px',
-  transition: 'border-color 0.15s, background 0.15s',
+  borderColor: active ? 'var(--text-primary)' : 'var(--border-subtle)',
+  background: active ? 'var(--bg-active)' : 'transparent',
+  transition: 'border-color 0.15s, background 0.15s, color 0.15s',
 })
 
 const LAYOUT_LABELS: Record<LayoutMode, string> = {
@@ -132,6 +128,7 @@ export function SettingsModal({
                 aria-label={LAYOUT_LABELS[mode]}
                 style={S_layoutOption(layoutMode === mode)}
                 onClick={() => onLayoutModeChange(mode)}
+                className="string-outline-button"
               >
                 {LAYOUT_LABELS[mode]}
               </button>

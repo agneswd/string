@@ -38,10 +38,10 @@ describe('UserPanel — string mode', () => {
     expect(screen.getByText('Alice Smith')).toBeDefined()
   })
 
-  it('renders avatar fallback with rounded-rect (borderRadius 8px)', () => {
+  it('renders avatar fallback with rounded-rect using string radius token', () => {
     const { container } = render(<UserPanel {...baseProps} layoutMode="string" />)
     // No avatarUrl → fallback div with initials
-    const avatarDiv = container.querySelector<HTMLElement>('div[style*="border-radius: 8px"]')
+    const avatarDiv = container.querySelector<HTMLElement>('div[style*="border-radius: var(--radius-sm)"]')
     expect(avatarDiv).toBeTruthy()
   })
 
@@ -55,7 +55,28 @@ describe('UserPanel — string mode', () => {
     )
     const img = container.querySelector<HTMLImageElement>('img')
     expect(img).toBeTruthy()
-    expect(img!.style.borderRadius).toBe('8px')
+    expect(img!.style.borderRadius).toBe('var(--radius-sm)')
+  })
+
+  it('positions the status dot tightly in the avatar corner', () => {
+    const { container } = render(<UserPanel {...baseProps} layoutMode="string" />)
+    const dots = Array.from(container.querySelectorAll<HTMLElement>('div')).filter((el) => el.style.backgroundColor === 'var(--status-online)')
+    const dot = dots[0]
+    expect(dot).toBeTruthy()
+    expect(dot!.style.right).toBe('-3px')
+    expect(dot!.style.bottom).toBe('-3px')
+  })
+
+  it('uses profileColor for fallback avatar background when provided', () => {
+    const { container } = render(
+      <UserPanel
+        {...baseProps}
+        user={{ ...baseUser, profileColor: '#123456' }}
+        layoutMode="string"
+      />,
+    )
+    const avatarDiv = container.querySelector<HTMLElement>('div[style*="background-color: rgb(18, 52, 86)"]')
+    expect(avatarDiv).toBeTruthy()
   })
 
   it('profile row is clickable and calls onOpenProfile', async () => {

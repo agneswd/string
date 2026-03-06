@@ -78,4 +78,16 @@ describe('MemberListPane', () => {
     const zoeIdx = names.findIndex((n) => n?.includes('Zoe'))
     expect(aliceIdx).toBeLessThan(zoeIdx)
   })
+
+  it('uses rounded-square avatars in string mode', () => {
+    const { container } = renderPane({
+      layoutMode: 'string',
+      members: [
+        { id: 'u1', username: 'alice', displayName: 'Alice', status: 'online', avatarUrl: 'https://example.com/alice.png' },
+      ],
+    })
+    const img = container.querySelector('img')
+    expect(img).toBeTruthy()
+    expect(img!.style.borderRadius).toBe('var(--radius-sm)')
+  })
 })

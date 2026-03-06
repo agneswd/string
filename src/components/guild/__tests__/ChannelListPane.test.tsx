@@ -67,6 +67,11 @@ describe('ChannelListPane', () => {
     expect(screen.getByRole('button', { name: /create channel/i })).toBeTruthy()
   })
 
+  it('does not render a copy guild name button in the header', () => {
+    renderPane()
+    expect(screen.queryByRole('button', { name: /copy guild name/i })).toBeNull()
+  })
+
   it('renders user panel when userPanel is provided', () => {
     renderPane({ userPanel: { displayName: 'Me', username: 'me', status: 'Online' } })
     expect(screen.getByText('Me')).toBeTruthy()

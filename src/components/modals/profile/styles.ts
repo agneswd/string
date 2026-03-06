@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import { S_stringOutlineButton, S_stringOutlineButtonDisabled } from '../../../constants/appStyles'
 
 export const S_section: CSSProperties = {
   display: 'flex',
@@ -50,21 +51,17 @@ export const S_charCount: CSSProperties = {
 }
 
 export const S_saveBtn: CSSProperties = {
-  padding: '9px 20px',
-  borderRadius: '2px',
-  border: 'none',
-  backgroundColor: 'var(--accent-primary)',
-  color: '#111111',
-  fontWeight: 600,
-  fontSize: '13px',
-  cursor: 'pointer',
+  ...S_stringOutlineButton,
+  alignSelf: 'stretch',
+  width: '100%',
   marginTop: '8px',
 }
 
 export const S_saveBtnDisabled: CSSProperties = {
-  ...S_saveBtn,
-  opacity: 0.4,
-  cursor: 'not-allowed',
+  ...S_stringOutlineButtonDisabled,
+  alignSelf: 'stretch',
+  width: '100%',
+  marginTop: '8px',
 }
 
 export const S_statusBtn: CSSProperties = {
@@ -88,12 +85,8 @@ export const S_statusBtnActive: CSSProperties = {
 }
 
 export const S_uploadBtn: CSSProperties = {
+  ...S_stringOutlineButton,
+  minHeight: 30,
   padding: '5px 12px',
-  borderRadius: '2px',
-  border: '1px solid var(--border-subtle)',
-  backgroundColor: 'var(--bg-active)',
-  color: 'var(--text-primary)',
-  fontWeight: 500,
   fontSize: '12px',
-  cursor: 'pointer',
 }

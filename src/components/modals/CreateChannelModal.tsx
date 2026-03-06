@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Volume2 } from 'lucide-react'
 import { Modal } from './Modal'
-import { S_formCol, S_labelCol, S_labelSpan, S_input } from '../../constants/appStyles'
+import { S_formCol, S_labelCol, S_labelSpan, S_input, S_stringOutlineButton, S_stringOutlineButtonDisabled } from '../../constants/appStyles'
 
 export interface CreateChannelModalProps {
   isOpen: boolean
@@ -35,7 +35,7 @@ export function CreateChannelModal({ isOpen, onClose, channelName, onChannelName
           <span style={S_labelSpan}>CHANNEL NAME</span>
           <input value={channelName} onChange={e => onChannelNameChange(e.target.value)} placeholder="new-channel" style={S_input} />
         </label>
-        <button type="submit" disabled={!channelName.trim() || isSubmitting} style={{ padding: '10px 16px', borderRadius: '4px', border: 'none', backgroundColor: 'var(--accent-primary, #5865f2)', color: '#fff', fontWeight: 600, cursor: channelName.trim() && !isSubmitting ? 'pointer' : 'not-allowed', opacity: channelName.trim() && !isSubmitting ? 1 : 0.5 }}>
+        <button type="submit" disabled={!channelName.trim() || isSubmitting} style={channelName.trim() && !isSubmitting ? S_stringOutlineButton : S_stringOutlineButtonDisabled} className="string-outline-button">
           {isSubmitting ? 'Creating…' : 'Create Channel'}
         </button>
       </form>

@@ -155,6 +155,7 @@ export const ChatMessageRow = React.memo(function ChatMessageRow({
   layoutMode = 'string',
 }: ChatMessageRowProps) {
   const [hovered, setHovered] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState('')
   const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number } | null>(
@@ -294,19 +295,6 @@ export const ChatMessageRow = React.memo(function ChatMessageRow({
 
   // ── Regular row ───────────────────────────────────────────────────────────
 
-  const actionBarStyle: CSSProperties = {
-    position: 'absolute',
-    top: -8,
-    right: 16,
-    display: 'flex',
-    gap: 2,
-    background: 'var(--bg-panel)',
-    borderRadius: isString ? 3 : 4,
-    border: '1px solid var(--border-subtle)',
-    padding: 2,
-    zIndex: 5,
-  }
-
   const editInputStyle: CSSProperties = {
     flex: 1,
     background: 'var(--bg-input)',
@@ -400,41 +388,42 @@ export const ChatMessageRow = React.memo(function ChatMessageRow({
         <p style={S_row.content}>{message.content}</p>
       )}
 
-      {hovered && (onDeleteMessage || onEditMessage) && !isEditing && isOwnMessage && (
-        <div style={actionBarStyle}>
-          {canEditOrDelete && onEditMessage && (
-            <button
-              type="button"
-              onClick={() => {
-                setEditValue(message.content)
-                setIsEditing(true)
-              }}
-              style={actionBtnBase}
-              title="Edit"
-              aria-label="Edit message"
-            >
-              <Pencil size={16} />
-            </button>
-          )}
-          {canEditOrDelete && onDeleteMessage && (
-            <button
-              type="button"
-              onClick={() => onDeleteMessage(message.id)}
-              style={{ ...actionBtnBase, color: 'var(--text-danger)' }}
-              title="Delete"
-              aria-label="Delete message"
-            >
-              <Trash2 size={16} />
-            </button>
-          )}
-        </div>
-      )}
-
-      {shouldRenderReactions && hovered && onToggleReaction && !isEditing && (
+      {(hovered || pickerOpen) && !isEditing && ((shouldRenderReactions && onToggleReaction) || (isOwnMessage && (onDeleteMessage || onEditMessage))) && (
         <QuickReactBar
           onToggleReaction={handleToggle}
           disabled={!onToggleReaction}
           layoutMode={layoutMode}
+          showQuickReacts={Boolean(shouldRenderReactions && onToggleReaction)}
+          onPickerVisibilityChange={setPickerOpen}
+          trailingContent={isOwnMessage && (onDeleteMessage || onEditMessage) ? (
+            <>
+              {canEditOrDelete && onEditMessage && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditValue(message.content)
+                    setIsEditing(true)
+                  }}
+                  style={actionBtnBase}
+                  title="Edit"
+                  aria-label="Edit message"
+                >
+                  <Pencil size={16} />
+                </button>
+              )}
+              {canEditOrDelete && onDeleteMessage && (
+                <button
+                  type="button"
+                  onClick={() => onDeleteMessage(message.id)}
+                  style={{ ...actionBtnBase, color: 'var(--text-danger)' }}
+                  title="Delete"
+                  aria-label="Delete message"
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
+            </>
+          ) : undefined}
         />
       )}
 

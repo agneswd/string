@@ -1,3 +1,5 @@
+import { AVATAR_COLORS } from '../../../lib/avatarUtils'
+
 // Muted status colors — match the editorial dark theme (theme.md)
 export const STATUS_OPTIONS = [
   { tag: 'Online',       label: 'Online',              color: '#4a8a6a' },
@@ -25,8 +27,4 @@ export function getStatusColor(tag: string): string {
  * Muted editorial palette — tones drawn from theme.md language-tag accent tints.
  * Avoids bright/saturated Discord-style swatches.
  */
-export const PROFILE_COLORS = [
-  '#3870a0', '#389878', '#9a8428', '#a05a38',
-  '#a04030', '#5048a0', '#3880a0', '#708840',
-  '#983840', '#5870a0', '#a06038', '#5c6470',
-] as const
+export const PROFILE_COLORS = AVATAR_COLORS

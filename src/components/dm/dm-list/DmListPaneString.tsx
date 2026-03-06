@@ -3,7 +3,6 @@
  * Uses CSS design tokens (var(--*)). Only rendered when layoutMode="string".
  */
 import { useState, useMemo, useCallback, memo } from 'react'
-import { Users } from 'lucide-react'
 import { DmNavButton } from './DmNavButton'
 import { DmItem } from './DmItem'
 import type { DmListPaneProps, DmChannelId } from './types'
@@ -136,7 +135,6 @@ export const DmListPaneString = memo(function DmListPaneString({
       <div style={navSectionStyle}>
         <DmNavButton
           label="Friends"
-          icon={<Users style={{ width: 18, height: 18 }} aria-hidden="true" />}
           onClick={() => onShowFriends?.()}
         />
       </div>

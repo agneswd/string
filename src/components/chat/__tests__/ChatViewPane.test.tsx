@@ -118,4 +118,72 @@ describe('ChatViewPane', () => {
     const names = screen.getAllByText('Alice')
     expect(names.length).toBe(1)
   })
+
+  it('merges quick reactions and edit/delete into one hover toolbar', () => {
+    renderPane({
+      currentUserId: 'u1',
+      onEditMessage: vi.fn(),
+      onDeleteMessage: vi.fn(),
+      onToggleReaction: vi.fn(),
+      getReactionsForMessage: () => [],
+    })
+
+    const row = screen.getByText('Hello world').closest('li')
+    expect(row).toBeTruthy()
+    fireEvent.mouseEnter(row!)
+
+    const moreBtn = screen.getByLabelText(/more reactions/i)
+    const editBtn = screen.getByLabelText(/edit message/i)
+    const deleteBtn = screen.getByLabelText(/delete message/i)
+
+    expect(moreBtn).toBeTruthy()
+    expect(editBtn).toBeTruthy()
+    expect(deleteBtn).toBeTruthy()
+    expect(editBtn.parentElement?.parentElement).toBe(moreBtn.parentElement?.parentElement)
+    expect(deleteBtn.parentElement?.parentElement).toBe(moreBtn.parentElement?.parentElement)
+  })
+
+  it('keeps the emoji picker open until clicking outside', () => {
+    renderPane({
+      currentUserId: 'u1',
+      onEditMessage: vi.fn(),
+      onDeleteMessage: vi.fn(),
+      onToggleReaction: vi.fn(),
+      getReactionsForMessage: () => [],
+    })
+
+    const row = screen.getByText('Hello world').closest('li')
+    expect(row).toBeTruthy()
+    fireEvent.mouseEnter(row!)
+    fireEvent.click(screen.getByLabelText(/more reactions/i))
+
+    expect(screen.getByPlaceholderText(/search emoji/i)).toBeTruthy()
+
+    fireEvent.mouseLeave(row!)
+    expect(screen.getByPlaceholderText(/search emoji/i)).toBeTruthy()
+
+    fireEvent.mouseDown(document.body)
+    expect(screen.queryByPlaceholderText(/search emoji/i)).toBeNull()
+  })
+
+  it('searches emoji picker entries by emoji names', () => {
+    renderPane({
+      currentUserId: 'u1',
+      onEditMessage: vi.fn(),
+      onDeleteMessage: vi.fn(),
+      onToggleReaction: vi.fn(),
+      getReactionsForMessage: () => [],
+    })
+
+    const row = screen.getByText('Hello world').closest('li')
+    expect(row).toBeTruthy()
+    fireEvent.mouseEnter(row!)
+    fireEvent.click(screen.getByLabelText(/more reactions/i))
+
+    const search = screen.getByPlaceholderText(/search emoji/i)
+    fireEvent.change(search, { target: { value: 'heart' } })
+
+    expect(screen.getAllByRole('button', { name: /heart/i }).length).toBeGreaterThan(0)
+    expect(screen.queryByRole('button', { name: /pizza/i })).toBeNull()
+  })
 })

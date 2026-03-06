@@ -6,6 +6,7 @@ export interface DmListItem {
   id: DmChannelId
   name: string
   avatarUrl?: string
+  profileColor?: string
   status?: 'online' | 'idle' | 'dnd' | 'offline'
   lastMessage?: string
   unreadCount?: number

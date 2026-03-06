@@ -40,7 +40,7 @@ export function UserPanelClassic({
           ) : (
             <div style={{
               width: 32, height: 32, borderRadius: '50%',
-              backgroundColor: getAvatarColor(displayName),
+              backgroundColor: user.profileColor || getAvatarColor(displayName),
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: '#fff', fontSize: '14px', fontWeight: 600,
             }}>
@@ -80,7 +80,7 @@ export function UserPanelClassic({
         <button onClick={onToggleMute} title={isMuted ? 'Unmute' : 'Mute'} style={{
           width: 32, height: 32, borderRadius: '4px', border: 'none', padding: 0,
           backgroundColor: isMuted ? 'var(--bg-danger-hover)' : 'transparent',
-          color: muteColor,
+          color: isMuted ? muteColor : 'var(--text-muted, #b5bac1)',
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           {isMuted ? (
@@ -92,7 +92,7 @@ export function UserPanelClassic({
         <button onClick={onToggleDeafen} title={isDeafened ? 'Undeafen' : 'Deafen'} style={{
           width: 32, height: 32, borderRadius: '4px', border: 'none', padding: 0,
           backgroundColor: isDeafened ? 'var(--bg-danger-hover)' : 'transparent',
-          color: deafenColor,
+          color: isDeafened ? deafenColor : 'var(--text-muted, #b5bac1)',
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           {isDeafened ? (

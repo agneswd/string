@@ -23,9 +23,8 @@ describe('TopNavBar — classic mode', () => {
 })
 
 describe('TopNavBar — string mode', () => {
-  it('shows guild name as muted context prefix', () => {
+  it('shows guild name inside the badge', () => {
     render(<TopNavBar {...baseProps} layoutMode="string" channelName="general" />)
-    // Alpha Corp should appear as a span (muted prefix) not a <strong>
     expect(screen.getByText('Alpha Corp')).toBeDefined()
     expect(document.querySelector('strong')).toBeNull()
   })
@@ -42,6 +41,12 @@ describe('TopNavBar — string mode', () => {
     expect(screen.queryByText('/')).toBeNull()
   })
 
+  it('shows home inside the badge without duplicate text', () => {
+    render(<TopNavBar {...baseProps} layoutMode="string" isHomeView={true} />)
+    expect(screen.getByText('home')).toBeDefined()
+    expect(screen.getAllByText('home')).toHaveLength(1)
+  })
+
   it('shows DM name in string breadcrumb when isDmMode', () => {
     render(
       <TopNavBar
@@ -54,6 +59,12 @@ describe('TopNavBar — string mode', () => {
     )
     expect(screen.getAllByText('Bob')).toHaveLength(1)
     expect(screen.queryByText('/')).toBeNull()
+  })
+
+  it('shows only channel breadcrumb text when context is already in the badge', () => {
+    render(<TopNavBar {...baseProps} layoutMode="string" channelName="announcements" />)
+    expect(screen.getByText('announcements')).toBeDefined()
+    expect(screen.getAllByText('Alpha Corp')).toHaveLength(1)
   })
 
   it('renders member list toggle button', () => {

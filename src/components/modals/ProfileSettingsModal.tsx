@@ -29,6 +29,7 @@ export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
   const [uploadedPreview, setUploadedPreview] = useState<string | null>(null)
   const uploadedPreviewRef = useRef<string | null>(null)
   const [avatarBytes, setAvatarBytes] = useState<Uint8Array | null>(null)
+  const [avatarRemoved, setAvatarRemoved] = useState(false)
   const [saving, setSaving] = useState(false)
   const [avatarError, setAvatarError] = useState<string | null>(null)
   const [focusedField, setFocusedField] = useState<string | null>(null)
@@ -47,7 +48,7 @@ export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
   )
 
   // The preview to display: uploaded file takes priority, then existing avatar
-  const avatarPreview = uploadedPreview ?? existingAvatarUrl ?? null
+  const avatarPreview = uploadedPreview ?? (avatarRemoved ? null : existingAvatarUrl ?? null)
 
   // Sync form with currentUser — full reset only on modal open transition;
   // while already open, only update fields the user hasn't locally modified.
@@ -67,6 +68,7 @@ export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
         }
         setUploadedPreview(null)
         avatarDirtyRef.current = false
+        setAvatarRemoved(false)
         const serverColor = currentUser.profileColor ?? ''
         setProfileColor(serverColor)
         initialProfileColor.current = serverColor
@@ -109,6 +111,7 @@ export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
       URL.revokeObjectURL(uploadedPreviewRef.current)
       uploadedPreviewRef.current = null
       setUploadedPreview(null)
+          setAvatarRemoved(false)
     }
   }, [isOpen])
 
@@ -141,6 +144,7 @@ export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
 
       const bytes = new Uint8Array(await processedBlob.arrayBuffer())
       setAvatarBytes(bytes)
+      setAvatarRemoved(false)
       avatarDirtyRef.current = true
 
       if (uploadedPreviewRef.current) URL.revokeObjectURL(uploadedPreviewRef.current)
@@ -153,6 +157,21 @@ export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
       }
     } finally {
       e.target.value = ''
+    }
+  }, [])
+
+  const handleAvatarReset = useCallback(() => {
+    setAvatarError(null)
+    setAvatarBytes(null)
+    setAvatarRemoved(true)
+    avatarDirtyRef.current = true
+    if (uploadedPreviewRef.current) {
+      URL.revokeObjectURL(uploadedPreviewRef.current)
+      uploadedPreviewRef.current = null
+    }
+    setUploadedPreview(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
     }
   }, [])
 
@@ -180,7 +199,10 @@ export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
         hasProfileChange = true
       }
 
-      if (avatarBytes) {
+      if (avatarRemoved) {
+        params.avatarBytes = null
+        hasProfileChange = true
+      } else if (avatarBytes) {
         params.avatarBytes = avatarBytes
         hasProfileChange = true
       }
@@ -207,7 +229,7 @@ export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
     } finally {
       setSaving(false)
     }
-  }, [currentUser, saving, editDisplayName, editBio, editStatus, avatarBytes, profileColor, onUpdateProfile, onSetStatus, onClose])
+  }, [currentUser, saving, editDisplayName, editBio, editStatus, avatarBytes, avatarRemoved, profileColor, onUpdateProfile, onSetStatus, onClose])
 
   if (!currentUser) return null
 
@@ -221,6 +243,7 @@ export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
       (!!editDisplayName.trim() && editDisplayName.trim() !== originalDisplayName) ||
       editBio !== currentBio ||
       editStatus !== originalStatus ||
+      avatarRemoved ||
       avatarBytes !== null ||
       profileColor !== initialProfileColor.current
     )
@@ -236,6 +259,8 @@ export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
           statusColor={getStatusColor(editStatus)}
           avatarError={avatarError}
           onUploadClick={() => fileInputRef.current?.click()}
+          onResetClick={handleAvatarReset}
+          canReset={Boolean(avatarPreview)}
         />
 
         {/* Display Name */}
@@ -285,6 +310,7 @@ export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
           onClick={handleSave}
           disabled={saving || !hasChanges}
           style={hasChanges && !saving ? S_saveBtn : S_saveBtnDisabled}
+          className="string-outline-button"
         >
           {saving ? 'Saving...' : 'Save Changes'}
         </button>

@@ -96,7 +96,7 @@ export function AppModals({
           await onUpdateProfile({
             displayName: params.displayName ?? undefined,
             bio: params.bio === null ? '' : params.bio,
-            avatarBytes: params.avatarBytes ?? undefined,
+            avatarBytes: params.avatarBytes === null ? null : (params.avatarBytes ?? undefined),
             profileColor: params.profileColor === null ? '' : params.profileColor,
           })
         }}

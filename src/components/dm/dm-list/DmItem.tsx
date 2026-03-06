@@ -47,7 +47,7 @@ const avatarWrapStyle: React.CSSProperties = {
 const makeAvatarStyle = (bg: string): React.CSSProperties => ({
   width: 30,
   height: 30,
-  borderRadius: '50%',
+  borderRadius: 'var(--radius-sm)',
   background: bg,
   display: 'flex',
   alignItems: 'center',
@@ -62,14 +62,14 @@ const makeAvatarStyle = (bg: string): React.CSSProperties => ({
 
 const makeStatusDotStyle = (status: string): React.CSSProperties => ({
   position: 'absolute',
-  bottom: -1,
-  right: -1,
-  width: 9,
-  height: 9,
+  bottom: -3,
+  right: -3,
+  width: 10,
+  height: 10,
   borderRadius: '50%',
   border: '2px solid var(--bg-sidebar-light)',
   background: STATUS_COLORS[status] ?? STATUS_COLORS.offline,
-  boxSizing: 'content-box',
+  boxSizing: 'border-box',
 })
 
 const nameColStyle: React.CSSProperties = {
@@ -155,7 +155,7 @@ export const DmItem = memo(function DmItem({
   const [hovered, setHovered] = useState(false)
 
   const status = channel.status ?? 'offline'
-  const avatarBg = channel.avatarUrl ? 'var(--bg-sidebar-light)' : getAvatarColor(channel.name)
+  const avatarBg = channel.avatarUrl ? 'var(--bg-sidebar-light)' : (channel.profileColor || getAvatarColor(channel.name))
   const showActions = hovered || isActive
 
   const handleLeave = useCallback(
@@ -198,7 +198,7 @@ export const DmItem = memo(function DmItem({
               <img
                 src={channel.avatarUrl}
                 alt=""
-                style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: '50%' }}
+                style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: 'var(--radius-sm)' }}
               />
             ) : (
               (channel.name || '?')[0].toUpperCase()

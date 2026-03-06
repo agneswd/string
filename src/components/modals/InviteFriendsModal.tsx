@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Modal } from './Modal'
-import { S_input, S_inviteAvatar } from '../../constants/appStyles'
+import { S_input, S_inviteAvatar, S_stringOutlineButton } from '../../constants/appStyles'
 
 export interface InviteFriendsModalProps {
   isOpen: boolean
@@ -37,7 +37,8 @@ export function InviteFriendsModal({ isOpen, onClose, friends, onInviteFriend }:
               </div>
               <button
                 onClick={() => { if (friend.identity) { onInviteFriend(friend.identity); } }}
-                style={{ padding: '6px 16px', borderRadius: '4px', border: 'none', backgroundColor: 'var(--accent-primary, #5865f2)', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}
+                style={{ ...S_stringOutlineButton, minHeight: 30, padding: '5px 12px' }}
+                className="string-outline-button"
               >
                 Invite
               </button>

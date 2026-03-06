@@ -62,8 +62,58 @@ button:disabled {
   cursor: not-allowed;
 }
 
+
+.string-outline-button {
+  transition: background-color 0.12s, border-color 0.12s, color 0.12s, transform 0.12s;
+}
+
+.string-outline-button:hover:not(:disabled) {
+  background: var(--bg-hover) !important;
+  border-color: var(--text-primary) !important;
+}
+
+.string-outline-button:focus-visible {
+  outline: none;
+  border-color: var(--text-primary) !important;
+  box-shadow: 0 0 0 1px var(--text-primary);
+}
+
+.string-outline-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.string-outline-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.modal-status-button {
+  transition: background-color 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.modal-status-button:hover {
+  background: var(--bg-hover) !important;
+  border-color: var(--text-primary) !important;
+}
+
+.modal-status-button.is-active {
+  border-color: var(--accent-primary) !important;
+}
+
+.modal-status-button.is-active:hover {
+  background: var(--bg-hover) !important;
+  border-color: var(--accent-primary) !important;
+}
+
+.modal-status-button:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+  border-color: var(--text-primary) !important;
+  box-shadow: 0 0 0 1px var(--text-primary) !important;
+}
+
 /* --- Composer box focus --- */
 .chat-composer-box:focus-within {
-  box-shadow: 0 0 0 2px var(--accent-primary, #c8b8a2);
+  box-shadow: 0 0 0 1px var(--accent-primary, #c8b8a2);
   transition: box-shadow 0.15s ease;
 }

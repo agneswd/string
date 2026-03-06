@@ -17,6 +17,29 @@ export const S_labelCol: CSSProperties = { display: 'flex', flexDirection: 'colu
 export const S_labelSpan: CSSProperties = { fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }
 export const S_input: CSSProperties = { padding: '8px 10px', borderRadius: '2px', border: 'none', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '13px' }
 export const S_inviteAvatar: CSSProperties = { width: 30, height: 30, borderRadius: '3px', backgroundColor: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bg-deepest)', fontSize: '13px', fontWeight: 600 }
+export const S_stringOutlineButton: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: 32,
+  padding: '7px 14px',
+  borderRadius: '2px',
+  border: '1px solid var(--border-subtle)',
+  backgroundColor: 'transparent',
+  color: 'var(--text-primary)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '13px',
+  fontWeight: 500,
+  letterSpacing: '0.04em',
+  lineHeight: 1.2,
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+}
+export const S_stringOutlineButtonDisabled: CSSProperties = {
+  ...S_stringOutlineButton,
+  opacity: 0.45,
+  cursor: 'not-allowed',
+}
 export const S_screenShareOverlay: CSSProperties = {
   position: 'fixed', inset: 0, zIndex: 200,
   backgroundColor: 'rgba(0,0,0,0.92)',

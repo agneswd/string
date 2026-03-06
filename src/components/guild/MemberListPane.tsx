@@ -94,7 +94,7 @@ function resolveMemberStyles(mode: MemberLayoutMode): MemberStyleSheet {
       position: 'relative' as const,
       width: 32,
       height: 32,
-      borderRadius: '50%',
+      borderRadius: isString ? 'var(--radius-sm)' : '50%',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -212,7 +212,7 @@ const MemberRow = memo(function MemberRow({ member, showStatusDot, onViewProfile
       {/* Avatar */}
       <div style={{ ...styles.avatar, background: member.avatarUrl ? 'transparent' : avatarColor, opacity: online ? 1 : 0.45 }}>
         {member.avatarUrl ? (
-          <img src={member.avatarUrl} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+          <img src={member.avatarUrl} alt="" style={{ width: '100%', height: '100%', borderRadius: styles.avatar.borderRadius, objectFit: 'cover' }} />
         ) : (
           initial
         )}

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { avatarBytesToUrl } from '../lib/avatarUtils'
 import type { Identity } from 'spacetimedb/sdk'
 
 import type { AppData } from './useAppData'
@@ -134,6 +135,10 @@ export function useDmChat({
         .map((participant) => identityToString(participant.identity))
         .filter((participantId) => participantId && participantId !== identityString)
 
+      const primaryOtherUser = otherParticipantIds.length > 0
+        ? usersByIdentity.get(otherParticipantIds[0])
+        : undefined
+
       const names = otherParticipantIds.map((participantId) => {
         const participantUser = usersByIdentity.get(participantId)
         return participantUser?.displayName ?? participantUser?.username ?? participantId.slice(0, 12)
@@ -141,11 +146,15 @@ export function useDmChat({
 
       // Derive status from the first other participant
       let status: 'online' | 'idle' | 'dnd' | 'offline' = 'offline'
-      if (otherParticipantIds.length > 0) {
-        const otherUser = usersByIdentity.get(otherParticipantIds[0])
-        if (otherUser?.status && typeof otherUser.status === 'object' && 'tag' in otherUser.status) {
-          status = mapUserStatus((otherUser.status as { tag: string }).tag)
-        }
+      if (primaryOtherUser?.status && typeof primaryOtherUser.status === 'object' && 'tag' in primaryOtherUser.status) {
+        status = mapUserStatus((primaryOtherUser.status as { tag: string }).tag)
+      }
+
+      const avatarUrl = avatarBytesToUrl(primaryOtherUser?.avatarBytes)
+      const profileColor = primaryOtherUser?.profileColor ?? undefined
+
+      if (otherParticipantIds.length > 0 && !primaryOtherUser) {
+        status = 'offline'
       }
 
       const latestDmMessage = dmLastMessageByChannel.get(dmChannelKey)
@@ -157,6 +166,8 @@ export function useDmChat({
       return {
         id: dmChannelKey,
         name: names.length > 0 ? names.join(', ') : `dm-${dmChannelKey}`,
+        avatarUrl,
+        profileColor,
         status,
         unreadCount: hasUnread,
         lastMessage: latestDmMessage ? String(latestDmMessage.content ?? '') : undefined,

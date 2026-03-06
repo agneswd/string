@@ -11,6 +11,8 @@ interface ProfileAvatarSectionProps {
   statusColor: string
   avatarError: string | null
   onUploadClick: () => void
+  onResetClick: () => void
+  canReset: boolean
 }
 
 export const ProfileAvatarSection = React.memo(function ProfileAvatarSection({
@@ -20,6 +22,8 @@ export const ProfileAvatarSection = React.memo(function ProfileAvatarSection({
   statusColor,
   avatarError,
   onUploadClick,
+  onResetClick,
+  canReset,
 }: ProfileAvatarSectionProps) {
   return (
     <div>
@@ -30,14 +34,14 @@ export const ProfileAvatarSection = React.memo(function ProfileAvatarSection({
             <img
               src={avatarPreview}
               alt="Avatar"
-              style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover' }}
+              style={{ width: 64, height: 64, borderRadius: 'var(--radius-sm)', objectFit: 'cover' }}
             />
           ) : (
             <div
               style={{
                 width: 64,
                 height: 64,
-                borderRadius: '50%',
+                borderRadius: 'var(--radius-sm)',
                 backgroundColor: profileColor || getAvatarColor(name),
                 display: 'flex',
                 alignItems: 'center',
@@ -54,8 +58,8 @@ export const ProfileAvatarSection = React.memo(function ProfileAvatarSection({
           <div
             style={{
               position: 'absolute',
-              bottom: 0,
-              right: 0,
+              bottom: -2,
+              right: -2,
               width: 14,
               height: 14,
               borderRadius: '50%',
@@ -66,9 +70,20 @@ export const ProfileAvatarSection = React.memo(function ProfileAvatarSection({
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <button type="button" onClick={onUploadClick} style={S_uploadBtn}>
-            Upload Avatar
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button type="button" onClick={onUploadClick} style={S_uploadBtn} className="string-outline-button">
+              Upload Avatar
+            </button>
+            <button
+              type="button"
+              onClick={onResetClick}
+              disabled={!canReset}
+              style={S_uploadBtn}
+              className="string-outline-button"
+            >
+              Reset
+            </button>
+          </div>
           <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
             Max 100 KB, image only
           </span>

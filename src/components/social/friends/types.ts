@@ -18,6 +18,8 @@ export interface FriendListItem {
   username: string
   displayName?: string
   status?: string
+  avatarUrl?: string
+  profileColor?: string
 }
 
 export interface GuildInviteItem {

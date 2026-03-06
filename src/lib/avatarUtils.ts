@@ -1,15 +1,10 @@
 import { useState, useEffect } from 'react';
 
 export const AVATAR_COLORS = [
-  '#5865f2', // blurple
-  '#57f287', // green
-  '#fee75c', // yellow
-  '#eb459e', // fuchsia
-  '#ed4245', // red
-  '#3ba55d', // dark green
-  '#faa81a', // orange
-  '#9b59b6', // purple
-];
+  '#3870a0', '#389878', '#9a8428', '#a05a38',
+  '#a04030', '#5048a0', '#3880a0', '#708840',
+  '#983840', '#5870a0', '#a06038', '#5c6470',
+] as const;
 
 export function getAvatarColor(name: string): string {
   let hash = 0;

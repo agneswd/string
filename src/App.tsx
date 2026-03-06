@@ -20,6 +20,7 @@ function App() {
         displayName: app.me.displayName,
         status: statusToLabel(app.me.status) || 'Online',
         avatarBytes: app.me.avatarBytes,
+        profileColor: app.me.profileColor ?? undefined,
       }
     : null
 
@@ -38,6 +39,8 @@ function App() {
     username: friend.username,
     displayName: friend.displayName,
     status: friend.status,
+    avatarUrl: app.getAvatarUrlForUser(friend.id),
+    profileColor: (app.usersByIdentity.get(friend.id) as { profileColor?: string } | undefined)?.profileColor,
   }))
 
   const handleAddServer = () => {

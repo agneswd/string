@@ -29,8 +29,10 @@ export function UserPanelString({
     <div
       style={{
         display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '10px',
+        minWidth: 0,
       }}
     >
       {/* Identity row */}
@@ -40,7 +42,9 @@ export function UserPanelString({
           alignItems: 'center',
           gap: '8px',
           cursor: 'pointer',
-          padding: '3px 0',
+          minWidth: 0,
+          flex: 1,
+          padding: '2px 0',
         }}
         onClick={onOpenProfile}
         title={`@${user.username ?? 'unknown'}`}
@@ -50,12 +54,12 @@ export function UserPanelString({
             <img
               src={avatarUrl}
               alt=""
-              style={{ width: 32, height: 32, borderRadius: '8px', objectFit: 'cover' }}
+              style={{ width: 32, height: 32, borderRadius: 'var(--radius-sm)', objectFit: 'cover' }}
             />
           ) : (
             <div style={{
-              width: 32, height: 32, borderRadius: '8px',
-              backgroundColor: getAvatarColor(displayName),
+              width: 32, height: 32, borderRadius: 'var(--radius-sm)',
+              backgroundColor: user.profileColor || getAvatarColor(displayName),
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: '#fff', fontSize: '13px', fontWeight: 600,
             }}>
@@ -64,8 +68,8 @@ export function UserPanelString({
           )}
           {/* Status dot */}
           <div style={{
-            position: 'absolute', bottom: -2, right: -2,
-            width: 8, height: 8, borderRadius: '50%',
+            position: 'absolute', bottom: -3, right: -3,
+            width: 10, height: 10, borderRadius: '50%',
             backgroundColor: statusColor,
             border: '2px solid var(--bg-deepest)',
           }} />
@@ -75,6 +79,7 @@ export function UserPanelString({
           <div style={{
             fontFamily: 'var(--font-mono)',
             fontSize: '12px',
+            lineHeight: 1.2,
             fontWeight: 500,
             color: 'var(--text-primary)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -84,9 +89,10 @@ export function UserPanelString({
           <div style={{
             fontFamily: 'var(--font-mono)',
             fontSize: '10px',
+            lineHeight: 1.2,
             color: 'var(--text-muted)',
-            marginTop: 1,
             letterSpacing: '0.03em',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {user.status?.toLowerCase() ?? 'online'}
           </div>
@@ -94,7 +100,7 @@ export function UserPanelString({
       </div>
 
       {/* Action row */}
-      <div style={{ display: 'flex', gap: '3px', justifyContent: 'flex-end' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
         <IconButton onClick={onOpenSettings} title="Settings" aria-label="Open settings">
           <Settings style={{ width: 14, height: 14 }} />
         </IconButton>
@@ -103,7 +109,7 @@ export function UserPanelString({
           title={isMuted ? 'Unmute' : 'Mute'}
           active={isMuted}
           danger={isMuted}
-          style={{ color: muteColor }}
+          style={{ color: isMuted ? muteColor : 'var(--text-muted)' }}
         >
           {isMuted
             ? <MicOff style={{ width: 14, height: 14 }} />
@@ -115,7 +121,7 @@ export function UserPanelString({
           title={isDeafened ? 'Undeafen' : 'Deafen'}
           active={isDeafened}
           danger={isDeafened}
-          style={{ color: deafenColor }}
+          style={{ color: isDeafened ? deafenColor : 'var(--text-muted)' }}
         >
           {isDeafened
             ? <HeadphoneOff style={{ width: 14, height: 14 }} />
@@ -153,7 +159,7 @@ function IconButton({
       style={{
         width: 26,
         height: 26,
-        borderRadius: '2px',
+        borderRadius: '6px',
         border: '1px solid transparent',
         padding: 0,
         backgroundColor: danger && active ? 'var(--bg-danger-hover)' : 'transparent',

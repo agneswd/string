@@ -1,5 +1,5 @@
 import { MessageSquare, Check, X, Trash2 } from 'lucide-react'
-import { getAvatarColor } from '../../../lib/avatarUtils'
+import { getAvatarColor, getInitial } from '../../../lib/avatarUtils'
 import type { LayoutMode } from '../../../constants/theme'
 import type { PanelStyles } from './FriendsStyles'
 import { statusDotColor } from './FriendsStyles'
@@ -7,9 +7,24 @@ import type { FriendListItem, IncomingFriendRequestItem, OutgoingFriendRequestIt
 
 // ── Avatar ──────────────────────────────────────────────────────────────────
 
-function Avatar({ username, size = 32, layoutMode }: { username: string; size?: number; layoutMode: LayoutMode }) {
-  const bg = getAvatarColor(username)
-  const letter = username.charAt(0).toUpperCase()
+function Avatar({
+  username,
+  displayName,
+  avatarUrl,
+  profileColor,
+  size = 32,
+  layoutMode,
+}: {
+  username: string
+  displayName?: string
+  avatarUrl?: string
+  profileColor?: string
+  size?: number
+  layoutMode: LayoutMode
+}) {
+  const label = displayName || username
+  const bg = profileColor || getAvatarColor(label)
+  const letter = getInitial(label)
   const isString = layoutMode === 'string'
   return (
     <div
@@ -30,7 +45,15 @@ function Avatar({ username, size = 32, layoutMode }: { username: string; size?: 
       }}
       aria-hidden="true"
     >
-      {letter}
+      {avatarUrl ? (
+        <img
+          src={avatarUrl}
+          alt=""
+          style={{ width: size, height: size, objectFit: 'cover', borderRadius: isString ? 'var(--radius-sm)' : '50%' }}
+        />
+      ) : (
+        letter
+      )}
     </div>
   )
 }
@@ -68,11 +91,11 @@ export function FriendRow({ friend, styles: s, layoutMode, hoveredRow, hoveredBt
       onMouseLeave={() => setHoveredRow(null)}
     >
       <div style={s.avatarWrap}>
-        <Avatar username={friend.username} size={32} layoutMode={layoutMode} />
+        <Avatar username={friend.username} displayName={friend.displayName} avatarUrl={friend.avatarUrl} profileColor={friend.profileColor} size={32} layoutMode={layoutMode} />
         <div style={s.statusDot(statusDotColor(friend.status))} />
       </div>
       <div style={s.rowInfo}>
-        <span style={s.rowName}>{friend.username}</span>
+        <span style={s.rowName}>{friend.displayName || friend.username}</span>
         <span style={s.rowSub}>{friend.status || (layoutMode === 'string' ? 'offline' : 'Offline')}</span>
       </div>
       <div style={{ ...s.rowActions, opacity: hovered ? 1 : 0 }}>

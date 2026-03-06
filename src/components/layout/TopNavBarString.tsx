@@ -19,6 +19,7 @@ export function TopNavBarString({
   const contextLabel = isDmMode ? (dmName ?? 'Direct Messages') : (guildName ?? 'Workspace')
   const channelLabel = isHomeView ? null : (channelName ?? (isDmMode ? dmName : null))
   const showSingleContextLabel = !isHomeView && (channelLabel == null || channelLabel === contextLabel)
+  const badgeLabel = isHomeView ? 'home' : contextLabel
 
   return (
     <div
@@ -49,39 +50,14 @@ export function TopNavBarString({
             userSelect: 'none',
           }}
         >
-          string
+          {badgeLabel}
         </span>
 
         {/* Breadcrumb context */}
         {!isHomeView ? (
           <>
-            {showSingleContextLabel ? (
-              <span
-                style={{
-                  fontSize: 12,
-                  fontWeight: 400,
-                  color: 'var(--text-muted)',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {contextLabel}
-              </span>
-            ) : (
+            {!showSingleContextLabel && (
               <>
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 400,
-                    color: 'var(--text-muted)',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {contextLabel}
-                </span>
                 <span style={{ color: 'var(--border-subtle)', fontSize: 12, userSelect: 'none' }}>/</span>
                 <span
                   style={{
@@ -106,11 +82,7 @@ export function TopNavBarString({
               </>
             )}
           </>
-        ) : (
-          <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
-            home
-          </span>
-        )}
+        ) : null}
       </div>
 
       {/* Actions */}

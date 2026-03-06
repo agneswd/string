@@ -9,6 +9,7 @@ export interface UserPanelProps {
     status: string
     avatarUrl?: string
     avatarBytes?: Uint8Array | null
+    profileColor?: string
   } | null
   isMuted: boolean
   isDeafened: boolean

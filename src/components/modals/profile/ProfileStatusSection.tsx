@@ -21,6 +21,7 @@ export const ProfileStatusSection = React.memo(function ProfileStatusSection({
             type="button"
             onClick={() => onChange(opt.tag)}
             style={editStatus === opt.tag ? S_statusBtnActive : S_statusBtn}
+            className={editStatus === opt.tag ? 'modal-status-button is-active' : 'modal-status-button'}
           >
             <div
               style={{
