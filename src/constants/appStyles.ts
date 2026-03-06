@@ -5,18 +5,18 @@ export const S_appShell: CSSProperties = { display: 'flex', flexDirection: 'colu
 export const S_main: CSSProperties = { flex: 1, display: 'flex', minHeight: 0, height: '100%', overflow: 'hidden' }
 export const S_userPanel: CSSProperties = {
   display: 'flex', alignItems: 'center', padding: '0 8px', height: '52px',
-  backgroundColor: 'var(--bg-sidebar-dark, #232428)',
+  backgroundColor: 'var(--bg-sidebar-dark, #111115)',
   borderTop: '1px solid rgba(255,255,255,0.06)',
 }
 export const S_userPanelInner: CSSProperties = { display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }
 export const S_userPanelName: CSSProperties = { fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
-export const S_userPanelStatus: CSSProperties = { fontSize: '12px', color: 'var(--text-muted, #949ba4)' }
+export const S_userPanelStatus: CSSProperties = { fontSize: '12px', color: 'var(--text-muted, #78716c)' }
 export const S_userPanelActions: CSSProperties = { display: 'flex', gap: '4px' }
 export const S_formCol: CSSProperties = { display: 'flex', flexDirection: 'column', gap: '16px' }
 export const S_labelCol: CSSProperties = { display: 'flex', flexDirection: 'column', gap: '8px' }
 export const S_labelSpan: CSSProperties = { fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)' }
-export const S_input: CSSProperties = { padding: '10px', borderRadius: '4px', border: 'none', backgroundColor: 'var(--bg-input, #1e1f22)', color: 'var(--text-primary)', fontSize: '14px' }
-export const S_inviteAvatar: CSSProperties = { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#5865f2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '14px', fontWeight: 600 }
+export const S_input: CSSProperties = { padding: '10px', borderRadius: '4px', border: 'none', backgroundColor: 'var(--bg-input, #111115)', color: 'var(--text-primary)', fontSize: '14px' }
+export const S_inviteAvatar: CSSProperties = { width: 32, height: 32, borderRadius: '50%', backgroundColor: 'var(--accent-primary, #c07a4f)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '14px', fontWeight: 600 }
 export const S_screenShareOverlay: CSSProperties = {
   position: 'fixed', inset: 0, zIndex: 200,
   backgroundColor: 'rgba(0,0,0,0.9)',

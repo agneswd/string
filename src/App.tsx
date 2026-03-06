@@ -39,6 +39,7 @@ import { useNotificationEffects } from './hooks/useNotificationEffects'
 import { useMessageActions } from './hooks/useMessageActions'
 import { useAppNavigation } from './hooks/useAppNavigation'
 import { useAppState } from './hooks/useAppState'
+import { useLayoutMode } from './hooks/useLayoutMode'
 import { useSendSignal } from './hooks/useSendSignal'
 
 import { NotificationToast } from './components/ui/NotificationToast'
@@ -461,10 +462,15 @@ function App() {
   })
 
   // ---------------------------------------------------------------------------
+  // Layout mode (scaffolding — shell switching implemented in a later phase)
+  // ---------------------------------------------------------------------------
+  const { layoutMode } = useLayoutMode()
+
+  // ---------------------------------------------------------------------------
   // JSX
   // ---------------------------------------------------------------------------
   return (
-    <div className="app-shell" style={S_appShell}>
+    <div className="app-shell" style={S_appShell} data-layout-mode={layoutMode}>
       {/* Global call banner */}
       {(currentVoiceState || outgoingCall) && (
         <CallBanner

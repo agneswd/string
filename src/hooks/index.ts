@@ -17,3 +17,5 @@ export { useNotificationEffects } from './useNotificationEffects';
 export { useMessageActions } from './useMessageActions';
 export { useAppNavigation } from './useAppNavigation';
 export { useAppState } from './useAppState';
+export { useLayoutMode } from './useLayoutMode';
+export type { LayoutMode } from '../constants/theme';

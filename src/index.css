@@ -9,10 +9,14 @@ input:focus, textarea:focus, select:focus, button:focus-visible {
 }
 
 /* =============================================
-   TightWire — Discord-like Dark Theme
+   String — Neutral Dark Minimalist Theme
+   Warm terracotta accent, dark neutral surfaces
    ============================================= */
 
-/* --- Theme Variables --- */
+/* --- Design Tokens ---
+   Canonical values live in src/constants/theme.ts (CSS_VAR_TOKENS).
+   If you change a value here, update that map too — the parity test will
+   catch any divergence. --- */
 :root {
   font-family: 'gg sans', 'Noto Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   line-height: 1.5;
@@ -20,44 +24,49 @@ input:focus, textarea:focus, select:focus, button:focus-visible {
 
   color-scheme: dark;
 
-  /* Discord-like dark theme palette */
-  --bg-app: #313338;
-  --bg-sidebar-dark: #1e1f22;
-  --bg-sidebar-light: #2b2d31;
-  --bg-panel: #313338;
-  --bg-input: #1e1f22;
-  --bg-hover: #35373c;
-  --bg-active: #404249;
-  --bg-primary: #313338;
-  --bg-accent: #5865f2;
-  --bg-modifier-hover: rgba(79, 84, 92, 0.32);
-  --bg-modifier-selected: rgba(79, 84, 92, 0.48);
-  --bg-danger: #da373c;
+  /* Surfaces */
+  --bg-deepest:       #111115;
+  --bg-app:           #17171b;
+  --bg-sidebar-dark:  #111115;
+  --bg-sidebar-light: #1c1c21;
+  --bg-panel:         #202026;
+  --bg-input:         #111115;
+  --bg-hover:         #26262d;
+  --bg-active:        #2e2e37;
+  --bg-primary:       #17171b;
+  --bg-accent:        #c07a4f;
+  --bg-modifier-hover:    rgba(255, 255, 255, 0.04);
+  --bg-modifier-selected: rgba(255, 255, 255, 0.08);
+  --bg-danger:        #7f1d1d;
 
-  --text-primary: #f2f3f5;
-  --text-secondary: #b5bac1;
-  --text-muted: #949ba4;
-  --text-normal: #dbdee1;
-  --text-channels-default: #949ba4;
-  --text-interactive-normal: #b5bac1;
-  --text-interactive-hover: #dbdee1;
-  --text-interactive-active: #ffffff;
-  --text-header-primary: #f2f3f5;
-  --text-success: #23a55a;
-  --text-danger: #f23f43;
+  /* Text */
+  --text-primary:             #f0ede8;
+  --text-secondary:           #a8a29e;
+  --text-muted:               #78716c;
+  --text-normal:              #e2ddd8;
+  --text-channels-default:    #78716c;
+  --text-interactive-normal:  #a8a29e;
+  --text-interactive-hover:   #e2ddd8;
+  --text-interactive-active:  #f0ede8;
+  --text-header-primary:      #f0ede8;
+  --text-success: #4ade80;
+  --text-danger:  #f87171;
 
-  --accent-primary: #5865f2;
-  --accent-hover: #4752c4;
-  --accent-subtle: rgba(88, 101, 242, 0.15);
-  --brand-primary: #5865f2;
-  --brand-primary-hover: #4752c4;
+  /* Accent — warm terracotta */
+  --accent-primary: #c07a4f;
+  --accent-hover:   #a8633b;
+  --accent-subtle:  rgba(192, 122, 79, 0.15);
+  --brand-primary:       #c07a4f;
+  --brand-primary-hover: #a8633b;
 
-  --border-subtle: #3f4147;
-  --border-focus: #5865f2;
+  /* Borders */
+  --border-subtle: #2c2c34;
+  --border-focus:  #c07a4f;
 
-  --radius-sm: 0.25rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
+  /* Radius */
+  --radius-sm:   0.25rem;
+  --radius-md:   0.375rem;
+  --radius-lg:   0.5rem;
   --radius-full: 9999px;
 }
 
@@ -141,7 +150,7 @@ button:hover:not(:disabled) {
 button:focus-visible {
   outline: none !important;
   outline-offset: 0 !important;
-  box-shadow: 0 0 0 2px var(--accent-primary, #5865f2) !important;
+  box-shadow: 0 0 0 2px var(--accent-primary, #c07a4f) !important;
 }
 
 button:disabled {
@@ -149,7 +158,7 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* --- Scrollbar (Discord-like: thin, dark) --- */
+/* --- Scrollbar: thin, dark --- */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -166,7 +175,7 @@ button:disabled {
   min-height: 40px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #5c5e66;
+  background-color: #44444e;
   background-clip: padding-box;
 }
 ::-webkit-scrollbar-corner {
@@ -185,8 +194,8 @@ html {
   height: 100vh;
   width: 100%;
   overflow: hidden;
-  background: var(--bg-app, #313338);
-  color: var(--text-primary, #dbdee1);
+  background: var(--bg-app, #17171b);
+  color: var(--text-primary, #f0ede8);
 }
 
 .app-shell > main {
@@ -232,7 +241,7 @@ html {
   overflow-y: auto;
 }
 
-/* --- Discord Shell --- */
+/* --- Classic Shell --- */
 .discord-shell,
 .tw-discord-shell {
   background-color: var(--bg-app);
@@ -444,7 +453,7 @@ html {
 
 /* --- Component: Composer box focus glow --- */
 .chat-composer-box:focus-within {
-  box-shadow: 0 0 0 2px var(--accent-primary, #5865f2);
+  box-shadow: 0 0 0 2px var(--accent-primary, #c07a4f);
   transition: box-shadow 0.15s ease;
 }
 
@@ -511,7 +520,7 @@ html {
   font-size: 0.8125rem;
 }
 
-.app-status .is-error { color: #f23f43; font-weight: 500; }
+.app-status .is-error { color: var(--text-danger); font-weight: 500; }
 
 /* --- Toast Notification Animation --- */
 @keyframes toastSlideIn {
