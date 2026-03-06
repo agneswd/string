@@ -1,785 +1,275 @@
-import { useCallback, useMemo, useEffect, useLayoutEffect, useState } from 'react'
+import { useState } from 'react'
 
-import {
-  CallBanner,
-  ChannelColumn,
-  IncomingCallModal,
-  RegisterOverlay,
-  SettingsModal,
-} from './components'
-import { ServerColumnClassic } from './components/layout/ServerColumnClassic'
-import { ServerColumnString } from './components/layout/ServerColumnString'
+import { AppCallOverlays } from './components/app/AppCallOverlays'
+import { AppMainShell } from './components/app/AppMainShell'
+import { AppModals } from './components/app/AppModals'
 import type { ProfileSettingsModalProps } from './components/modals/ProfileSettingsModal'
-import { ModalSection } from './components/layout/ModalSection'
-import { AudioStreams } from './components/voice/AudioStreams'
-import { ContextMenuOverlay } from './components/ui/ContextMenuOverlay'
-import { AppShell } from './components/layout/AppShell'
-import { WorkspaceShell } from './components/layout/WorkspaceShell'
-import { MessageArea } from './components/layout/MessageArea'
-import { MemberColumn } from './components/layout/MemberColumn'
-import { SidebarBottomClassic } from './components/layout/SidebarBottomClassic'
-import { SidebarBottomString } from './components/layout/SidebarBottomString'
-import { TopNavBarClassic } from './components/layout/TopNavBarClassic'
-import { TopNavBarString } from './components/layout/TopNavBarString'
-import { ScreenShareViewer } from './components/voice/ScreenShareViewer'
-import { useRtcOrchestrator } from './lib/webrtc'
-import { toIdKey, isVoiceChannel, statusToLabel } from './lib/helpers'
-import { avatarBytesToUrl } from './lib/avatarUtils'
-import { setSfxVolume } from './lib/sfx'
-import { identityToString } from './hooks/useAppData'
-
-import { useAppData } from './hooks/useAppData'
-import { useActionFeedback } from './hooks/useActionFeedback'
-import { useGuildNavigation } from './hooks/useGuildNavigation'
-import { useFriends } from './hooks/useFriends'
-import { useDmChat } from './hooks/useDmChat'
-import { useGuildMessages } from './hooks/useGuildMessages'
-import { useVoiceChat } from './hooks/useVoiceChat'
-import { useRtcSignaling } from './hooks/useRtcSignaling'
-import { useGuildActions } from './hooks/useGuildActions'
-import { useCallHandling } from './hooks/useCallHandling'
-import { useCallSfx } from './hooks/useCallSfx'
-import { useNotificationEffects } from './hooks/useNotificationEffects'
-import { useMessageActions } from './hooks/useMessageActions'
-import { useAppNavigation } from './hooks/useAppNavigation'
-import { useAppState } from './hooks/useAppState'
+import { S_appShell } from './constants/appStyles'
+import { useAppOrchestrator } from './hooks/useAppOrchestrator'
 import { useLayoutMode } from './hooks/useLayoutMode'
-import { useSendSignal } from './hooks/useSendSignal'
-
-import { NotificationToast } from './components/ui/NotificationToast'
-import {
-  S_appShell,
-  S_main,
-} from './constants/appStyles'
-
-const UI_SOUND_LEVEL_STORAGE_KEY = 'string.settings.uiSoundLevel'
-const FRIEND_STATUS_NOTIFICATIONS_STORAGE_KEY = 'string.settings.friendStatusNotificationsEnabled'
-const DM_MESSAGE_NOTIFICATIONS_STORAGE_KEY = 'string.settings.dmMessageNotificationsEnabled'
-
-function readUiSoundLevel(): number {
-  try {
-    const raw = window.localStorage.getItem(UI_SOUND_LEVEL_STORAGE_KEY)
-    if (raw === null) return 50
-    const parsed = Number(raw)
-    if (!Number.isFinite(parsed)) return 50
-    if (parsed < 0) return 0
-    if (parsed > 100) return 100
-    return Math.round(parsed)
-  } catch {
-    return 50
-  }
-}
-
-function readBooleanSetting(key: string, fallback: boolean): boolean {
-  try {
-    const raw = window.localStorage.getItem(key)
-    if (raw === null) return fallback
-    return raw === 'true'
-  } catch {
-    return fallback
-  }
-}
+import { statusToLabel } from './lib/helpers'
 
 function App() {
-  // ---------------------------------------------------------------------------
-  // Core data & feedback
-  // ---------------------------------------------------------------------------
-  const appData = useAppData()
-  const { state, actions, extendedState, extendedActions, identityString, usersByIdentity, me } = appData
-
-  // Helper to get a data URL for any user's avatar by identity string
-  const getAvatarUrlForUser = useCallback((identityStr: string): string | undefined => {
-    const user = usersByIdentity.get(identityStr)
-    return avatarBytesToUrl(user?.avatarBytes as Uint8Array | null | undefined)
-  }, [usersByIdentity])
-
-  const feedback = useActionFeedback()
-  const { actionError, actionStatus, setActionError, setActionStatus, runAction, callActionOrReducer } = feedback
-
-  // ---------------------------------------------------------------------------
-  // Friends
-  // ---------------------------------------------------------------------------
-  const friendsData = useFriends(appData, runAction, callActionOrReducer)
-  const {
-    friendRequestUsername, setFriendRequestUsername,
-    friends, incomingFriendRequests, outgoingFriendRequests,
-    friendIdentityById,
-    onSendFriendRequest, onAcceptFriendRequest, onDeclineFriendRequest,
-    onCancelOutgoingFriendRequest, onRemoveFriend,
-  } = friendsData
-
-  // ---------------------------------------------------------------------------
-  // DM Chat
-  // ---------------------------------------------------------------------------
-  const dm = useDmChat({
-    appData,
-    friendIdentityById,
-    runAction,
-    callActionOrReducer,
-    setActionError,
-    setActionStatus,
-  })
-  const {
-    selectedDmChannelId, setSelectedDmChannelId,
-    dmListItems, selectedDmChannel, selectedDmName,
-    dmMessagesForSelectedChannel,
-    onStartDmFromFriend, onLeaveDmChannel,
-    onToggleDmReaction, getDmReactionsForMessage,
-  } = dm
-
-  // ---------------------------------------------------------------------------
-  // sendSignal callback (needed before useRtcOrchestrator)
-  // ---------------------------------------------------------------------------
-  const currentVoiceState = useMemo(
-    () => state.voiceStates.find((vs) => identityToString(vs.identity) === identityString) ?? null,
-    [identityString, state.voiceStates],
-  )
-
-  const sendSignal = useSendSignal({ currentVoiceState, usersByIdentity, actions, extendedActions })
-
-  // ---------------------------------------------------------------------------
-  // RTC Orchestrator
-  // ---------------------------------------------------------------------------
-  const { startAudio, setMuted, stopAudio, startScreenShare, stopScreenShare, handleIncomingSignal, remoteStreams, peerStates, isLocalSpeaking, remoteSpeaking, connectToPeers } =
-    useRtcOrchestrator({ localIdentity: identityString || '', sendSignal })
-
-  // ---------------------------------------------------------------------------
-  // Guild Navigation
-  // ---------------------------------------------------------------------------
-  const nav = useGuildNavigation({
-    appData,
-    currentVoiceState,
-    selectedDmChannelId,
-  })
-  const {
-    selectedGuildId, setSelectedGuildId,
-    selectedTextChannelId, setSelectedTextChannelId,
-    setSelectedVoiceChannelId,
-    homeViewActiveRef,
-    memberGuilds, ownedGuildIds,
-    selectedGuild, channelsForGuild,
-    textChannels, voiceChannels,
-    channelIdsForSelectedGuild,
-    selectedTextChannel, selectedVoiceChannel,
-  } = nav
-
-  // ---------------------------------------------------------------------------
-  // Subscriptions Refactor Phase 2 Wiring
-  // ---------------------------------------------------------------------------
-  useLayoutEffect(() => {
-    if (actions.setActiveSubscriptions) {
-      actions.setActiveSubscriptions(selectedTextChannelId, selectedDmChannelId)
-    }
-  }, [selectedTextChannelId, selectedDmChannelId, actions])
-
-  // ---------------------------------------------------------------------------
-  // Voice Chat
-  // ---------------------------------------------------------------------------
-  const voice = useVoiceChat({
-    appData,
-    selectedVoiceChannel,
-    setActionError,
-    runAction,
-    rtcOrchestrator: {
-      isVoiceConnected: Boolean(currentVoiceState),
-      startAudio,
-      setMuted,
-      stopAudio,
-      startScreenShare,
-      stopScreenShare,
-      remoteStreams,
-      peerStates,
-      isLocalSpeaking,
-      remoteSpeaking,
-      handleIncomingSignal,
-      sendSignal,
-      connectToPeers,
-    },
-  })
-  const {
-    viewingScreenShareKey, setViewingScreenShareKey,
-    voiceChannelUsers,
-    rtcRecipients,
-    remoteSharersCount,
-    onJoinVoice, onLeaveVoice,
-    onToggleMute, onToggleDeafen,
-    onStartSharing, onStopSharing,
-    preMuted, preDeafened,
-  } = voice
-
-  // ---------------------------------------------------------------------------
-  // Local state (extracted hook)
-  // ---------------------------------------------------------------------------
-  const {
-    composerValue, setComposerValue,
-    locallyMutedUsers,
-    showMemberList, setShowMemberList,
-    showProfileModal, setShowProfileModal,
-    profilePopup, setProfilePopup,
-    contextMenu, setContextMenu,
-    initialLoadComplete,
-    notifications,
-    ignoredCallIds, setIgnoredCallIds,
-    addNotification,
-    dismissNotification,
-    toggleLocalMuteUser,
-    handleToggleScreenShare,
-    viewingScreenStream,
-    onRegister,
-    onLoginAsUser,
-    audioStreams,
-    isMuted, isDeafened, muteColor, deafenColor,
-  } = useAppState({
-    viewingScreenShareKey,
-    remoteStreams,
-    isStreaming: currentVoiceState?.isStreaming,
-    onStartSharing,
-    onStopSharing,
-    connectionStatus: state.connectionStatus,
-    runAction,
-    actions,
-    currentVoiceIsMuted: currentVoiceState?.isMuted,
-    currentVoiceIsDeafened: currentVoiceState?.isDeafened,
-    preMuted,
-    preDeafened,
-  })
-
-  const [showSettingsModal, setShowSettingsModal] = useState(false)
-  const [uiSoundLevel, setUiSoundLevel] = useState<number>(() => readUiSoundLevel())
-  const [friendStatusNotificationsEnabled, setFriendStatusNotificationsEnabled] = useState<boolean>(() =>
-    readBooleanSetting(FRIEND_STATUS_NOTIFICATIONS_STORAGE_KEY, true),
-  )
-  const [dmMessageNotificationsEnabled, setDmMessageNotificationsEnabled] = useState<boolean>(() =>
-    readBooleanSetting(DM_MESSAGE_NOTIFICATIONS_STORAGE_KEY, true),
-  )
-
-  useEffect(() => {
-    setSfxVolume(uiSoundLevel / 100)
-    try {
-      window.localStorage.setItem(UI_SOUND_LEVEL_STORAGE_KEY, String(uiSoundLevel))
-    } catch {}
-  }, [uiSoundLevel])
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(FRIEND_STATUS_NOTIFICATIONS_STORAGE_KEY, String(friendStatusNotificationsEnabled))
-    } catch {}
-  }, [friendStatusNotificationsEnabled])
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(DM_MESSAGE_NOTIFICATIONS_STORAGE_KEY, String(dmMessageNotificationsEnabled))
-    } catch {}
-  }, [dmMessageNotificationsEnabled])
-
-  // ---------------------------------------------------------------------------
-  // RTC Signaling (debug panel)
-  // ---------------------------------------------------------------------------
-  useRtcSignaling({
-    appData,
-    currentVoiceState,
-    rtcRecipients,
-    sendSignal: voice.sendSignal,
-    handleIncomingSignal,
-    actions,
-    setActionError,
-    runAction,
-  })
-
-  // ---------------------------------------------------------------------------
-  // Guild Messages & Members
-  // ---------------------------------------------------------------------------
-  const guildMessages = useGuildMessages(
-    {
-      messages: state.messages,
-      reactions: appData.reactions,
-      identityString,
-      usersByIdentity,
-      guildMembersByGuildId: appData.guildMembersByGuildId,
-      extendedActions,
-    },
-    selectedGuild,
-    selectedTextChannel,
-    channelIdsForSelectedGuild,
-    runAction,
-    callActionOrReducer,
-  )
-  const {
-    messagesForSelectedTextChannel,
-    memberListItems,
-    onToggleReaction,
-    getReactionsForMessage,
-  } = guildMessages
-
-  // ---------------------------------------------------------------------------
-  // Guild Actions (create guild/channel, invite, leave, delete)
-  // ---------------------------------------------------------------------------
-  const guildActions = useGuildActions({
-    actions,
-    selectedGuild,
-    runAction,
-    callActionOrReducer,
-    setActionError,
-    setActionStatus,
-    setSelectedGuildId,
-    identityString,
-    guildInvites: appData.guildInvites,
-    usersByIdentity,
-    extendedActions,
-  })
-  const {
-    newGuildName, setNewGuildName,
-    newChannelName, setNewChannelName,
-    newChannelType, setNewChannelType,
-    showCreateGuildModal, setShowCreateGuildModal,
-    showCreateChannelModal, setShowCreateChannelModal,
-    showInviteModal, setShowInviteModal,
-    onCreateGuild, onCreateChannel,
-    onInviteFriend, onLeaveGuild, onDeleteGuild,
-    myGuildInvites, onAcceptGuildInvite, onDeclineGuildInvite,
-  } = guildActions
-
-  // ---------------------------------------------------------------------------
-  // Derived values
-  // ---------------------------------------------------------------------------
-  const isHomeView = !selectedGuildId && !selectedDmChannel
-  const isDmMode = selectedDmChannel !== null
-
-  // ---------------------------------------------------------------------------
-  // Call handling (extracted hook)
-  // ---------------------------------------------------------------------------
-  const {
-    incomingCall, outgoingCall,
-    incomingCallId, outgoingCallId,
-    isInDmVoice, dmVoiceChannelId,
-    dmCallRemoteUser, dmCallActive,
-    dmPartnerIdentity, dmPartnerAvatarUrl, dmPartnerProfileColor,
-    dmRemoteSpeaking, dmRemoteScreenStream, dmRemoteScreenShareKey,
-    activeCallChannelIds,
-    handleAcceptCall, handleDeclineCall, handleCancelOutgoingCall, handleIgnoreCall,
-    callBannerProps, handleNavigateToCall,
-  } = useCallHandling({
-    identityString,
-    voiceStates: state.voiceStates,
-    dmCallRequests: state.dmCallRequests,
-    currentVoiceState,
-    runAction,
-    extendedActions,
-    usersByIdentity,
-    getAvatarUrlForUser,
-    setSelectedDmChannelId,
-    setSelectedGuildId,
-    selectedDmChannel: selectedDmChannel ?? null,
-    selectedDmChannelId,
-    isDmMode,
-    remoteSpeaking,
-    remoteStreams,
-    ignoredCallIds,
-    setIgnoredCallIds,
-    dmParticipants: appData.dmParticipants,
-    channelsForGuild,
-    selectedGuildId,
-    selectedTextChannelId,
-  })
-
-  // ---------------------------------------------------------------------------
-  // Call SFX (extracted hook)
-  // ---------------------------------------------------------------------------
-  const { handleHangUpWithSfx } = useCallSfx({
-    outgoingCallId,
-    outgoingCall,
-    incomingCallId,
-    isInDmVoice,
-    dmVoiceChannelId,
-    voiceStates: state.voiceStates,
-    identityString,
-    addNotification,
-    onLeaveVoice,
-  })
-
-  // ---------------------------------------------------------------------------
-  // Message Actions (extracted hook)
-  // ---------------------------------------------------------------------------
-  const { handleDeleteMessage, handleEditMessage, onSendMessage, handleSendMessageWithSfx, activeChannelName, activeMessages, statusError } = useMessageActions({
-    isDmMode,
-    selectedDmChannel: selectedDmChannel ?? null,
-    selectedTextChannel: selectedTextChannel ?? null,
-    selectedDmName,
-    dmMessagesForSelectedChannel,
-    messagesForSelectedTextChannel,
-    stateError: state.error,
-    actionError,
-    runAction,
-    callActionOrReducer,
-    extendedActions,
-    actions,
-    setActionError,
-    setComposerValue,
-  })
-
-  // ---------------------------------------------------------------------------
-  // Notification effects (extracted hook)
-  // ---------------------------------------------------------------------------
-  useNotificationEffects({
-    actionStatus,
-    actionError,
-    addNotification,
-    friendStatusNotificationsEnabled,
-    dmMessageNotificationsEnabled,
-    friends,
-    identityString,
-    dmParticipants: appData.dmParticipants,
-    dmLastMessageByChannel: appData.dmLastMessageByChannel,
-    selectedDmChannelId,
-    usersByIdentity,
-    setSelectedDmChannelId,
-    setSelectedGuildId,
-  })
-
-
-
-  // ---------------------------------------------------------------------------
-  // App Navigation (extracted hook)
-  // ---------------------------------------------------------------------------
-  const {
-    guildOrder, orderedGuilds,
-    handleReorderGuilds, handleSelectGuild, handleHomeClick,
-    handleSelectDmChannel, handleInitiateDmCall,
-    handleSelectTextOrVoiceChannel, handleViewProfile, handleInviteToGuild,
-  } = useAppNavigation({
-    memberGuilds,
-    homeViewActiveRef,
-    setSelectedGuildId,
-    setSelectedDmChannelId,
-    setSelectedTextChannelId,
-    setSelectedVoiceChannelId,
-    channelsForGuild,
-    onJoinVoice: onJoinVoice,
-    setShowInviteModal,
-    runAction,
-    extendedActions,
-    voiceStates: state.voiceStates,
-    identityString,
-    usersByIdentity,
-    getAvatarUrlForUser,
-    setContextMenu,
-  })
-
-  // ---------------------------------------------------------------------------
-  // Layout mode — 'string' is the default for new users; 'classic' renders the
-  // Discord-style AppShell. Variants are selected here so each mode keeps its
-  // own component tree for follow-up layout work.
-  // ---------------------------------------------------------------------------
+  const app = useAppOrchestrator()
   const { layoutMode, setLayoutMode } = useLayoutMode()
-  const Shell = layoutMode === 'string' ? WorkspaceShell : AppShell
-  const ServerColumnComponent = layoutMode === 'string' ? ServerColumnString : ServerColumnClassic
-  const TopNavBarComponent = layoutMode === 'string' ? TopNavBarString : TopNavBarClassic
-  const SidebarBottomComponent = layoutMode === 'string' ? SidebarBottomString : SidebarBottomClassic
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
 
-  // ---------------------------------------------------------------------------
-  // JSX
-  // ---------------------------------------------------------------------------
+  const sidebarUser = app.me
+    ? {
+        username: app.me.username,
+        displayName: app.me.displayName,
+        status: statusToLabel(app.me.status) || 'Online',
+        avatarBytes: app.me.avatarBytes,
+      }
+    : null
+
+  const incomingRequests = app.incomingFriendRequests.map((request) => ({
+    id: request.id,
+    username: request.username,
+  }))
+
+  const outgoingRequests = app.outgoingFriendRequests.map((request) => ({
+    id: request.id,
+    username: request.username,
+  }))
+
+  const homeFriends = app.friends.map((friend) => ({
+    id: friend.id,
+    username: friend.username,
+    displayName: friend.displayName,
+    status: friend.status,
+  }))
+
+  const handleAddServer = () => {
+    const userName = app.me?.displayName ?? app.me?.username ?? 'My'
+    app.setNewGuildName(`${userName}'s server`)
+    app.setShowCreateGuildModal(true)
+  }
+
   return (
     <div className="app-shell" style={S_appShell} data-layout-mode={layoutMode}>
-      {/* Global call banner */}
-      {(currentVoiceState || outgoingCall) && (
-        <CallBanner
-          currentVoiceState={!!currentVoiceState}
-          outgoingCall={!!outgoingCall}
-          calleeName={callBannerProps.calleeName}
-          onCancelCall={handleCancelOutgoingCall}
-          isDmCall={callBannerProps.isDmCall}
-          callName={callBannerProps.callName}
-          isOnCallPage={callBannerProps.isOnCallPage}
-          onNavigateToCall={handleNavigateToCall}
-        />
-      )}
-      <main style={S_main}>
-        <Shell
-          serverColumn={
-            <ServerColumnComponent
-              orderedGuilds={orderedGuilds}
-              selectedGuildId={selectedGuildId ?? null}
-              onSelectGuild={handleSelectGuild}
-              onHomeClick={handleHomeClick}
-              isDmMode={isDmMode}
-              onAddServer={() => {
-                const userName = (me as any)?.displayName ?? (me as any)?.username ?? 'My'
-                setNewGuildName(`${userName}'s server`)
-                setShowCreateGuildModal(true)
-              }}
-              onLeaveGuild={onLeaveGuild}
-              onDeleteGuild={onDeleteGuild}
-              onInviteToGuild={handleInviteToGuild}
-              ownedGuildIds={ownedGuildIds}
-              onReorder={handleReorderGuilds}
-            />
-          }
-          channelColumn={
-            <ChannelColumn
-              layoutMode={layoutMode}
-              isDmMode={isDmMode}
-              selectedGuildId={selectedGuildId}
-              dmListItems={dmListItems}
-              selectedDmChannelId={selectedDmChannelId}
-              onSelectDmChannel={handleSelectDmChannel}
-              onLeaveDmChannel={(channelId) => onLeaveDmChannel(channelId)}
-              onShowFriends={() => setSelectedDmChannelId(undefined)}
-              activeCallChannelIds={activeCallChannelIds}
-              guildName={selectedGuild?.name}
-              channels={channelsForGuild.map((channel) => ({
-                id: toIdKey(channel.channelId),
-                name: channel.name,
-                kind: isVoiceChannel(channel) ? 'voice' as const : 'text' as const,
-              }))}
-              selectedTextChannelId={selectedTextChannelId}
-              onSelectChannel={handleSelectTextOrVoiceChannel}
-              onCreateChannel={() => setShowCreateChannelModal(true)}
-              onViewScreenShare={setViewingScreenShareKey}
-              voiceChannelUsers={voiceChannelUsers}
-              currentVoiceChannelId={currentVoiceState ? toIdKey(currentVoiceState.channelId) : undefined}
-              locallyMutedUsers={locallyMutedUsers}
-              onToggleLocalMuteUser={toggleLocalMuteUser}
-              localIdentity={identityString}
-              getAvatarUrl={getAvatarUrlForUser}
-            />
-          }
-          showMemberList={showMemberList}
-          topNav={
-            <TopNavBarComponent
-              isDmMode={isDmMode}
-              isHomeView={isHomeView}
-              dmName={selectedDmName}
-              guildName={selectedGuild?.name}
-              selectedDmChannel={!!selectedDmChannel}
-              currentVoiceState={!!currentVoiceState}
-              outgoingCall={!!outgoingCall}
-              dmCallActive={!!dmCallActive}
-              selectedDmChannelId={selectedDmChannelId}
-              showMemberList={showMemberList}
-              onToggleMemberList={() => setShowMemberList(prev => !prev)}
-              onInitiateDmCall={handleInitiateDmCall}
-              channelName={activeChannelName}
-            />
-          }
-          messageArea={
-            <MessageArea
-              layoutMode={layoutMode}
-              isInDmVoice={isInDmVoice}
-              isDmMode={isDmMode}
-              isHomeView={isHomeView}
-              selectedDmChannelId={selectedDmChannelId}
-              dmVoiceChannelId={dmVoiceChannelId}
-              localUser={{
-                name: me?.displayName ?? me?.username ?? '?',
-                avatarUrl: getAvatarUrlForUser(identityString ?? ''),
-                isMuted: currentVoiceState?.isMuted ?? false,
-                isDeafened: currentVoiceState?.isDeafened ?? false,
-              }}
-              remoteUser={dmCallRemoteUser ?? { name: 'Connecting...' }}
-              onMute={onToggleMute}
-              onDeafen={onToggleDeafen}
-              onScreenShare={handleToggleScreenShare}
-              onHangUp={handleHangUpWithSfx}
-              isMuted={currentVoiceState?.isMuted ?? false}
-              isDeafened={currentVoiceState?.isDeafened ?? false}
-              isScreenSharing={currentVoiceState?.isStreaming ?? false}
-              isLocalSpeaking={isLocalSpeaking}
-              isRemoteSpeaking={dmRemoteSpeaking}
-              remoteScreenStream={dmRemoteScreenStream}
-              dmRemoteScreenShareKey={dmRemoteScreenShareKey}
-              onViewScreenShareFullscreen={setViewingScreenShareKey}
-              activeChannelName={activeChannelName}
-              activeMessages={activeMessages}
-              channelName={activeChannelName}
-              messages={activeMessages}
-              dmMessages={dmMessagesForSelectedChannel}
-              composerValue={composerValue}
-              onComposerChange={setComposerValue}
-              onSend={handleSendMessageWithSfx}
-              getDmReactionsForMessage={getDmReactionsForMessage}
-              getReactionsForMessage={getReactionsForMessage}
-              onToggleDmReaction={onToggleDmReaction}
-              onToggleReaction={onToggleReaction}
-              currentUserId={identityString || undefined}
-              onViewProfile={handleViewProfile}
-              getAvatarUrl={getAvatarUrlForUser}
-              onDeleteMessage={handleDeleteMessage}
-              onEditMessage={handleEditMessage}
-              dmPartnerAvatarUrl={dmPartnerAvatarUrl}
-              dmPartnerProfileColor={dmPartnerProfileColor}
-              selectedTextChannel={selectedTextChannel}
-              dmCallActive={!!dmCallActive}
-              friendRequestUsername={friendRequestUsername}
-              onRequestUsernameChange={setFriendRequestUsername}
-              onSendRequest={onSendFriendRequest}
-              incomingRequests={incomingFriendRequests.map((request) => ({
-                id: request.id,
-                username: request.username,
-              }))}
-              onAcceptRequest={onAcceptFriendRequest}
-              onDeclineRequest={onDeclineFriendRequest}
-              outgoingRequests={outgoingFriendRequests.map((request) => ({
-                id: request.id,
-                username: request.username,
-              }))}
-              onCancelOutgoingRequest={onCancelOutgoingFriendRequest}
-              friends={friends.map((friend) => ({
-                id: friend.id,
-                username: friend.username,
-                displayName: friend.displayName,
-                status: friend.status,
-              }))}
-              onStartDm={onStartDmFromFriend}
-              onRemoveFriend={onRemoveFriend}
-              guildInvites={myGuildInvites}
-              onAcceptGuildInvite={onAcceptGuildInvite}
-              onDeclineGuildInvite={onDeclineGuildInvite}
-            />
-          }
-          inputArea={null}
-          sidebarBottom={
-            <SidebarBottomComponent
-              showVoicePanel={true}
-              currentVoiceState={currentVoiceState}
-              onLeave={handleHangUpWithSfx}
-              remoteSharersCount={remoteSharersCount}
-              onStartSharing={onStartSharing}
-              onStopSharing={onStopSharing}
-              user={me ? {
-                username: (me as Record<string, unknown>).username as string,
-                displayName: (me as Record<string, unknown>).displayName as string | undefined,
-                status: statusToLabel((me as Record<string, unknown>).status) || 'Online',
-                avatarBytes: (me as Record<string, unknown>).avatarBytes as Uint8Array | null,
-              } : null}
-              isMuted={isMuted}
-              isDeafened={isDeafened}
-              muteColor={muteColor}
-              deafenColor={deafenColor}
-              onToggleMute={onToggleMute}
-              onToggleDeafen={onToggleDeafen}
-              onOpenSettings={() => setShowSettingsModal(true)}
-              onOpenProfile={() => setShowProfileModal(true)}
-            />
-          }
-          memberColumn={
-            <MemberColumn
-              layoutMode={layoutMode}
-              isDmMode={isDmMode}
-              guildName={selectedGuild?.name}
-              friends={friends}
-              memberListItems={memberListItems}
-              getAvatarUrl={getAvatarUrlForUser}
-              usersByIdentity={usersByIdentity}
-              onViewProfile={handleViewProfile}
-              localUserId={identityString || undefined}
-            />
-          }
-        />
+      <AppCallOverlays
+        showCallBanner={Boolean(app.currentVoiceState || app.outgoingCall)}
+        currentVoiceState={Boolean(app.currentVoiceState)}
+        outgoingCall={Boolean(app.outgoingCall)}
+        callBannerProps={app.callBannerProps}
+        onCancelCall={app.handleCancelOutgoingCall}
+        onNavigateToCall={app.handleNavigateToCall}
+        audioStreams={app.audioStreams}
+        isDeafened={app.currentVoiceState?.isDeafened ?? false}
+        locallyMutedUsers={app.locallyMutedUsers}
+        incomingCall={app.incomingCall}
+        ignoredCallIds={app.ignoredCallIds}
+        usersByIdentity={app.usersByIdentity}
+        getAvatarUrlForUser={app.getAvatarUrlForUser}
+        onAcceptCall={app.handleAcceptCall}
+        onDeclineCall={app.handleDeclineCall}
+        onIgnoreCall={app.handleIgnoreCall}
+        viewingScreenStream={app.viewingScreenStream}
+        onCloseScreenShare={() => app.setViewingScreenShareKey(null)}
+        me={app.me}
+        initialLoadComplete={app.initialLoadComplete}
+        connectionStatus={app.state.connectionStatus}
+        onRegister={app.onRegister}
+        onLoginAsUser={app.onLoginAsUser}
+        notifications={app.notifications}
+        onDismissNotification={app.dismissNotification}
+      />
 
-        {/* All modals */}
-        <ModalSection
-          showCreateGuildModal={showCreateGuildModal}
-          onCloseCreateGuild={() => setShowCreateGuildModal(false)}
-          newGuildName={newGuildName}
-          onGuildNameChange={setNewGuildName}
-          onCreateGuild={onCreateGuild}
-          showCreateChannelModal={showCreateChannelModal}
-          onCloseCreateChannel={() => setShowCreateChannelModal(false)}
-          newChannelName={newChannelName}
-          onChannelNameChange={setNewChannelName}
-          newChannelType={newChannelType}
-          onChannelTypeChange={setNewChannelType}
-          onCreateChannel={onCreateChannel}
-          showInviteModal={showInviteModal}
-          onCloseInvite={() => setShowInviteModal(false)}
-          friends={friends}
-          onInviteFriend={onInviteFriend}
-          showProfileModal={showProfileModal}
-          onCloseProfile={() => setShowProfileModal(false)}
-          currentUser={me as ProfileSettingsModalProps['currentUser']}
-          onUpdateProfile={async (params) => {
-            await actions.updateProfile({
-              // null → undefined: displayName cannot be cleared (backend requires 1-64 chars)
-              displayName: params.displayName ?? undefined,
-              // null → '' so the reducer's isEmpty guard fires and clears the field
-              bio: params.bio === null ? '' : params.bio,
-              avatarBytes: params.avatarBytes ?? undefined,
-              // null → '' so the reducer's isEmpty guard fires and clears the field
-              profileColor: params.profileColor === null ? '' : params.profileColor,
-            })
-          }}
-          onSetStatus={(statusTag) => {
-            void actions.setStatus({ status: { tag: statusTag } as never })
-          }}
-        />
+      <AppMainShell
+        layoutMode={layoutMode}
+        showMemberList={app.showMemberList}
+        serverColumn={{
+          orderedGuilds: app.orderedGuilds,
+          selectedGuildId: app.selectedGuildId ?? null,
+          onSelectGuild: app.handleSelectGuild,
+          onHomeClick: app.handleHomeClick,
+          isDmMode: app.isDmMode,
+          onAddServer: handleAddServer,
+          onLeaveGuild: app.onLeaveGuild,
+          onDeleteGuild: app.onDeleteGuild,
+          onInviteToGuild: app.handleInviteToGuild,
+          ownedGuildIds: app.ownedGuildIds,
+          onReorder: app.handleReorderGuilds,
+        }}
+        channelColumn={{
+          layoutMode,
+          isDmMode: app.isDmMode,
+          selectedGuildId: app.selectedGuildId,
+          dmListItems: app.dmListItems,
+          selectedDmChannelId: app.selectedDmChannelId,
+          onSelectDmChannel: app.handleSelectDmChannel,
+          onLeaveDmChannel: app.onLeaveDmChannel,
+          onShowFriends: () => app.setSelectedDmChannelId(undefined),
+          activeCallChannelIds: app.activeCallChannelIds,
+          guildName: app.selectedGuild?.name,
+          channels: app.channelItems,
+          selectedTextChannelId: app.selectedTextChannelId,
+          onSelectChannel: app.handleSelectTextOrVoiceChannel,
+          onCreateChannel: () => app.setShowCreateChannelModal(true),
+          onViewScreenShare: app.setViewingScreenShareKey,
+          voiceChannelUsers: app.voiceChannelUsers,
+          currentVoiceChannelId: app.currentVoiceState?.channelId,
+          locallyMutedUsers: app.locallyMutedUsers,
+          onToggleLocalMuteUser: app.toggleLocalMuteUser,
+          localIdentity: app.identityString,
+          getAvatarUrl: app.getAvatarUrlForUser,
+        }}
+        topNav={{
+          isDmMode: app.isDmMode,
+          isHomeView: app.isHomeView,
+          dmName: app.selectedDmName,
+          guildName: app.selectedGuild?.name,
+          selectedDmChannel: Boolean(app.selectedDmChannel),
+          currentVoiceState: Boolean(app.currentVoiceState),
+          outgoingCall: Boolean(app.outgoingCall),
+          dmCallActive: Boolean(app.dmCallActive),
+          selectedDmChannelId: app.selectedDmChannelId,
+          showMemberList: app.showMemberList,
+          onToggleMemberList: () => app.setShowMemberList((current) => !current),
+          onInitiateDmCall: app.handleInitiateDmCall,
+          channelName: app.activeChannelName,
+        }}
+        messageArea={{
+          layoutMode,
+          isInDmVoice: app.isInDmVoice,
+          isDmMode: app.isDmMode,
+          isHomeView: app.isHomeView,
+          selectedDmChannelId: app.selectedDmChannelId,
+          dmVoiceChannelId: app.dmVoiceChannelId,
+          localUser: {
+            name: app.me?.displayName ?? app.me?.username ?? '?',
+            avatarUrl: app.getAvatarUrlForUser(app.identityString),
+            isMuted: app.currentVoiceState?.isMuted ?? false,
+            isDeafened: app.currentVoiceState?.isDeafened ?? false,
+          },
+          remoteUser: app.dmCallRemoteUser ?? { name: 'Connecting...' },
+          onMute: app.onToggleMute,
+          onDeafen: app.onToggleDeafen,
+          onScreenShare: app.handleToggleScreenShare,
+          onHangUp: app.handleHangUpWithSfx,
+          isMuted: app.currentVoiceState?.isMuted ?? false,
+          isDeafened: app.currentVoiceState?.isDeafened ?? false,
+          isScreenSharing: app.currentVoiceState?.isStreaming ?? false,
+          isLocalSpeaking: app.isLocalSpeaking,
+          isRemoteSpeaking: app.dmRemoteSpeaking,
+          remoteScreenStream: app.dmRemoteScreenStream,
+          dmRemoteScreenShareKey: app.dmRemoteScreenShareKey,
+          onViewScreenShareFullscreen: app.setViewingScreenShareKey,
+          activeChannelName: app.activeChannelName,
+          activeMessages: app.activeMessages,
+          channelName: app.activeChannelName,
+          messages: app.activeMessages,
+          dmMessages: app.dmMessagesForSelectedChannel,
+          composerValue: app.composerValue,
+          onComposerChange: app.setComposerValue,
+          onSend: app.handleSendMessageWithSfx,
+          getDmReactionsForMessage: app.getDmReactionsForMessage,
+          getReactionsForMessage: app.getReactionsForMessage,
+          onToggleDmReaction: app.onToggleDmReaction,
+          onToggleReaction: app.onToggleReaction,
+          currentUserId: app.identityString || undefined,
+          onViewProfile: app.handleViewProfile,
+          getAvatarUrl: app.getAvatarUrlForUser,
+          onDeleteMessage: app.handleDeleteMessage,
+          onEditMessage: app.handleEditMessage,
+          dmPartnerAvatarUrl: app.dmPartnerAvatarUrl,
+          dmPartnerProfileColor: app.dmPartnerProfileColor,
+          selectedTextChannel: app.selectedTextChannel,
+          dmCallActive: Boolean(app.dmCallActive),
+          friendRequestUsername: app.friendRequestUsername,
+          onRequestUsernameChange: app.setFriendRequestUsername,
+          onSendRequest: app.onSendFriendRequest,
+          incomingRequests,
+          onAcceptRequest: app.onAcceptFriendRequest,
+          onDeclineRequest: app.onDeclineFriendRequest,
+          outgoingRequests,
+          onCancelOutgoingRequest: app.onCancelOutgoingFriendRequest,
+          friends: homeFriends,
+          onStartDm: app.onStartDmFromFriend,
+          onRemoveFriend: app.onRemoveFriend,
+          guildInvites: app.myGuildInvites,
+          onAcceptGuildInvite: app.onAcceptGuildInvite,
+          onDeclineGuildInvite: app.onDeclineGuildInvite,
+        }}
+        sidebarBottom={{
+          showVoicePanel: true,
+          currentVoiceState: app.currentVoiceState,
+          onLeave: app.handleHangUpWithSfx,
+          remoteSharersCount: app.remoteSharersCount,
+          onStartSharing: app.onStartSharing,
+          onStopSharing: app.onStopSharing,
+          user: sidebarUser,
+          isMuted: app.isMuted,
+          isDeafened: app.isDeafened,
+          muteColor: app.muteColor,
+          deafenColor: app.deafenColor,
+          onToggleMute: app.onToggleMute,
+          onToggleDeafen: app.onToggleDeafen,
+          onOpenSettings: () => setShowSettingsModal(true),
+          onOpenProfile: () => app.setShowProfileModal(true),
+        }}
+        memberColumn={{
+          layoutMode,
+          isDmMode: app.isDmMode,
+          guildName: app.selectedGuild?.name,
+          friends: app.friends,
+          memberListItems: app.memberListItems,
+          getAvatarUrl: app.getAvatarUrlForUser,
+          usersByIdentity: app.usersByIdentity,
+          onViewProfile: app.handleViewProfile,
+          localUserId: app.identityString || undefined,
+        }}
+      />
 
-        <SettingsModal
-          isOpen={showSettingsModal}
-          onClose={() => setShowSettingsModal(false)}
-          uiSoundLevel={uiSoundLevel}
-          onUiSoundLevelChange={setUiSoundLevel}
-          friendStatusNotificationsEnabled={friendStatusNotificationsEnabled}
-          onFriendStatusNotificationsChange={setFriendStatusNotificationsEnabled}
-          dmMessageNotificationsEnabled={dmMessageNotificationsEnabled}
-          onDmMessageNotificationsChange={setDmMessageNotificationsEnabled}
-          layoutMode={layoutMode}
-          onLayoutModeChange={setLayoutMode}
-        />
-
-        <ContextMenuOverlay
-          layoutMode={layoutMode}
-          contextMenu={contextMenu}
-          profilePopup={profilePopup}
-          identityString={identityString}
-          friends={friends}
-          usersByIdentity={usersByIdentity}
-          getAvatarUrlForUser={getAvatarUrlForUser}
-          onClose={() => setContextMenu(null)}
-          onCloseProfile={() => setProfilePopup(null)}
-          onViewProfile={(userId) => setProfilePopup({ userId })}
-          onStartDm={onStartDmFromFriend}
-        />
-
-        {/* Hidden audio elements for remote voice playback */}
-        <AudioStreams
-          audioStreams={audioStreams}
-          isDeafened={currentVoiceState?.isDeafened ?? false}
-          locallyMutedUsers={locallyMutedUsers}
-        />
-
-        {/* Incoming call modal */}
-        {incomingCall && !ignoredCallIds.has(String(incomingCall.callId)) && (() => {
-          const callerId = identityToString(incomingCall.callerIdentity)
-          const callerUser = usersByIdentity.get(callerId)
-          return (
-            <IncomingCallModal
-              callerName={callerUser?.displayName ?? callerUser?.username ?? callerId.slice(0, 12)}
-              callerAvatarUrl={getAvatarUrlForUser(callerId)}
-              onAccept={handleAcceptCall}
-              onDecline={handleDeclineCall}
-              onIgnore={handleIgnoreCall}
-            />
-          )
-        })()}
-
-        {/* Screen share viewer overlay */}
-        {viewingScreenStream && (
-          <ScreenShareViewer
-            stream={viewingScreenStream}
-            sharerName="Screen Share"
-            onClose={() => setViewingScreenShareKey(null)}
-          />
-        )}
-      </main>
-
-      {/* Register overlay */}
-      {!me && initialLoadComplete && state.connectionStatus === 'connected' && (
-        <RegisterOverlay onRegister={onRegister} onLoginAsUser={onLoginAsUser} />
-      )}
-
-      {/* Notification toasts */}
-      <NotificationToast notifications={notifications} onDismiss={dismissNotification} />
+      <AppModals
+        showCreateGuildModal={app.showCreateGuildModal}
+        onCloseCreateGuild={() => app.setShowCreateGuildModal(false)}
+        newGuildName={app.newGuildName}
+        onGuildNameChange={app.setNewGuildName}
+        onCreateGuild={() => void app.onCreateGuild()}
+        showCreateChannelModal={app.showCreateChannelModal}
+        onCloseCreateChannel={() => app.setShowCreateChannelModal(false)}
+        newChannelName={app.newChannelName}
+        onChannelNameChange={app.setNewChannelName}
+        newChannelType={app.newChannelType}
+        onChannelTypeChange={app.setNewChannelType}
+        onCreateChannel={() => void app.onCreateChannel()}
+        showInviteModal={app.showInviteModal}
+        onCloseInvite={() => app.setShowInviteModal(false)}
+        friends={app.friends}
+        onInviteFriend={app.onInviteFriend}
+        showProfileModal={app.showProfileModal}
+        onCloseProfile={() => app.setShowProfileModal(false)}
+        currentUser={app.me as ProfileSettingsModalProps['currentUser']}
+        onUpdateProfile={app.actions.updateProfile}
+        onSetStatus={(statusTag) => {
+          void app.actions.setStatus({ status: { tag: statusTag } as never })
+        }}
+        showSettingsModal={showSettingsModal}
+        onCloseSettings={() => setShowSettingsModal(false)}
+        uiSoundLevel={app.uiSoundLevel}
+        onUiSoundLevelChange={app.setUiSoundLevel}
+        friendStatusNotificationsEnabled={app.friendStatusNotificationsEnabled}
+        onFriendStatusNotificationsChange={app.setFriendStatusNotificationsEnabled}
+        dmMessageNotificationsEnabled={app.dmMessageNotificationsEnabled}
+        onDmMessageNotificationsChange={app.setDmMessageNotificationsEnabled}
+        layoutMode={layoutMode}
+        onLayoutModeChange={setLayoutMode}
+        contextMenuOverlay={{
+          layoutMode,
+          contextMenu: app.contextMenu,
+          profilePopup: app.profilePopup,
+          identityString: app.identityString,
+          friends: app.friends,
+          usersByIdentity: app.usersByIdentity,
+          getAvatarUrlForUser: app.getAvatarUrlForUser,
+          onClose: () => app.setContextMenu(null),
+          onCloseProfile: () => app.setProfilePopup(null),
+          onViewProfile: (userId) => app.setProfilePopup({ userId }),
+          onStartDm: app.onStartDmFromFriend,
+        }}
+      />
     </div>
   )
 }
