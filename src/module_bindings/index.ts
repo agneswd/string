@@ -105,6 +105,8 @@ import MyMessagesRow from "./my_messages_table";
 import MyProfileRow from "./my_profile_table";
 import MyReactionsRow from "./my_reactions_table";
 import MyRtcSignalsRow from "./my_rtc_signals_table";
+import MyVisibleUserPresenceRow from "./my_visible_user_presence_table";
+import MyVisibleUsersRow from "./my_visible_users_table";
 import MyVoiceStatesRow from "./my_voice_states_table";
 import UserRow from "./user_table";
 import UserPresenceRow from "./user_presence_table";
@@ -346,6 +348,20 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyRtcSignalsRow),
+  my_visible_user_presence: __table({
+    name: 'my_visible_user_presence',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyVisibleUserPresenceRow),
+  my_visible_users: __table({
+    name: 'my_visible_users',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyVisibleUsersRow),
   my_voice_states: __table({
     name: 'my_voice_states',
     indexes: [
