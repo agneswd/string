@@ -86,6 +86,8 @@ const S: Record<string, CSSProperties> = {
     padding: '0 16px 24px 16px',
     flexShrink: 0,
     boxSizing: 'border-box',
+    position: 'relative',
+    zIndex: 2,
   },
   composerInput: {
     flex: 1,
@@ -165,6 +167,8 @@ export const ChatViewPane = React.memo(function ChatViewPane({
       boxSizing: 'border-box' as const,
       border: '1px solid var(--border-subtle)',
       transition: 'border-color 0.15s',
+      position: 'relative' as const,
+      zIndex: 3,
     }),
     [isString],
   )

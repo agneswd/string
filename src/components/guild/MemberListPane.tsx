@@ -204,6 +204,9 @@ const MemberRow = memo(function MemberRow({ member, showStatusDot, onViewProfile
       onMouseLeave={(e) => {
         ;(e.currentTarget as HTMLElement).style.background = 'transparent'
       }}
+      onClick={(e) => {
+        onViewProfile?.({ displayName, username: member.username, status: member.status }, e.clientX, e.clientY)
+      }}
       onContextMenu={(e) => {
         e.preventDefault()
         onViewProfile?.({ displayName, username: member.username, status: member.status }, e.clientX, e.clientY)

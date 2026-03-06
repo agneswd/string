@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { userEvent } from '@testing-library/user-event'
 import { UserPanel } from '../UserPanel'
 
@@ -90,6 +90,14 @@ describe('UserPanel — string mode', () => {
   it('settings button has accessible aria-label', () => {
     render(<UserPanel {...baseProps} layoutMode="string" />)
     expect(screen.getByRole('button', { name: /open settings/i })).toBeDefined()
+  })
+
+  it('icon buttons get a hover treatment', () => {
+    render(<UserPanel {...baseProps} layoutMode="string" />)
+    const settingsButton = screen.getByRole('button', { name: /open settings/i }) as HTMLElement
+    fireEvent.mouseEnter(settingsButton)
+    expect(settingsButton.style.backgroundColor).toContain('var(--bg-hover)')
+    expect(settingsButton.style.border).toContain('var(--border-subtle)')
   })
 
   it('mute button shows MicOff icon when isMuted', () => {

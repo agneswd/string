@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 import { Settings, Mic, MicOff, Headphones, HeadphoneOff } from 'lucide-react'
 import { getAvatarColor, getInitial, avatarBytesToUrl } from '../../lib/avatarUtils'
 import type { UserPanelVariantProps } from './UserPanel'
@@ -151,23 +151,43 @@ function IconButton({
   danger?: boolean
   style?: CSSProperties
 }) {
+  const [hovered, setHovered] = useState(false)
+
+  const backgroundColor = danger && active
+    ? 'var(--bg-danger-hover)'
+    : hovered
+      ? 'var(--bg-hover)'
+      : 'transparent'
+
+  const borderColor = hovered
+    ? 'var(--border-subtle)'
+    : 'transparent'
+
+  const color = active
+    ? undefined
+    : hovered
+      ? 'var(--text-primary)'
+      : 'var(--text-muted)'
+
   return (
     <button
       onClick={onClick}
       title={title}
       aria-label={ariaLabel ?? title}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
         width: 26,
         height: 26,
         borderRadius: '6px',
-        border: '1px solid transparent',
+        border: `1px solid ${borderColor}`,
         padding: 0,
-        backgroundColor: danger && active ? 'var(--bg-danger-hover)' : 'transparent',
+        backgroundColor,
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: 'var(--text-muted)',
+        color,
         transition: 'background-color 0.1s, border-color 0.1s, color 0.1s',
         ...extraStyle,
       }}

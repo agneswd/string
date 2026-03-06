@@ -41,6 +41,13 @@ describe('FriendRequestPanel', () => {
     expect(screen.getByRole('complementary', { name: /friends/i })).toBeTruthy()
   })
 
+  it('renders the Friends header without an icon', () => {
+    const { container } = renderPanel()
+    const header = screen.getByText('Friends')
+    expect(header.querySelector('svg')).toBeNull()
+    expect(container.querySelector('aside svg')).toBeTruthy()
+  })
+
   it('renders Online, All, Pending and Add Friend tabs', () => {
     renderPanel()
     expect(screen.getByRole('button', { name: /^Online$/i })).toBeTruthy()

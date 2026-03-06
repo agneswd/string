@@ -100,6 +100,7 @@ export function useDmChat({
   } = appData
 
   const [selectedDmChannelId, setSelectedDmChannelId] = useState<string | undefined>(undefined)
+  const [hiddenDmChannelIds, setHiddenDmChannelIds] = useState<Set<string>>(() => new Set())
 
   const myDmChannels = useMemo(() => {
     if (!identityString) {
@@ -117,6 +118,45 @@ export function useDmChat({
       .slice()
       .sort((left, right) => compareById(left.dmChannelId, right.dmChannelId))
   }, [dmChannels, dmParticipants, identityString])
+
+  const directDmChannelIdByFriendIdentity = useMemo(() => {
+    const participantsByChannel = new Map<string, string[]>()
+
+    for (const participant of dmParticipants) {
+      const channelId = toIdKey(participant.dmChannelId)
+      const current = participantsByChannel.get(channelId) ?? []
+      current.push(identityToString(participant.identity))
+      participantsByChannel.set(channelId, current)
+    }
+
+    const result = new Map<string, string>()
+    if (!identityString) {
+      return result
+    }
+
+    for (const channel of myDmChannels) {
+      const channelId = toIdKey(channel.dmChannelId)
+      const participants = Array.from(new Set(participantsByChannel.get(channelId) ?? []))
+      if (participants.length !== 2 || !participants.includes(identityString)) {
+        continue
+      }
+
+      const otherParticipantId = participants.find((participantId) => participantId !== identityString)
+      if (otherParticipantId) {
+        result.set(otherParticipantId, channelId)
+      }
+    }
+
+    return result
+  }, [dmParticipants, identityString, myDmChannels])
+
+  useEffect(() => {
+    const availableChannelIds = new Set(myDmChannels.map((channel) => toIdKey(channel.dmChannelId)))
+    setHiddenDmChannelIds((current) => {
+      const next = new Set(Array.from(current).filter((channelId) => availableChannelIds.has(channelId)))
+      return next.size === current.size ? current : next
+    })
+  }, [myDmChannels])
 
   const dmListItems = useMemo(() => {
     const mapUserStatus = (tag: string): 'online' | 'idle' | 'dnd' | 'offline' => {
@@ -184,6 +224,40 @@ export function useDmChat({
     () => dmListItems.find((channel) => String(channel.id) === selectedDmChannelId)?.name ?? null,
     [dmListItems, selectedDmChannelId],
   )
+
+  const pendingDmWithRef = useRef<string | null>(null)
+  const autoCreatingDmWithRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    const pendingIdentity = autoCreatingDmWithRef.current
+    if (pendingIdentity && directDmChannelIdByFriendIdentity.has(pendingIdentity)) {
+      autoCreatingDmWithRef.current = null
+    }
+
+    if (!identityString || autoCreatingDmWithRef.current) {
+      return
+    }
+
+    for (const friendIdentity of friendIdentityById.values()) {
+      const friendIdentityStr = identityToString(friendIdentity)
+      if (!friendIdentityStr || directDmChannelIdByFriendIdentity.has(friendIdentityStr)) {
+        continue
+      }
+
+      autoCreatingDmWithRef.current = friendIdentityStr
+      pendingDmWithRef.current = pendingDmWithRef.current ?? friendIdentityStr
+
+      void callActionOrReducer(extendedActions.createDmChannel, 'createDmChannel', {
+        participants: [friendIdentity],
+        title: undefined,
+      }).catch(() => {
+        if (autoCreatingDmWithRef.current === friendIdentityStr) {
+          autoCreatingDmWithRef.current = null
+        }
+      })
+      return
+    }
+  }, [identityString, friendIdentityById, directDmChannelIdByFriendIdentity, callActionOrReducer, extendedActions.createDmChannel])
 
   const markDmReadInFlightByChannelRef = useRef<Map<string, string>>(new Map())
 
@@ -413,30 +487,21 @@ export function useDmChat({
 
       const friendIdentityStr = identityToString(friendIdentity)
 
-      const participantsByChannel = new Map<string, string[]>()
-      for (const p of dmParticipants) {
-        const channelId = toIdKey(p.dmChannelId)
-        const list = participantsByChannel.get(channelId) ?? []
-        list.push(identityToString(p.identity))
-        participantsByChannel.set(channelId, list)
-      }
-
-      let existingDmChannelId: string | null = null
-      for (const channel of myDmChannels) {
-        const channelId = toIdKey(channel.dmChannelId)
-        const pList = participantsByChannel.get(channelId) || []
-        if (pList.length === 2 && pList.includes(identityString || '') && pList.includes(friendIdentityStr)) {
-          existingDmChannelId = channelId
-          break
-        }
-      }
+      const existingDmChannelId = directDmChannelIdByFriendIdentity.get(friendIdentityStr) ?? null
 
       if (existingDmChannelId) {
+        setHiddenDmChannelIds((current) => {
+          if (!current.has(existingDmChannelId)) return current
+          const next = new Set(current)
+          next.delete(existingDmChannelId)
+          return next
+        })
         setSelectedDmChannelId(existingDmChannelId)
         return
       }
 
       pendingDmWithRef.current = friendIdentityStr
+      autoCreatingDmWithRef.current = friendIdentityStr
 
       void runAction(
         () =>
@@ -451,59 +516,51 @@ export function useDmChat({
       friendIdentityById,
       setActionStatus,
       setActionError,
-      dmParticipants,
-      myDmChannels,
-      identityString,
+      directDmChannelIdByFriendIdentity,
       runAction,
       callActionOrReducer,
       extendedActions,
     ],
   )
 
-  // Auto-select newly created DM channel after reducer completes
-  const pendingDmWithRef = useRef<string | null>(null)
-
   useEffect(() => {
     const pendingIdentity = pendingDmWithRef.current
-    if (!pendingIdentity || !identityString) return
+    if (!pendingIdentity) return
 
-    const participantsByChannel = new Map<string, string[]>()
-    for (const p of dmParticipants) {
-      const channelId = toIdKey(p.dmChannelId)
-      const list = participantsByChannel.get(channelId) ?? []
-      list.push(identityToString(p.identity))
-      participantsByChannel.set(channelId, list)
+    const pendingChannelId = directDmChannelIdByFriendIdentity.get(pendingIdentity)
+    if (pendingChannelId) {
+      pendingDmWithRef.current = null
+      setHiddenDmChannelIds((current) => {
+        if (!current.has(pendingChannelId)) return current
+        const next = new Set(current)
+        next.delete(pendingChannelId)
+        return next
+      })
+      setSelectedDmChannelId(pendingChannelId)
     }
-
-    for (const channel of myDmChannels) {
-      const channelId = toIdKey(channel.dmChannelId)
-      const pList = participantsByChannel.get(channelId) || []
-      if (pList.length === 2 && pList.includes(identityString) && pList.includes(pendingIdentity)) {
-        pendingDmWithRef.current = null
-        setSelectedDmChannelId(channelId)
-        return
-      }
-    }
-  }, [myDmChannels, dmParticipants, identityString])
+  }, [directDmChannelIdByFriendIdentity])
 
   const onLeaveDmChannel = useCallback(
     (dmChannelId: string | number): void => {
-      void runAction(
-        () => extendedActions.leaveDmChannel({ dmChannelId: BigInt(dmChannelId) }),
-        'Left DM',
-      )
+      const channelId = String(dmChannelId)
+      setHiddenDmChannelIds((current) => {
+        if (current.has(channelId)) return current
+        const next = new Set(current)
+        next.add(channelId)
+        return next
+      })
       if (String(selectedDmChannelId) === String(dmChannelId)) {
         setSelectedDmChannelId(undefined)
       }
     },
-    [runAction, extendedActions, selectedDmChannelId],
+    [selectedDmChannelId],
   )
 
   return {
     selectedDmChannelId,
     setSelectedDmChannelId,
     myDmChannels,
-    dmListItems,
+    dmListItems: dmListItems.filter((channel) => !hiddenDmChannelIds.has(String(channel.id))),
     selectedDmChannel,
     selectedDmName,
     dmMessagesForSelectedChannel,

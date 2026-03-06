@@ -68,9 +68,9 @@ type TableLike = {
 
 type TableMutationHandler = (...args: unknown[]) => void
 
-type HotTableKey = 'message' | 'my_reactions' | 'dm_message' | 'dm_reaction'
+type HotTableKey = 'message' | 'my_reactions' | 'my_dm_messages' | 'dm_reaction'
 
-const HOT_TABLE_KEYS = new Set<HotTableKey>(['message', 'my_reactions', 'dm_message', 'dm_reaction'])
+const HOT_TABLE_KEYS = new Set<HotTableKey>(['message', 'my_reactions', 'my_dm_messages', 'dm_reaction'])
 
 type AttachedTableHandlers = {
   table: TableLike
@@ -107,8 +107,8 @@ type PreferredReducerName =
   | 'toggleDmReaction'
 
 const TABLE_KEYS = [
-  'user',
-  'user_presence',
+  'my_visible_users',
+  'my_visible_user_presence',
   'my_friend_edges',
   'my_profile',
   'my_guilds',
@@ -122,7 +122,7 @@ const TABLE_KEYS = [
   'my_friend_requests_outgoing',
   'my_dm_channels',
   'my_dm_participants',
-  'dm_message',
+  'my_dm_messages',
   'my_dm_call_events',
   'my_rtc_signals',
   'my_voice_states',
@@ -132,8 +132,8 @@ const TABLE_KEYS = [
 const PREFERRED_VOICE_TABLE_KEYS = ['my_voice_states'] as const
 
 const CORE_SUBSCRIPTION_QUERIES = [
-  'SELECT * FROM user',
-  'SELECT * FROM user_presence',
+  'SELECT * FROM my_visible_users',
+  'SELECT * FROM my_visible_user_presence',
   'SELECT * FROM my_friend_edges',
   'SELECT * FROM my_profile',
   'SELECT * FROM my_guilds',
@@ -144,7 +144,7 @@ const CORE_SUBSCRIPTION_QUERIES = [
   'SELECT * FROM my_friend_requests_outgoing',
   'SELECT * FROM my_dm_channels',
   'SELECT * FROM my_dm_participants',
-  'SELECT * FROM dm_message',
+  'SELECT * FROM my_dm_messages',
   'SELECT * FROM my_dm_call_events',
   'SELECT * FROM my_rtc_signals',
   'SELECT * FROM my_voice_states',
@@ -671,7 +671,7 @@ class StringStore {
   }
 
   private clearDmChannelState(): void {
-    this.pendingMutatedTables.delete('dm_message')
+    this.pendingMutatedTables.delete('my_dm_messages')
     this.pendingMutatedTables.delete('dm_reaction')
     this.dmReactionsByMessage.clear()
     this.updateState({
@@ -783,8 +783,8 @@ class StringStore {
     const prev = this.state
     const next: Partial<StringState> = { identity }
 
-    const presenceMutated = mutated.has('user_presence')
-    const userMutated = mutated.has('user') || mutated.has('my_profile') || mutated.has('my_friend_edges')
+    const presenceMutated = mutated.has('my_visible_user_presence')
+    const userMutated = mutated.has('my_visible_users') || mutated.has('my_profile') || mutated.has('my_friend_edges')
     const usersChanged = syncAll || presenceMutated || userMutated || mutated.has('my_guild_members')
     const profileChanged = syncAll || presenceMutated || mutated.has('my_profile')
     const friendsChanged = syncAll || presenceMutated || userMutated
@@ -794,7 +794,7 @@ class StringStore {
 
     if (usersChanged) {
       const presenceMap = new Map<string, UserPresence>()
-      const presences = syncAll || presenceMutated ? this.readRows<UserPresence>(db, 'user_presence') : []
+      const presences = syncAll || presenceMutated ? this.readRows<UserPresence>(db, 'my_visible_user_presence') : []
       for (const p of presences) {
         presenceMap.set(String(p.identity), p)
       }
@@ -827,7 +827,7 @@ class StringStore {
         visibleIdentities.add(String(gm.identity))
       }
 
-      const rawUsers = this.readRows<User>(db, 'user')
+      const rawUsers = this.readRows<User>(db, 'my_visible_users')
 
       updatedUsers = rawUsers
         .filter(u => visibleIdentities.has(String(u.identity)))
@@ -866,10 +866,10 @@ class StringStore {
     const shouldSyncDmParticipants = syncAll || mutated.has('my_dm_participants')
     if (shouldSyncDmParticipants) next.dmParticipants = this.readRows<DmParticipant>(db, 'my_dm_participants')
 
-    const shouldSyncDmMessages = syncAll || mutated.has('dm_message')
+    const shouldSyncDmMessages = syncAll || mutated.has('my_dm_messages')
     const shouldSyncDmReactions = syncAll || mutated.has('dm_reaction')
     if (shouldSyncDmMessages || shouldSyncDmReactions) {
-      const dmMessages = this.readRows<DmMessage>(db, 'dm_message')
+      const dmMessages = this.readRows<DmMessage>(db, 'my_dm_messages')
       const dmReactions = this.readRows<DmReaction>(db, 'dm_reaction')
       this.rebuildDmHotIndexes(dmMessages, dmReactions)
       next.dmMessages = this.getSelectedDmMessages()
@@ -986,7 +986,7 @@ class StringStore {
           this.applyGuildReactionInsert(row)
           return
         }
-        case 'dm_message': {
+        case 'my_dm_messages': {
           const row = this.findLastMatchingArg(args, this.isDmMessageRow.bind(this))
           if (!row) {
             this.syncFromCache()
@@ -1029,7 +1029,7 @@ class StringStore {
           this.applyGuildReactionDelete(row)
           return
         }
-        case 'dm_message': {
+        case 'my_dm_messages': {
           const row = this.findLastMatchingArg(args, this.isDmMessageRow.bind(this))
           if (!row) {
             this.syncFromCache()
@@ -1072,7 +1072,7 @@ class StringStore {
           this.applyGuildReactionUpdate(oldRow, newRow)
           return
         }
-        case 'dm_message': {
+        case 'my_dm_messages': {
           const { oldRow, newRow } = this.getUpdateRows(args, this.isDmMessageRow.bind(this))
           if (!newRow) {
             this.syncFromCache()

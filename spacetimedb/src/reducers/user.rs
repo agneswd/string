@@ -1,17 +1,66 @@
 use crate::{
     cancel_offline_jobs_for, status_after_login_identity_transfer,
     tables::{
-        dm_call_request as _, dm_channel as _, dm_message as _, dm_participant as _, friend as _,
-        friend_request as _, guild as _, guild_member as _, message as _, presence_state as _,
-        reaction as _, rtc_signal as _, user as _, user__view as _, user_presence as _,
-        voice_state as _, DmCallRequest, DmChannel, DmMessage, DmParticipant, Friend,
-        FriendRequest, Guild, GuildMember, Message, PresenceState, Reaction, RtcSignal, User,
-        VoiceState,
+        dm_call_request as _, dm_channel as _, dm_message as _, dm_participant as _,
+        dm_participant__view as _, friend as _, friend__view as _, friend_request as _,
+        guild as _, guild_member as _, guild_member__view as _, message as _,
+        presence_state as _, reaction as _, rtc_signal as _, user as _, user__view as _,
+        user_presence as _, user_presence__view as _, voice_state as _, DmCallRequest,
+        DmChannel, DmMessage, DmParticipant, Friend, FriendRequest, Guild, GuildMember,
+        Message, PresenceState, Reaction, RtcSignal, User, VoiceState,
     },
     types::UserStatus,
     update_user_status_if_changed, upsert_user_presence,
 };
 use spacetimedb::{ReducerContext, Table, ViewContext};
+use std::collections::BTreeSet;
+
+fn visible_identity_set(ctx: &ViewContext, who: spacetimedb::Identity) -> BTreeSet<spacetimedb::Identity> {
+    let mut identities = BTreeSet::new();
+    identities.insert(who);
+
+    for edge in ctx.db.friend().friend_by_identity_low().filter(&who) {
+        identities.insert(edge.identity_low);
+        identities.insert(edge.identity_high);
+    }
+    for edge in ctx.db.friend().friend_by_identity_high().filter(&who) {
+        identities.insert(edge.identity_low);
+        identities.insert(edge.identity_high);
+    }
+
+    let guild_ids: BTreeSet<u64> = ctx
+        .db
+        .guild_member()
+        .identity()
+        .filter(&who)
+        .map(|member| member.guild_id)
+        .collect();
+    for guild_id in guild_ids {
+        for member in ctx.db.guild_member().guild_id().filter(&guild_id) {
+            identities.insert(member.identity);
+        }
+    }
+
+    let dm_channel_ids: BTreeSet<u64> = ctx
+        .db
+        .dm_participant()
+        .dm_participant_by_identity()
+        .filter(&who)
+        .map(|participant| participant.dm_channel_id)
+        .collect();
+    for dm_channel_id in dm_channel_ids {
+        for participant in ctx
+            .db
+            .dm_participant()
+            .dm_participant_by_dm_channel_id()
+            .filter(dm_channel_id)
+        {
+            identities.insert(participant.identity);
+        }
+    }
+
+    identities
+}
 
 fn can_transfer_login_identity(target_online_session_count: u32) -> bool {
     target_online_session_count == 0
@@ -472,6 +521,22 @@ pub fn login_as_user(ctx: &ReducerContext, username: String) -> Result<(), Strin
 pub fn my_profile(ctx: &ViewContext) -> Vec<User> {
     let who = ctx.sender();
     ctx.db.user().identity().find(who).into_iter().collect()
+}
+
+#[spacetimedb::view(accessor = my_visible_users, public)]
+pub fn my_visible_users(ctx: &ViewContext) -> Vec<User> {
+    visible_identity_set(ctx, ctx.sender())
+        .into_iter()
+        .filter_map(|identity| ctx.db.user().identity().find(identity))
+        .collect()
+}
+
+#[spacetimedb::view(accessor = my_visible_user_presence, public)]
+pub fn my_visible_user_presence(ctx: &ViewContext) -> Vec<crate::tables::UserPresence> {
+    visible_identity_set(ctx, ctx.sender())
+        .into_iter()
+        .filter_map(|identity| ctx.db.user_presence().identity().find(identity))
+        .collect()
 }
 
 #[cfg(test)]

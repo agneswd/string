@@ -108,9 +108,10 @@ export const S = {
       display: 'flex',
       alignItems: 'center',
       gap: 6,
-      width: 'calc(100% - 6px)',
+      width: 'calc(100% - 12px)',
       padding: '5px 8px',
       marginTop: 1,
+      marginLeft: 6,
       marginRight: 6,
       /* Square corners per theme.md */
       borderRadius: 'var(--radius-sm)',

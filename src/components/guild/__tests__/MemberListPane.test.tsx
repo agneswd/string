@@ -60,6 +60,14 @@ describe('MemberListPane', () => {
     expect(onViewProfile).toHaveBeenCalled()
   })
 
+  it('calls onViewProfile on left-click of a member row', () => {
+    const onViewProfile = vi.fn()
+    renderPane({ onViewProfile })
+    const rows = screen.getAllByRole('listitem')
+    fireEvent.click(rows[0])
+    expect(onViewProfile).toHaveBeenCalled()
+  })
+
   it('renders the owner crown icon for owner members', () => {
     renderPane({ members: [...members, ownerMember] })
     const crown = screen.getByRole('img', { name: /server owner/i })

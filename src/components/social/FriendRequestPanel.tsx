@@ -1,5 +1,5 @@
 import { type FormEvent, useState, useMemo, useCallback } from 'react'
-import { Users, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { useLayoutMode } from '../../hooks/useLayoutMode'
 import { buildPanelStyles, buildHoverCSS } from './friends/FriendsStyles'
 import { FriendRow, IncomingRow, OutgoingRow, GuildInviteRow, EmptyState } from './friends/PanelRows'
@@ -197,7 +197,6 @@ export function FriendRequestPanel({
       {/* Tab bar */}
       <div style={s.toolbar}>
         <span style={s.toolbarTitle}>
-          <Users width={layoutMode === 'string' ? 16 : 24} height={layoutMode === 'string' ? 16 : 24} aria-hidden="true" />
           Friends
         </span>
         <div style={s.divider} />
