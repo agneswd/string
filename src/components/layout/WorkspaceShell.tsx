@@ -5,14 +5,14 @@ type ClassValue = string | undefined | null | false
 const cx = (...values: ClassValue[]) => values.filter(Boolean).join(' ')
 
 /**
- * WorkspaceShell — default layout for String in workspace mode.
+ * WorkspaceShell — the slot-based shell used for String mode.
  *
- * Structurally distinct from the classic Discord-style AppShell:
- *  - Wide workspace rail (200px) with text-labelled rows, not icon stack
- *  - Narrower channel/member sidebars (220px)
- *  - Taller product-bar top nav (3rem) — room for breadcrumb-style context
- *  - Main content area rendered as an inset card (border-radius, inner margin)
- *  - No explicit rail border — background step provides visual separation
+ * Current layout contract:
+ *  - Fixed 208px server rail
+ *  - Fixed 232px channel column, with optional footer content below it
+ *  - Flexible main column with a 3.25rem top nav, message region, and optional input tray
+ *  - Optional 232px member column controlled by `memberColumn` + `showMemberList`
+ *  - Flush split-pane surfaces with subtle divider borders between shell regions
  */
 export interface WorkspaceShellProps {
   serverColumn: ReactNode
@@ -61,18 +61,19 @@ export function WorkspaceShell({
         width: '100%',
         minHeight: 0,
         overflow: 'hidden',
-        backgroundColor: 'var(--bg-deepest)',
+        backgroundColor: 'var(--bg-app)',
         color: 'var(--text-primary)',
         fontFamily: 'var(--font-sans)',
       }}
     >
-      {/* Workspace rail — wide sidebar, text-label rows, no icon-stack */}
+      {/* Server rail — fixed-width left column for String-mode navigation */}
       <aside
         className={cx('workspace-shell__servers', serverColumnClassName)}
         style={{
-          width: '200px',
+          width: '208px',
           flexShrink: 0,
           backgroundColor: 'var(--bg-deepest)',
+          borderRight: '1px solid var(--border-subtle)',
           overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column',
@@ -84,14 +85,15 @@ export function WorkspaceShell({
         {serverColumn}
       </aside>
 
-      {/* Channel sidebar */}
+      {/* Channel column wrapper with optional footer slot beneath the sidebar */}
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
-          width: '220px',
-          minWidth: '220px',
+          width: '232px',
+          minWidth: '232px',
           backgroundColor: 'var(--bg-sidebar-light)',
+          borderRight: '1px solid var(--border-subtle)',
           flexShrink: 0,
         }}
       >
@@ -112,7 +114,7 @@ export function WorkspaceShell({
           <div
             style={{
               flexShrink: 0,
-              backgroundColor: 'var(--bg-deepest)',
+              backgroundColor: 'var(--bg-sidebar-light)',
               padding: '0.875rem',
               display: 'flex',
               flexDirection: 'column',
@@ -125,7 +127,7 @@ export function WorkspaceShell({
         )}
       </div>
 
-      {/* Main content — inset card look: small margin + rounded top corners */}
+      {/* Main column — top nav, messages, and optional composer tray */}
       <main
         className={cx('workspace-shell__main', mainClassName)}
         style={{
@@ -135,21 +137,19 @@ export function WorkspaceShell({
           flexDirection: 'column',
           backgroundColor: 'var(--bg-panel)',
           position: 'relative',
-          margin: '6px 6px 0 4px',
-          borderRadius: '8px 8px 0 0',
           overflow: 'hidden',
         }}
       >
-        {/* Product-bar top nav — taller, breadcrumb-friendly */}
+        {/* Top nav slot with the current 3.25rem shell header height */}
         <header
           className={cx('workspace-shell__top-nav', topNavClassName)}
           style={{
-            height: '3rem',
+            height: '3.25rem',
             flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
             padding: '0 1rem',
-            backgroundColor: 'var(--bg-panel)',
+            backgroundColor: 'var(--bg-app)',
             zIndex: 10,
             borderBottom: '1px solid var(--border-subtle)',
           }}
@@ -177,7 +177,7 @@ export function WorkspaceShell({
               flexShrink: 0,
               padding: '0.75rem',
               backgroundColor: 'var(--bg-panel)',
-              boxShadow: '0 -1px 0 0 var(--border-subtle)',
+              borderTop: '1px solid var(--border-subtle)',
             }}
           >
             {inputArea}
@@ -185,12 +185,12 @@ export function WorkspaceShell({
         )}
       </main>
 
-      {/* Optional member list */}
+      {/* Optional member column for presence or participant lists */}
       {memberColumn && showMemberList && (
         <aside
           className={cx('workspace-shell__members', memberColumnClassName)}
           style={{
-            width: '220px',
+            width: '232px',
             flexShrink: 0,
             backgroundColor: 'var(--bg-sidebar-light)',
             borderLeft: '1px solid var(--border-subtle)',

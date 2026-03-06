@@ -5,8 +5,8 @@ export const S_appShell: CSSProperties = { display: 'flex', flexDirection: 'colu
 export const S_main: CSSProperties = { flex: 1, display: 'flex', minHeight: 0, height: '100%', overflow: 'hidden' }
 export const S_userPanel: CSSProperties = {
   display: 'flex', alignItems: 'center', padding: '0 8px', height: '52px',
-  backgroundColor: 'var(--bg-sidebar-dark, #111115)',
-  borderTop: '1px solid rgba(255,255,255,0.06)',
+  backgroundColor: 'var(--bg-sidebar-light, #1c1c21)',
+  borderTop: '1px solid var(--border-subtle)',
 }
 export const S_userPanelInner: CSSProperties = { display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }
 export const S_userPanelName: CSSProperties = { fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }

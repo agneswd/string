@@ -27,36 +27,34 @@ describe('WorkspaceShell', () => {
     expect(screen.getByTestId('input-area')).toBeDefined()
   })
 
-  it('server rail has 200px width (workspace uses text-label rows, not icon stack)', () => {
+  it('server rail uses the current 208px fixed width', () => {
     const { container } = render(<WorkspaceShell {...defaultProps} />)
     const serverAside = container.querySelector('.workspace-shell__servers') as HTMLElement
     expect(serverAside).toBeTruthy()
-    expect(serverAside.style.width).toBe('200px')
+    expect(serverAside.style.width).toBe('208px')
   })
 
-  it('channel sidebar has 220px width', () => {
+  it('channel sidebar wrapper uses the current 232px fixed width', () => {
     const { container } = render(<WorkspaceShell {...defaultProps} />)
-    // The channel wrapper div holds the channel aside
     const root = container.firstElementChild as HTMLElement
-    // Find the sidebar wrapper (second direct child, after server aside)
     const sidebarWrapper = root.children[1] as HTMLElement
     expect(sidebarWrapper).toBeTruthy()
-    expect(sidebarWrapper.style.width).toBe('220px')
+    expect(sidebarWrapper.style.width).toBe('232px')
+    expect(sidebarWrapper.style.minWidth).toBe('232px')
   })
 
-  it('top nav header has 3rem height (workspace uses taller product-bar)', () => {
+  it('top nav header uses the current 3.25rem height', () => {
     const { container } = render(<WorkspaceShell {...defaultProps} />)
     const header = container.querySelector('.workspace-shell__top-nav') as HTMLElement
     expect(header).toBeTruthy()
-    expect(header.style.height).toBe('3rem')
+    expect(header.style.height).toBe('3.25rem')
   })
 
-  it('main card area has an inset appearance via margin', () => {
+  it('main content stays flush without a card inset border radius', () => {
     const { container } = render(<WorkspaceShell {...defaultProps} />)
     const main = container.querySelector('.workspace-shell__main') as HTMLElement
     expect(main).toBeTruthy()
-    // The workspace main area has borderRadius for a card-inset look
-    expect(main.style.borderRadius).toBeTruthy()
+    expect(main.style.borderRadius).toBe('')
   })
 
   it('shows member column when showMemberList is true', () => {
@@ -98,7 +96,7 @@ describe('WorkspaceShell', () => {
     expect(screen.queryByTestId('sidebar-bottom')).toBeNull()
   })
 
-  it('member column has 220px width when shown', () => {
+  it('member column uses the current 232px fixed width when shown', () => {
     const { container } = render(
       <WorkspaceShell
         {...defaultProps}
@@ -108,7 +106,7 @@ describe('WorkspaceShell', () => {
     )
     const memberAside = container.querySelector('.workspace-shell__members') as HTMLElement
     expect(memberAside).toBeTruthy()
-    expect(memberAside.style.width).toBe('220px')
+    expect(memberAside.style.width).toBe('232px')
   })
 
   it('accepts optional className on root', () => {
@@ -119,10 +117,9 @@ describe('WorkspaceShell', () => {
     expect(root.className).toContain('custom-class')
   })
 
-  it('server rail has no right border (workspace uses bg diff only)', () => {
+  it('server rail keeps the subtle right border used by the current shell chrome', () => {
     const { container } = render(<WorkspaceShell {...defaultProps} />)
     const serverAside = container.querySelector('.workspace-shell__servers') as HTMLElement
-    // Workspace shell: no explicit border-right on the server rail
-    expect(serverAside.style.borderRight).toBeFalsy()
+    expect(serverAside.style.borderRight).toBe('1px solid var(--border-subtle)')
   })
 })

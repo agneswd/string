@@ -99,6 +99,7 @@ function StringRow({
         style={{
           flex: 1,
           minWidth: 0,
+          fontFamily: 'var(--font-mono)',
           fontSize: 13,
           fontWeight: isSelected ? 600 : 400,
           color: isSelected ? 'var(--text-primary)' : hovered ? 'var(--text-normal)' : 'var(--text-secondary)',
@@ -210,6 +211,7 @@ export const ServerListPaneString = memo(function ServerListPaneString({
       <div
         style={{
           padding: '16px 12px 6px',
+          fontFamily: 'var(--font-mono)',
           fontSize: 10,
           fontWeight: 700,
           letterSpacing: '0.08em',

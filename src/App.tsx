@@ -547,6 +547,7 @@ function App() {
           topNav={
             <TopNavBarComponent
               isDmMode={isDmMode}
+              isHomeView={isHomeView}
               dmName={selectedDmName}
               guildName={selectedGuild?.name}
               selectedDmChannel={!!selectedDmChannel}

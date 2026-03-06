@@ -37,10 +37,9 @@ describe('TopNavBar — string mode', () => {
 
   it('shows just the context label when no channelName provided', () => {
     render(<TopNavBar {...baseProps} layoutMode="string" />)
-    // Name should appear once (as the primary label)
     const labels = screen.getAllByText('Alpha Corp')
-    // At least one occurrence
-    expect(labels.length).toBeGreaterThan(0)
+    expect(labels).toHaveLength(1)
+    expect(screen.queryByText('/')).toBeNull()
   })
 
   it('shows DM name in string breadcrumb when isDmMode', () => {
@@ -53,8 +52,8 @@ describe('TopNavBar — string mode', () => {
         channelName="Bob"
       />,
     )
-    // "Bob" should appear in the breadcrumb context area
-    expect(screen.getAllByText('Bob').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Bob')).toHaveLength(1)
+    expect(screen.queryByText('/')).toBeNull()
   })
 
   it('renders member list toggle button', () => {

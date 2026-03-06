@@ -120,12 +120,12 @@ describe('Shell + layout wiring — classic mode', () => {
     expect(screen.getByRole('navigation', { name: /servers/i })).toBeDefined()
   })
 
-  it('top nav renders classic bold guild name', () => {
+  it('top nav renders classic bold channel title when a channel is selected', () => {
     render(makeShell('classic'))
     const strong = document.querySelector('strong')
-    // In classic mode TopNavBar renders guild name in a <strong> tag
+    // In classic mode the active channel title takes precedence in the <strong> tag.
     expect(strong).toBeTruthy()
-    expect(strong!.textContent).toBe('Alpha Corp')
+    expect(strong!.textContent).toBe('# general')
   })
 
   it('sidebar footer UserPanel renders with rounded-circle avatar (classic mode)', () => {

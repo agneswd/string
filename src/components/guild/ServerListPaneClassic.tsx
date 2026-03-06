@@ -9,11 +9,11 @@ import {
   type ServerListPaneVariantProps,
 } from './ServerListPane.shared'
 
-const BG = '#1e1f22'
-const ICON_BG_ACTIVE = '#5865f2'
-const ICON_BG_HOVER = '#5865f2'
-const ADD_GREEN = '#3ba55d'
-const SEPARATOR = '#35363c'
+const BG = 'var(--bg-sidebar-dark)'
+const ICON_BG_ACTIVE = 'var(--accent-primary)'
+const ICON_BG_HOVER = 'var(--accent-primary)'
+const ADD_GREEN = 'var(--text-success)'
+const SEPARATOR = 'var(--border-subtle)'
 
 const rootStyle: CSSProperties = {
   display: 'flex',
@@ -23,7 +23,7 @@ const rootStyle: CSSProperties = {
   height: '100%',
   minHeight: 0,
   backgroundColor: BG,
-  paddingTop: 0,
+  paddingTop: 12,
   paddingBottom: 12,
   boxSizing: 'border-box',
   overflowX: 'hidden',
@@ -55,7 +55,7 @@ const scrollRegionStyle: CSSProperties = {
   paddingBottom: 4,
 }
 
-const homeWrapStyle: CSSProperties = { paddingTop: 12, width: '100%' }
+const homeWrapStyle: CSSProperties = { width: '100%' }
 const addServerWrapStyle: CSSProperties = { paddingBottom: 4, width: '100%' }
 
 export const ServerListPaneClassic = memo(function ServerListPaneClassic({
@@ -176,8 +176,8 @@ export const ServerListPaneClassic = memo(function ServerListPaneClassic({
                 transition: 'opacity 0.15s ease',
                 position: 'relative',
                 width: '100%',
-                borderTop: isDragOver && dropPosition === 'above' ? '2px solid #5865f2' : '2px solid transparent',
-                borderBottom: isDragOver && dropPosition === 'below' ? '2px solid #5865f2' : '2px solid transparent',
+                borderTop: isDragOver && dropPosition === 'above' ? '2px solid var(--accent-primary)' : '2px solid transparent',
+                borderBottom: isDragOver && dropPosition === 'below' ? '2px solid var(--accent-primary)' : '2px solid transparent',
                 borderRadius: 4,
               }}
             >

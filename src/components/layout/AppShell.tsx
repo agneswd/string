@@ -66,9 +66,9 @@ export function AppShell({
           overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          padding: '0.5rem 0',
-          gap: '0.5rem',
+          alignItems: 'stretch',
+          padding: 0,
+          gap: 0,
         }}
       >
         {serverColumn}
@@ -83,6 +83,7 @@ export function AppShell({
           backgroundColor: 'var(--bg-sidebar-light)',
           borderRight: '1px solid var(--border-subtle)',
           flexShrink: 0,
+          minHeight: 0,
         }}
       >
         <aside
@@ -102,13 +103,13 @@ export function AppShell({
           <div style={{
             flexShrink: 0,
             borderTop: '1px solid var(--border-subtle)',
-            backgroundColor: 'var(--bg-sidebar-dark)',
+            backgroundColor: 'var(--bg-sidebar-light)',
             padding: '0.75rem',
             display: 'flex',
             flexDirection: 'column',
-            gap: '0.5rem'
+            gap: '0.5rem',
           }}>
-             {sidebarBottom}
+            {sidebarBottom}
           </div>
         )}
       </div>
@@ -135,6 +136,7 @@ export function AppShell({
             padding: '0 1rem',
             backgroundColor: 'var(--bg-panel)',
             zIndex: 10,
+            boxShadow: '0 1px 0 rgba(0, 0, 0, 0.08)',
           }}
         >
           {topNav}

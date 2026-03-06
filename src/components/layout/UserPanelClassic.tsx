@@ -52,11 +52,11 @@ export function UserPanelClassic({
             width: 10, height: 10, borderRadius: '50%',
             backgroundColor: (() => {
               const s = user.status
-              if (s === 'DoNotDisturb') return '#ed4245'
-              if (s === 'Offline') return '#747f8d'
-              return '#43b581'
+              if (s === 'DoNotDisturb') return 'var(--status-dnd)'
+              if (s === 'Offline') return 'var(--status-offline)'
+              return 'var(--status-online)'
             })(),
-            border: '2px solid var(--bg-sidebar-dark, #232428)',
+            border: '2px solid var(--bg-sidebar-light)',
           }} />
         </div>
         <div style={{ minWidth: 0 }}>
@@ -79,7 +79,7 @@ export function UserPanelClassic({
         </button>
         <button onClick={onToggleMute} title={isMuted ? 'Unmute' : 'Mute'} style={{
           width: 32, height: 32, borderRadius: '4px', border: 'none', padding: 0,
-          backgroundColor: isMuted ? 'rgba(237,66,69,0.2)' : 'transparent',
+          backgroundColor: isMuted ? 'var(--bg-danger-hover)' : 'transparent',
           color: muteColor,
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
@@ -91,7 +91,7 @@ export function UserPanelClassic({
         </button>
         <button onClick={onToggleDeafen} title={isDeafened ? 'Undeafen' : 'Deafen'} style={{
           width: 32, height: 32, borderRadius: '4px', border: 'none', padding: 0,
-          backgroundColor: isDeafened ? 'rgba(237,66,69,0.2)' : 'transparent',
+          backgroundColor: isDeafened ? 'var(--bg-danger-hover)' : 'transparent',
           color: deafenColor,
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>

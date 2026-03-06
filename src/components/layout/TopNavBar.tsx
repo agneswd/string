@@ -4,6 +4,7 @@ import { TopNavBarString } from './TopNavBarString'
 
 export interface TopNavBarProps {
   isDmMode: boolean
+  isHomeView: boolean
   dmName?: string
   guildName?: string
   selectedDmChannel: boolean

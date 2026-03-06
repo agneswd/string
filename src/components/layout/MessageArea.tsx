@@ -112,6 +112,7 @@ export function MessageArea(props: MessageAreaProps) {
         chatPanel={
           <ChatViewPane
             channelName={activeChannelName}
+            showHeader={false}
             messages={dmMessages}
             composerValue={composerValue}
             onComposerChange={onComposerChange}
@@ -160,6 +161,7 @@ export function MessageArea(props: MessageAreaProps) {
   return (
     <ChatViewPane
       channelName={activeChannelName}
+      showHeader={false}
       messages={activeMessages}
       composerValue={composerValue}
       onComposerChange={onComposerChange}

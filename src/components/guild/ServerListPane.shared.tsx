@@ -24,11 +24,11 @@ export interface ServerListPaneVariantProps {
   className?: string
 }
 
-export const CTX_BG = '#111214'
-export const CTX_HOVER = '#5865f2'
-export const CTX_DANGER = '#ed4245'
-export const CTX_TEXT = '#dbdee1'
-export const CTX_SEPARATOR = '#2e2f34'
+export const CTX_BG = 'var(--bg-deepest)'
+export const CTX_HOVER = 'var(--accent-primary)'
+export const CTX_DANGER = 'var(--text-danger)'
+export const CTX_TEXT = 'var(--text-primary)'
+export const CTX_SEPARATOR = 'var(--border-subtle)'
 
 export function getInitials(name: string): string {
   return name
@@ -84,7 +84,7 @@ export function ContextMenuItem({
 }
 
 const TEXT_WHITE = '#fff'
-const TEXT_MUTED = '#96989d'
+const TEXT_MUTED = 'var(--text-muted)'
 
 function Tooltip({ text, visible }: { text: string; visible: boolean }) {
   if (!visible) return null
@@ -95,7 +95,7 @@ function Tooltip({ text, visible }: { text: string; visible: boolean }) {
         left: 'calc(100% + 12px)',
         top: '50%',
         transform: 'translateY(-50%)',
-        backgroundColor: '#18191c',
+        backgroundColor: 'var(--bg-sidebar-light)',
         color: TEXT_WHITE,
         fontSize: 14,
         fontWeight: 600,
@@ -116,7 +116,7 @@ function Tooltip({ text, visible }: { text: string; visible: boolean }) {
           transform: 'translateY(-50%) rotate(45deg)',
           width: 8,
           height: 8,
-          backgroundColor: '#18191c',
+          backgroundColor: 'var(--bg-sidebar-light)',
         }}
       />
       {text}
@@ -124,12 +124,12 @@ function Tooltip({ text, visible }: { text: string; visible: boolean }) {
   )
 }
 
-const ICON_BG = '#313338'
-const ICON_BG_HOVER = '#5865f2'
-const ICON_BG_ACTIVE = '#5865f2'
+const ICON_BG = 'var(--bg-panel)'
+const ICON_BG_HOVER = 'var(--accent-primary)'
+const ICON_BG_ACTIVE = 'var(--accent-primary)'
 const PILL_COLOR = '#fff'
-const BADGE_RED = '#ed4245'
-const BG = '#1e1f22'
+const BADGE_RED = 'var(--text-danger)'
+const BG = 'var(--bg-sidebar-dark)'
 
 const iconWrapStyle: CSSProperties = {
   position: 'relative',

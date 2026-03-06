@@ -17,6 +17,7 @@ export interface ChatMessageItem {
 
 export interface ChatViewPaneProps {
   channelName?: string
+  showHeader?: boolean
   messages: ChatMessageItem[]
   composerValue: string
   onComposerChange: (value: string) => void
@@ -221,6 +222,7 @@ const S_timestampInlineVisible: CSSProperties = { ...S.timestampInline, color: '
 
 export const ChatViewPane = React.memo(function ChatViewPane({
   channelName,
+  showHeader = true,
   messages,
   composerValue,
   onComposerChange,
@@ -299,32 +301,33 @@ export const ChatViewPane = React.memo(function ChatViewPane({
       style={S.root}
       aria-label="Chat"
     >
-      {/* ── Fixed header ── */}
-      <header style={S.header}>
-        {isDm ? (
-          <>
-            <div style={{
-              width: 24, height: 24, borderRadius: '50%',
-              backgroundColor: profileColor || 'var(--accent-primary)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#fff', fontSize: 12, fontWeight: 600, marginRight: 8, flexShrink: 0,
-              overflow: 'hidden',
-            }}>
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-              ) : (
-                (displayName || '?')[0].toUpperCase()
-              )}
-            </div>
-            <span>{displayName}</span>
-          </>
-        ) : (
-          <>
-            <span style={S.hashIcon}>#</span>
-            <span>{displayName}</span>
-          </>
-        )}
-      </header>
+      {showHeader && (
+        <header style={S.header}>
+          {isDm ? (
+            <>
+              <div style={{
+                width: 24, height: 24, borderRadius: '50%',
+                backgroundColor: profileColor || 'var(--accent-primary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontSize: 12, fontWeight: 600, marginRight: 8, flexShrink: 0,
+                overflow: 'hidden',
+              }}>
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                ) : (
+                  (displayName || '?')[0].toUpperCase()
+                )}
+              </div>
+              <span>{displayName}</span>
+            </>
+          ) : (
+            <>
+              <span style={S.hashIcon}>#</span>
+              <span>{displayName}</span>
+            </>
+          )}
+        </header>
+      )}
 
       {/* ── Call active banner ── */}
       {callActive && (
