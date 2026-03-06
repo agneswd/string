@@ -13,6 +13,8 @@ export const ServerColumnClassic = memo(function ServerColumnClassic({
   onLeaveGuild,
   onDeleteGuild,
   onInviteToGuild,
+  onViewGuildInfo,
+  onOpenGuildSettings,
   ownedGuildIds,
   onReorder,
 }: ServerColumnVariantProps) {
@@ -32,6 +34,8 @@ export const ServerColumnClassic = memo(function ServerColumnClassic({
       onLeaveGuild={onLeaveGuild as (id: GuildId) => void}
       onDeleteGuild={onDeleteGuild as (id: GuildId) => void}
       onInviteToGuild={onInviteToGuild as (id: GuildId) => void}
+      onViewGuildInfo={onViewGuildInfo as (id: GuildId) => void}
+      onOpenGuildSettings={onOpenGuildSettings as (id: GuildId) => void}
       ownedGuildIds={ownedGuildIds as Set<GuildId>}
       onReorder={onReorder}
     />

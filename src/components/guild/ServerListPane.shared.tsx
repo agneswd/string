@@ -19,6 +19,8 @@ export interface ServerListPaneVariantProps {
   onLeaveGuild?: (guildId: GuildId) => void
   onInviteToGuild?: (guildId: GuildId) => void
   onDeleteGuild?: (guildId: GuildId) => void
+  onViewGuildInfo?: (guildId: GuildId) => void
+  onOpenGuildSettings?: (guildId: GuildId) => void
   ownedGuildIds?: Set<GuildId>
   onReorder?: (newOrder: string[]) => void
   className?: string

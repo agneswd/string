@@ -69,6 +69,7 @@ import RegisterUserReducer from "./register_user_reducer";
 import RemoveDmReactionReducer from "./remove_dm_reaction_reducer";
 import RemoveFriendReducer from "./remove_friend_reducer";
 import RemoveReactionReducer from "./remove_reaction_reducer";
+import SaveChannelLayoutReducer from "./save_channel_layout_reducer";
 import SendDmMessageReducer from "./send_dm_message_reducer";
 import SendDmRtcSignalReducer from "./send_dm_rtc_signal_reducer";
 import SendFriendRequestReducer from "./send_friend_request_reducer";
@@ -78,6 +79,7 @@ import SetStatusReducer from "./set_status_reducer";
 import ToggleDmReactionReducer from "./toggle_dm_reaction_reducer";
 import ToggleReactionReducer from "./toggle_reaction_reducer";
 import UpdateChannelReducer from "./update_channel_reducer";
+import UpdateGuildReducer from "./update_guild_reducer";
 import UpdateProfileReducer from "./update_profile_reducer";
 import UpdateVoiceStateReducer from "./update_voice_state_reducer";
 
@@ -408,6 +410,7 @@ const reducersSchema = __reducers(
   __reducerSchema("remove_dm_reaction", RemoveDmReactionReducer),
   __reducerSchema("remove_friend", RemoveFriendReducer),
   __reducerSchema("remove_reaction", RemoveReactionReducer),
+  __reducerSchema("save_channel_layout", SaveChannelLayoutReducer),
   __reducerSchema("send_dm_message", SendDmMessageReducer),
   __reducerSchema("send_dm_rtc_signal", SendDmRtcSignalReducer),
   __reducerSchema("send_friend_request", SendFriendRequestReducer),
@@ -417,6 +420,7 @@ const reducersSchema = __reducers(
   __reducerSchema("toggle_dm_reaction", ToggleDmReactionReducer),
   __reducerSchema("toggle_reaction", ToggleReactionReducer),
   __reducerSchema("update_channel", UpdateChannelReducer),
+  __reducerSchema("update_guild", UpdateGuildReducer),
   __reducerSchema("update_profile", UpdateProfileReducer),
   __reducerSchema("update_voice_state", UpdateVoiceStateReducer),
 );

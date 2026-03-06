@@ -2,7 +2,28 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { AppData } from './useAppData'
 import type { Channel, VoiceState } from '../module_bindings/types'
-import { toIdKey, identityToString, isTextChannel, isVoiceChannel } from '../lib/helpers'
+import { toIdKey, identityToString, isCategoryChannel, isTextChannel, isVoiceChannel } from '../lib/helpers'
+
+function compareGuildChannels(left: Channel, right: Channel): number {
+  const leftParent = left.categoryId == null ? '' : toIdKey(left.categoryId)
+  const rightParent = right.categoryId == null ? '' : toIdKey(right.categoryId)
+
+  if (leftParent !== rightParent) {
+    return leftParent.localeCompare(rightParent)
+  }
+
+  const leftPosition = Number(left.position)
+  const rightPosition = Number(right.position)
+  if (leftPosition !== rightPosition) {
+    return leftPosition - rightPosition
+  }
+
+  if (isCategoryChannel(left) !== isCategoryChannel(right)) {
+    return isCategoryChannel(left) ? -1 : 1
+  }
+
+  return toIdKey(left.channelId).localeCompare(toIdKey(right.channelId))
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -106,11 +127,11 @@ export function useGuildNavigation({
     return state.channels
       .filter((channel) => toIdKey(channel.guildId) === guildKey)
       .slice()
-      .sort((left, right) => Number(left.position) - Number(right.position))
+      .sort(compareGuildChannels)
   }, [selectedGuild, state.channels])
 
   const textChannels = useMemo(
-    () => channelsForGuild.filter((channel) => isTextChannel(channel)),
+    () => channelsForGuild.filter((channel) => isTextChannel(channel) && !isCategoryChannel(channel)),
     [channelsForGuild],
   )
 

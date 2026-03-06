@@ -10,15 +10,9 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
-import {
-  ChannelType,
-} from "./types";
-
 export default {
   guildId: __t.u64(),
-  name: __t.string(),
-  get channelType() {
-    return ChannelType;
-  },
-  parentCategoryId: __t.option(__t.u64()),
+  name: __t.option(__t.string()),
+  bio: __t.option(__t.string()),
+  avatarBytes: __t.option(__t.byteArray()),
 };

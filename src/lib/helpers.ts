@@ -11,8 +11,8 @@ import { getConn } from './connection'
 export const RTC_SIGNAL_TYPE_TAGS = ['Offer', 'Answer', 'IceCandidate', 'Bye'] as const
 export type RtcSignalTypeTag = (typeof RTC_SIGNAL_TYPE_TAGS)[number]
 
-/** Tag literals for channel type enum construction. */
-export const CHANNEL_TYPE_TAGS = ['Text', 'Voice'] as const
+/** Tag literals for channel-type enum construction. */
+export const CHANNEL_TYPE_TAGS = ['Category', 'Text', 'Voice'] as const
 export type ChannelTypeTag = (typeof CHANNEL_TYPE_TAGS)[number]
 
 /** Minimal duck-type for a runtime table that exposes `.iter()`. */
@@ -99,6 +99,9 @@ export const isTextChannel = (channel: Channel): boolean => isChannelVariant(cha
 
 /** Returns `true` if `channel` is a Voice channel. */
 export const isVoiceChannel = (channel: Channel): boolean => isChannelVariant(channel.channelType, 'Voice')
+
+/** Returns `true` if `channel` is a Category channel. */
+export const isCategoryChannel = (channel: Channel): boolean => isChannelVariant(channel.channelType, 'Category')
 
 /** Parse any value to a BigInt for sorting, or `null` if not convertible. */
 export const toSortableBigInt = (value: unknown): bigint | null => {

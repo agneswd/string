@@ -49,6 +49,8 @@ pub fn create_guild(ctx: &ReducerContext, name: String) -> Result<(), String> {
     let guild = ctx.db.guild().insert(Guild {
         guild_id: 0, // auto_inc
         name: name.clone(),
+        avatar_bytes: None,
+        bio: None,
         owner_identity: who,
         created_at: ctx.timestamp,
     });
@@ -67,6 +69,7 @@ pub fn create_guild(ctx: &ReducerContext, name: String) -> Result<(), String> {
     ctx.db.channel().insert(Channel {
         channel_id: 0,
         guild_id: guild.guild_id,
+        category_id: None,
         name: "general".into(),
         channel_type: ChannelType::Text,
         position: 0,
@@ -265,6 +268,48 @@ pub fn delete_guild(ctx: &ReducerContext, guild_id: u64) -> Result<(), String> {
         guild_id,
         who.to_abbreviated_hex()
     );
+    Ok(())
+}
+
+#[spacetimedb::reducer]
+pub fn update_guild(
+    ctx: &ReducerContext,
+    guild_id: u64,
+    name: Option<String>,
+    bio: Option<String>,
+    avatar_bytes: Option<Vec<u8>>,
+) -> Result<(), String> {
+    let who = ctx.sender();
+    let mut guild = ctx
+        .db
+        .guild()
+        .guild_id()
+        .find(guild_id)
+        .ok_or("Guild not found")?;
+
+    if guild.owner_identity != who {
+        return Err("Only the guild owner can update server settings".into());
+    }
+
+    if let Some(next_name) = name {
+        let next_name = next_name.trim().to_string();
+        if next_name.is_empty() || next_name.len() > 100 {
+            return Err("Guild name must be 1–100 characters".into());
+        }
+        guild.name = next_name;
+    }
+
+    if let Some(next_bio) = bio {
+        let next_bio = next_bio.trim().to_string();
+        guild.bio = if next_bio.is_empty() {
+            None
+        } else {
+            Some(next_bio)
+        };
+    }
+
+    guild.avatar_bytes = avatar_bytes;
+    ctx.db.guild().guild_id().update(guild);
     Ok(())
 }
 

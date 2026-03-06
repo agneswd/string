@@ -66,6 +66,8 @@ pub struct Guild {
     #[auto_inc]
     pub guild_id: u64,
     pub name: String,
+    pub avatar_bytes: Option<Vec<u8>>,
+    pub bio: Option<String>,
     pub owner_identity: Identity,
     pub created_at: Timestamp,
 }
@@ -112,6 +114,8 @@ pub struct Channel {
     pub channel_id: u64,
     #[index(btree)]
     pub guild_id: u64,
+    #[index(btree)]
+    pub category_id: Option<u64>,
     pub name: String,
     pub channel_type: ChannelType,
     pub position: u32,

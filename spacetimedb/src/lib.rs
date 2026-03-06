@@ -2,7 +2,7 @@
 // Manager/wiring module: types, tables, helpers, reducers
 
 pub mod types;
-pub use types::{ChannelType, MemberRole, RtcSignalType, UserStatus};
+pub use types::{ChannelLayoutItem, ChannelType, MemberRole, RtcSignalType, UserStatus};
 
 pub mod tables;
 pub use tables::{

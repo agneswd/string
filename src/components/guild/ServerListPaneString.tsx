@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, memo, type MouseEvent, type ReactNode } from 'react'
-import { UserPlus, LogOut, Clipboard, Trash2, LineSquiggle } from 'lucide-react'
+import { UserPlus, LogOut, Clipboard, Trash2, LineSquiggle, Info, Settings } from 'lucide-react'
 import {
   ContextMenuItem,
   getInitials,
@@ -160,6 +160,8 @@ export const ServerListPaneString = memo(function ServerListPaneString({
   onLeaveGuild,
   onDeleteGuild,
   onInviteToGuild,
+  onViewGuildInfo,
+  onOpenGuildSettings,
   ownedGuildIds,
   onReorder,
   className,
@@ -369,6 +371,19 @@ export const ServerListPaneString = memo(function ServerListPaneString({
           }}
           role="menu"
         >
+          <ContextMenuItem
+            label="View Server Info"
+            icon={<Info width={16} height={16} />}
+            onClick={() => { onViewGuildInfo?.(contextMenu.guildId); closeContextMenu() }}
+          />
+          {ownedGuildIds?.has(contextMenu.guildId) && (
+            <ContextMenuItem
+              label="Server Settings"
+              icon={<Settings width={16} height={16} />}
+              onClick={() => { onOpenGuildSettings?.(contextMenu.guildId); closeContextMenu() }}
+            />
+          )}
+          <div style={{ height: 1, backgroundColor: 'var(--border-subtle)', margin: '4px 0' }} />
           <ContextMenuItem
             label="Invite People"
             icon={<UserPlus width={16} height={16} />}

@@ -2,6 +2,7 @@ import { CreateGuildModal } from '../modals/CreateGuildModal'
 import { CreateChannelModal } from '../modals/CreateChannelModal'
 import { InviteFriendsModal } from '../modals/InviteFriendsModal'
 import { ProfileSettingsModal, type ProfileSettingsModalProps } from '../modals/ProfileSettingsModal'
+import { GuildSettingsModal, type GuildSettingsModalProps } from '../modals/GuildSettingsModal'
 
 export interface ModalSectionProps {
   // Create Guild
@@ -15,8 +16,12 @@ export interface ModalSectionProps {
   onCloseCreateChannel: () => void
   newChannelName: string
   onChannelNameChange: (v: string) => void
-  newChannelType: 'Text' | 'Voice'
-  onChannelTypeChange: (v: 'Text' | 'Voice') => void
+  newChannelType: 'Category' | 'Text' | 'Voice'
+  onChannelTypeChange: (v: 'Category' | 'Text' | 'Voice') => void
+  newChannelParentCategoryId: string
+  onChannelParentCategoryIdChange: (v: string) => void
+  availableChannelCategories: Array<{ id: string; name: string }>
+  editingChannelId: string | null
   onCreateChannel: () => void
   // Invite Friends
   showInviteModal: boolean
@@ -29,13 +34,18 @@ export interface ModalSectionProps {
   currentUser: ProfileSettingsModalProps['currentUser']
   onUpdateProfile: (params: { displayName?: string | null; bio?: string | null; avatarBytes?: Uint8Array | null; profileColor?: string | null }) => Promise<void>
   onSetStatus: (tag: string) => void
+  showGuildSettingsModal: boolean
+  onCloseGuildSettings: () => void
+  currentGuild: GuildSettingsModalProps['currentGuild']
+  onUpdateGuild: GuildSettingsModalProps['onUpdateGuild']
 }
 
 export function ModalSection({
   showCreateGuildModal, onCloseCreateGuild, newGuildName, onGuildNameChange, onCreateGuild,
-  showCreateChannelModal, onCloseCreateChannel, newChannelName, onChannelNameChange, newChannelType, onChannelTypeChange, onCreateChannel,
+  showCreateChannelModal, onCloseCreateChannel, newChannelName, onChannelNameChange, newChannelType, onChannelTypeChange, newChannelParentCategoryId, onChannelParentCategoryIdChange, availableChannelCategories, editingChannelId, onCreateChannel,
   showInviteModal, onCloseInvite, friends, onInviteFriend,
   showProfileModal, onCloseProfile, currentUser, onUpdateProfile, onSetStatus,
+  showGuildSettingsModal, onCloseGuildSettings, currentGuild, onUpdateGuild,
 }: ModalSectionProps) {
   return (
     <>
@@ -54,6 +64,10 @@ export function ModalSection({
         onChannelNameChange={onChannelNameChange}
         channelType={newChannelType}
         onChannelTypeChange={onChannelTypeChange}
+        parentCategoryId={newChannelParentCategoryId}
+        onParentCategoryIdChange={onChannelParentCategoryIdChange}
+        availableCategories={availableChannelCategories}
+        mode={editingChannelId ? 'edit' : 'create'}
         onSubmit={onCreateChannel}
       />
 
@@ -70,6 +84,13 @@ export function ModalSection({
         currentUser={currentUser}
         onUpdateProfile={onUpdateProfile}
         onSetStatus={onSetStatus}
+      />
+
+      <GuildSettingsModal
+        isOpen={showGuildSettingsModal}
+        onClose={onCloseGuildSettings}
+        currentGuild={currentGuild}
+        onUpdateGuild={onUpdateGuild}
       />
     </>
   )

@@ -8,7 +8,7 @@
 import { useCallback, useMemo, useEffect, useLayoutEffect, useState } from 'react'
 
 import { useRtcOrchestrator } from '../lib/webrtc'
-import { toIdKey, isVoiceChannel } from '../lib/helpers'
+import { toIdKey, isCategoryChannel, isVoiceChannel } from '../lib/helpers'
 import { avatarBytesToUrl } from '../lib/avatarUtils'
 import { setSfxVolume } from '../lib/sfx'
 import { identityToString, useAppData } from './useAppData'
@@ -168,6 +168,8 @@ export function useAppOrchestrator() {
     showMemberList, setShowMemberList,
     showProfileModal, setShowProfileModal,
     profilePopup, setProfilePopup,
+      showGuildSettingsModal, setShowGuildSettingsModal,
+      guildPopup, setGuildPopup,
     contextMenu, setContextMenu,
     initialLoadComplete,
     notifications,
@@ -238,16 +240,23 @@ export function useAppOrchestrator() {
     actions, selectedGuild, runAction, callActionOrReducer,
     setActionError, setActionStatus, setSelectedGuildId,
     identityString, guildInvites: appData.guildInvites,
-    usersByIdentity, extendedActions,
+    usersByIdentity, extendedActions, channelsForGuild,
   })
   const {
     newGuildName, setNewGuildName,
     newChannelName, setNewChannelName,
+    newChannelParentCategoryId, setNewChannelParentCategoryId,
     newChannelType, setNewChannelType,
     showCreateGuildModal, setShowCreateGuildModal,
     showCreateChannelModal, setShowCreateChannelModal,
     showInviteModal, setShowInviteModal,
-    onCreateGuild, onCreateChannel,
+    editingChannelId,
+    openCreateChannelModal,
+    openCreateCategoryModal,
+    openEditChannelModal,
+    onDeleteChannel,
+    saveChannelLayout,
+    onCreateGuild, onCreateChannel, onUpdateGuild,
     onInviteFriend, onLeaveGuild, onDeleteGuild,
     myGuildInvites, onAcceptGuildInvite, onDeclineGuildInvite,
   } = guildActions
@@ -348,7 +357,13 @@ export function useAppOrchestrator() {
     () => channelsForGuild.map((ch) => ({
       id: toIdKey(ch.channelId),
       name: ch.name,
-      kind: isVoiceChannel(ch) ? 'voice' as const : 'text' as const,
+      kind: isCategoryChannel(ch)
+        ? 'category' as const
+        : isVoiceChannel(ch)
+          ? 'voice' as const
+          : 'text' as const,
+      parentCategoryId: ch.categoryId ? toIdKey(ch.categoryId) : null,
+      position: Number(ch.position),
     })),
     [channelsForGuild],
   )
@@ -385,8 +400,10 @@ export function useAppOrchestrator() {
     // App state
     composerValue, setComposerValue,
     locallyMutedUsers, showMemberList, setShowMemberList,
+    showGuildSettingsModal, setShowGuildSettingsModal,
     showProfileModal, setShowProfileModal,
     profilePopup, setProfilePopup,
+    guildPopup, setGuildPopup,
     contextMenu, setContextMenu,
     initialLoadComplete, notifications,
     ignoredCallIds, addNotification, dismissNotification,
@@ -398,11 +415,18 @@ export function useAppOrchestrator() {
     // Guild actions
     newGuildName, setNewGuildName,
     newChannelName, setNewChannelName,
+    newChannelParentCategoryId, setNewChannelParentCategoryId,
     newChannelType, setNewChannelType,
     showCreateGuildModal, setShowCreateGuildModal,
     showCreateChannelModal, setShowCreateChannelModal,
     showInviteModal, setShowInviteModal,
-    onCreateGuild, onCreateChannel,
+    editingChannelId,
+    openCreateChannelModal,
+    openCreateCategoryModal,
+    openEditChannelModal,
+    onDeleteChannel,
+    saveChannelLayout,
+    onCreateGuild, onCreateChannel, onUpdateGuild,
     onInviteFriend, onLeaveGuild, onDeleteGuild,
     myGuildInvites, onAcceptGuildInvite, onDeclineGuildInvite,
     // Derived

@@ -11,14 +11,12 @@ import {
 } from "spacetimedb";
 
 import {
-  ChannelType,
+  ChannelLayoutItem,
 } from "./types";
 
 export default {
   guildId: __t.u64(),
-  name: __t.string(),
-  get channelType() {
-    return ChannelType;
+  get layout() {
+    return __t.array(ChannelLayoutItem);
   },
-  parentCategoryId: __t.option(__t.u64()),
 };

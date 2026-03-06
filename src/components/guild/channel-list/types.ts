@@ -3,14 +3,22 @@ import type { LayoutMode } from './styles'
 
 export type { LayoutMode }
 
-export type ChannelKind = 'text' | 'voice'
+export type ChannelKind = 'category' | 'text' | 'voice'
 
 export interface ChannelListItem {
   id: GuildId
   name: string
   kind?: ChannelKind
   category?: string
+  parentCategoryId?: GuildId | null
+  position?: number
   unreadCount?: number
+}
+
+export interface ChannelLayoutUpdateItem {
+  channelId: GuildId
+  categoryId?: GuildId | null
+  position: number
 }
 
 export interface UserPanelInfo {
@@ -36,7 +44,11 @@ export interface ChannelListPaneProps {
   onSelectChannel?: (channelId: GuildId) => void
   /** Optional user info to render in the bottom user panel */
   userPanel?: UserPanelInfo
-  onCreateChannel?: () => void
+  onCreateChannel?: (parentCategoryId?: GuildId | null) => void
+  onCreateCategory?: () => void
+  onEditChannel?: (channelId: GuildId) => void
+  onDeleteChannel?: (channelId: GuildId) => void
+  onSaveLayout?: (layout: ChannelLayoutUpdateItem[]) => void
   onMuteToggle?: () => void
   onDeafenToggle?: () => void
   onViewScreenShare?: (identity: string) => void

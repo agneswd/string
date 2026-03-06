@@ -17,6 +17,7 @@ import {
 export default __t.row({
   channelId: __t.u64().name("channel_id"),
   guildId: __t.u64().name("guild_id"),
+  categoryId: __t.option(__t.u64()).name("category_id"),
   name: __t.string(),
   get channelType() {
     return ChannelType.name("channel_type");

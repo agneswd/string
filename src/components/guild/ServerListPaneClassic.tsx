@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, memo, type CSSProperties } from 'react'
-import { Plus, UserPlus, LogOut, Clipboard, Trash2, LineSquiggle } from 'lucide-react'
+import { Plus, UserPlus, LogOut, Clipboard, Trash2, LineSquiggle, Info, Settings } from 'lucide-react'
 import {
   CTX_BG,
   CTX_SEPARATOR,
@@ -68,6 +68,8 @@ export const ServerListPaneClassic = memo(function ServerListPaneClassic({
   onLeaveGuild,
   onDeleteGuild,
   onInviteToGuild,
+  onViewGuildInfo,
+  onOpenGuildSettings,
   ownedGuildIds,
   onReorder,
   className,
@@ -230,6 +232,25 @@ export const ServerListPaneClassic = memo(function ServerListPaneClassic({
           }}
           role="menu"
         >
+          <ContextMenuItem
+            label="View Server Info"
+            icon={<Info width={16} height={16} />}
+            onClick={() => {
+              onViewGuildInfo?.(contextMenu.guildId)
+              closeContextMenu()
+            }}
+          />
+          {ownedGuildIds?.has(contextMenu.guildId) && (
+            <ContextMenuItem
+              label="Server Settings"
+              icon={<Settings width={16} height={16} />}
+              onClick={() => {
+                onOpenGuildSettings?.(contextMenu.guildId)
+                closeContextMenu()
+              }}
+            />
+          )}
+          <div style={{ height: 1, backgroundColor: CTX_SEPARATOR, margin: '4px 0' }} />
           <ContextMenuItem
             label="Invite People"
             icon={<UserPlus width={16} height={16} />}

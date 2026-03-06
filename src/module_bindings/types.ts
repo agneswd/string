@@ -13,6 +13,7 @@ import {
 export const Channel = __t.object("Channel", {
   channelId: __t.u64(),
   guildId: __t.u64(),
+  categoryId: __t.option(__t.u64()),
   name: __t.string(),
   get channelType() {
     return ChannelType;
@@ -23,8 +24,16 @@ export const Channel = __t.object("Channel", {
 });
 export type Channel = __Infer<typeof Channel>;
 
+export const ChannelLayoutItem = __t.object("ChannelLayoutItem", {
+  channelId: __t.u64(),
+  categoryId: __t.option(__t.u64()),
+  position: __t.u32(),
+});
+export type ChannelLayoutItem = __Infer<typeof ChannelLayoutItem>;
+
 // The tagged union or sum type for the algebraic type `ChannelType`.
 export const ChannelType = __t.enum("ChannelType", {
+  Category: __t.unit(),
   Text: __t.unit(),
   Voice: __t.unit(),
   Announcement: __t.unit(),
@@ -109,6 +118,8 @@ export type FriendRequest = __Infer<typeof FriendRequest>;
 export const Guild = __t.object("Guild", {
   guildId: __t.u64(),
   name: __t.string(),
+  avatarBytes: __t.option(__t.byteArray()),
+  bio: __t.option(__t.string()),
   ownerIdentity: __t.identity(),
   createdAt: __t.timestamp(),
 });

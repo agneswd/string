@@ -20,7 +20,11 @@ export interface ChannelColumnProps {
   channels: ChannelListItem[]
   selectedTextChannelId?: GuildId
   onSelectChannel: (id: GuildId) => void
-  onCreateChannel: () => void
+  onCreateChannel: (parentCategoryId?: GuildId | null) => void
+  onCreateCategory?: () => void
+  onEditChannel?: (id: GuildId) => void
+  onDeleteChannel?: (id: GuildId) => void
+  onSaveChannelLayout?: (layout: import('../guild/ChannelListPane').ChannelLayoutUpdateItem[]) => void
   onViewScreenShare: (key: string | null) => void
   voiceChannelUsers?: Map<string | number, VoiceChannelUser[]>
   currentVoiceChannelId?: string | number
@@ -61,6 +65,10 @@ export function ChannelColumn(props: ChannelColumnProps) {
       selectedChannelId={props.selectedTextChannelId}
       onSelectChannel={props.onSelectChannel}
       onCreateChannel={props.onCreateChannel}
+      onCreateCategory={props.onCreateCategory}
+      onEditChannel={props.onEditChannel}
+      onDeleteChannel={props.onDeleteChannel}
+      onSaveLayout={props.onSaveChannelLayout}
       onViewScreenShare={props.onViewScreenShare}
       voiceChannelUsers={props.voiceChannelUsers}
       currentVoiceChannelId={props.currentVoiceChannelId}

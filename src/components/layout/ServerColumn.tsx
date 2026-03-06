@@ -12,6 +12,8 @@ export interface ServerColumnProps {
   onLeaveGuild: (id: string) => void
   onDeleteGuild: (id: string) => void
   onInviteToGuild: (guildId: string) => void
+  onViewGuildInfo: (guildId: string) => void
+  onOpenGuildSettings: (guildId: string) => void
   ownedGuildIds: Set<string>
   onReorder: (ids: string[]) => void
   layoutMode?: LayoutMode

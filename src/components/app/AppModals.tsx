@@ -8,8 +8,10 @@ import { ModalSection } from '../layout/ModalSection'
 import { SettingsModal } from '../index'
 import { ContextMenuOverlay } from '../ui/ContextMenuOverlay'
 import type { ProfileSettingsModalProps } from '../modals/ProfileSettingsModal'
+import type { GuildSettingsModalProps } from '../modals/GuildSettingsModal'
 import type { LayoutMode } from '../../constants/theme'
 import type { ContextMenuOverlayProps } from '../ui/ContextMenuOverlay'
+import { GuildProfilePopup, type GuildPopupInfo } from '../social/GuildProfilePopup'
 
 export interface AppModalsProps {
   // Create Guild Modal
@@ -23,8 +25,12 @@ export interface AppModalsProps {
   onCloseCreateChannel: () => void
   newChannelName: string
   onChannelNameChange: (v: string) => void
-  newChannelType: string
-  onChannelTypeChange: (v: string) => void
+  newChannelType: 'Category' | 'Text' | 'Voice'
+  onChannelTypeChange: (v: 'Category' | 'Text' | 'Voice') => void
+  newChannelParentCategoryId: string
+  onChannelParentCategoryIdChange: (v: string) => void
+  availableChannelCategories: Array<{ id: string; name: string }>
+  editingChannelId: string | null
   onCreateChannel: () => void
   // Invite Modal
   showInviteModal: boolean
@@ -42,6 +48,10 @@ export interface AppModalsProps {
     profileColor?: string | null
   }) => Promise<void>
   onSetStatus: (statusTag: string) => void
+  showGuildSettingsModal: boolean
+  onCloseGuildSettings: () => void
+  currentGuild: GuildSettingsModalProps['currentGuild']
+  onUpdateGuild: GuildSettingsModalProps['onUpdateGuild']
   // Settings Modal
   showSettingsModal: boolean
   onCloseSettings: () => void
@@ -53,6 +63,8 @@ export interface AppModalsProps {
   onDmMessageNotificationsChange: (v: boolean) => void
   layoutMode: LayoutMode
   onLayoutModeChange: (v: LayoutMode) => void
+  guildPopup: GuildPopupInfo | null
+  onCloseGuildPopup: () => void
   // Context Menu / Profile Popup Overlay
   contextMenuOverlay: Omit<ContextMenuOverlayProps, 'layoutMode'> & { layoutMode?: LayoutMode }
 }
@@ -60,14 +72,15 @@ export interface AppModalsProps {
 export function AppModals({
   showCreateGuildModal, onCloseCreateGuild, newGuildName, onGuildNameChange, onCreateGuild,
   showCreateChannelModal, onCloseCreateChannel, newChannelName, onChannelNameChange,
-  newChannelType, onChannelTypeChange, onCreateChannel,
+  newChannelType, onChannelTypeChange, newChannelParentCategoryId, onChannelParentCategoryIdChange, availableChannelCategories, editingChannelId, onCreateChannel,
   showInviteModal, onCloseInvite, friends, onInviteFriend,
   showProfileModal, onCloseProfile, currentUser, onUpdateProfile, onSetStatus,
+  showGuildSettingsModal, onCloseGuildSettings, currentGuild, onUpdateGuild,
   showSettingsModal, onCloseSettings,
   uiSoundLevel, onUiSoundLevelChange,
   friendStatusNotificationsEnabled, onFriendStatusNotificationsChange,
   dmMessageNotificationsEnabled, onDmMessageNotificationsChange,
-  layoutMode, onLayoutModeChange,
+  layoutMode, onLayoutModeChange, guildPopup, onCloseGuildPopup,
   contextMenuOverlay,
 }: AppModalsProps) {
   return (
@@ -84,6 +97,10 @@ export function AppModals({
         onChannelNameChange={onChannelNameChange}
         newChannelType={newChannelType}
         onChannelTypeChange={onChannelTypeChange}
+        newChannelParentCategoryId={newChannelParentCategoryId}
+        onChannelParentCategoryIdChange={onChannelParentCategoryIdChange}
+        availableChannelCategories={availableChannelCategories}
+        editingChannelId={editingChannelId}
         onCreateChannel={onCreateChannel}
         showInviteModal={showInviteModal}
         onCloseInvite={onCloseInvite}
@@ -103,6 +120,10 @@ export function AppModals({
         onSetStatus={(statusTag) => {
           void onSetStatus(statusTag as never)
         }}
+        showGuildSettingsModal={showGuildSettingsModal}
+        onCloseGuildSettings={onCloseGuildSettings}
+        currentGuild={currentGuild}
+        onUpdateGuild={onUpdateGuild}
       />
 
       <SettingsModal
@@ -119,6 +140,10 @@ export function AppModals({
       />
 
       <ContextMenuOverlay {...contextMenuOverlay} />
+
+      {guildPopup && (
+        <GuildProfilePopup guild={guildPopup} onClose={onCloseGuildPopup} layoutMode={layoutMode} />
+      )}
     </>
   )
 }

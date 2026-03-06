@@ -115,6 +115,7 @@ export const SC = {
       lineHeight: '20px',
       cursor: 'pointer',
       textAlign: 'left' as const,
+      boxSizing: 'border-box' as const,
       fontFamily: 'inherit',
       transition: 'background-color 0.1s, color 0.1s',
     }),

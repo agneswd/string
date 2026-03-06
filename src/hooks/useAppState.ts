@@ -4,6 +4,7 @@ import type { NotificationItem } from '../components/ui/NotificationToast'
 import { getConn } from '../lib/connection'
 
 export type ProfilePopupState = { userId: string } | null
+export type GuildPopupState = { guildId: string } | null
 import { stringStore } from '../lib/stringStore'
 
 export interface AppStateParams {
@@ -49,7 +50,9 @@ export function useAppState(params: AppStateParams) {
   const [locallyMutedUsers, setLocallyMutedUsers] = useState<Set<string>>(new Set())
   const [showMemberList, setShowMemberList] = useState(true)
   const [showProfileModal, setShowProfileModal] = useState(false)
+  const [showGuildSettingsModal, setShowGuildSettingsModal] = useState(false)
   const [profilePopup, setProfilePopup] = useState<ProfilePopupState>(null)
+  const [guildPopup, setGuildPopup] = useState<GuildPopupState>(null)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; userId: string; user: ProfilePopupUser } | null>(null)
   const [initialLoadComplete, setInitialLoadComplete] = useState(false)
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
@@ -129,7 +132,9 @@ export function useAppState(params: AppStateParams) {
     locallyMutedUsers, setLocallyMutedUsers,
     showMemberList, setShowMemberList,
     showProfileModal, setShowProfileModal,
+    showGuildSettingsModal, setShowGuildSettingsModal,
     profilePopup, setProfilePopup,
+    guildPopup, setGuildPopup,
     contextMenu, setContextMenu,
     initialLoadComplete, setInitialLoadComplete,
     notifications, setNotifications,

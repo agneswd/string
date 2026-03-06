@@ -13,6 +13,8 @@ import {
 export default __t.row({
   guildId: __t.u64().name("guild_id"),
   name: __t.string(),
+  avatarBytes: __t.option(__t.byteArray()).name("avatar_bytes"),
+  bio: __t.option(__t.string()),
   ownerIdentity: __t.identity().name("owner_identity"),
   createdAt: __t.timestamp().name("created_at"),
 });

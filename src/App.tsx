@@ -5,7 +5,9 @@ import { AppMainShell } from './components/app/AppMainShell'
 import { AppModals } from './components/app/AppModals'
 import type { ProfileSettingsModalProps } from './components/modals/ProfileSettingsModal'
 import { S_appShell } from './constants/appStyles'
+import { avatarBytesToUrl } from './lib/avatarUtils'
 import { useAppOrchestrator } from './hooks/useAppOrchestrator'
+import { identityToString } from './hooks/useAppData'
 import { useLayoutMode } from './hooks/useLayoutMode'
 import { statusToLabel } from './lib/helpers'
 
@@ -21,6 +23,32 @@ function App() {
         status: statusToLabel(app.me.status) || 'Online',
         avatarBytes: app.me.avatarBytes,
         profileColor: app.me.profileColor ?? undefined,
+      }
+    : null
+
+  const currentGuild = app.selectedGuild
+    ? {
+        guildId: app.selectedGuild.guildId,
+        name: app.selectedGuild.name,
+        bio: app.selectedGuild.bio ?? null,
+        avatarBytes: app.selectedGuild.avatarBytes ?? null,
+      }
+    : null
+
+  const availableChannelCategories = app.channelsForGuild
+    .filter((channel) => channel.channelType.tag === 'Category')
+    .map((channel) => ({ id: String(channel.channelId), name: channel.name }))
+
+  const guildPopupGuild = app.guildPopup
+    ? app.state.guilds.find((guild) => String(guild.guildId) === app.guildPopup?.guildId) ?? null
+    : null
+
+  const guildPopup = guildPopupGuild
+    ? {
+        name: guildPopupGuild.name,
+        bio: guildPopupGuild.bio ?? null,
+        avatarUrl: avatarBytesToUrl(guildPopupGuild.avatarBytes),
+        ownerName: app.usersByIdentity.get(identityToString(guildPopupGuild.ownerIdentity))?.displayName ?? undefined,
       }
     : null
 
@@ -92,6 +120,11 @@ function App() {
           onLeaveGuild: app.onLeaveGuild,
           onDeleteGuild: app.onDeleteGuild,
           onInviteToGuild: app.handleInviteToGuild,
+          onViewGuildInfo: (guildId) => app.setGuildPopup({ guildId }),
+          onOpenGuildSettings: (guildId) => {
+            app.handleSelectGuild(guildId)
+            app.setShowGuildSettingsModal(true)
+          },
           ownedGuildIds: app.ownedGuildIds,
           onReorder: app.handleReorderGuilds,
         }}
@@ -109,7 +142,11 @@ function App() {
           channels: app.channelItems,
           selectedTextChannelId: app.selectedTextChannelId,
           onSelectChannel: app.handleSelectTextOrVoiceChannel,
-          onCreateChannel: () => app.setShowCreateChannelModal(true),
+          onCreateChannel: (parentCategoryId) => app.openCreateChannelModal(parentCategoryId ? String(parentCategoryId) : null),
+          onCreateCategory: () => app.openCreateCategoryModal(),
+          onEditChannel: (channelId) => app.openEditChannelModal(String(channelId)),
+          onDeleteChannel: (channelId) => app.onDeleteChannel(String(channelId)),
+          onSaveChannelLayout: app.saveChannelLayout,
           onViewScreenShare: app.setViewingScreenShareKey,
           voiceChannelUsers: app.voiceChannelUsers,
           currentVoiceChannelId: app.currentVoiceState?.channelId,
@@ -237,6 +274,10 @@ function App() {
         onChannelNameChange={app.setNewChannelName}
         newChannelType={app.newChannelType}
         onChannelTypeChange={app.setNewChannelType}
+        newChannelParentCategoryId={app.newChannelParentCategoryId}
+        onChannelParentCategoryIdChange={app.setNewChannelParentCategoryId}
+        availableChannelCategories={availableChannelCategories}
+        editingChannelId={app.editingChannelId}
         onCreateChannel={() => void app.onCreateChannel()}
         showInviteModal={app.showInviteModal}
         onCloseInvite={() => app.setShowInviteModal(false)}
@@ -249,6 +290,10 @@ function App() {
         onSetStatus={(statusTag) => {
           void app.actions.setStatus({ status: { tag: statusTag } as never })
         }}
+        showGuildSettingsModal={app.showGuildSettingsModal}
+        onCloseGuildSettings={() => app.setShowGuildSettingsModal(false)}
+        currentGuild={currentGuild}
+        onUpdateGuild={app.onUpdateGuild}
         showSettingsModal={showSettingsModal}
         onCloseSettings={() => setShowSettingsModal(false)}
         uiSoundLevel={app.uiSoundLevel}
@@ -259,6 +304,8 @@ function App() {
         onDmMessageNotificationsChange={app.setDmMessageNotificationsEnabled}
         layoutMode={layoutMode}
         onLayoutModeChange={setLayoutMode}
+        guildPopup={guildPopup}
+        onCloseGuildPopup={() => app.setGuildPopup(null)}
         contextMenuOverlay={{
           layoutMode,
           contextMenu: app.contextMenu,
