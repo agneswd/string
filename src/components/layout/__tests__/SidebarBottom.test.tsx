@@ -34,9 +34,9 @@ const baseProps = {
 // ── layoutMode forwarding ─────────────────────────────────────────────────
 
 describe('SidebarBottom — layoutMode forwarding to UserPanel', () => {
-  it('forwards layoutMode="workspace" producing rounded-rect avatar in UserPanel', () => {
+  it('forwards layoutMode="string" producing rounded-rect avatar in UserPanel', () => {
     const { container } = render(
-      <SidebarBottom {...baseProps} layoutMode="workspace" />,
+      <SidebarBottom {...baseProps} layoutMode="string" />,
     )
     // Workspace UserPanel: fallback avatar uses borderRadius: '8px'
     const rectAvatar = container.querySelector<HTMLElement>('div[style*="border-radius: 8px"]')

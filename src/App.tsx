@@ -7,7 +7,8 @@ import {
   RegisterOverlay,
   SettingsModal,
 } from './components'
-import { ServerColumn } from './components/layout/ServerColumn'
+import { ServerColumnClassic } from './components/layout/ServerColumnClassic'
+import { ServerColumnString } from './components/layout/ServerColumnString'
 import type { ProfileSettingsModalProps } from './components/modals/ProfileSettingsModal'
 import { ModalSection } from './components/layout/ModalSection'
 import { AudioStreams } from './components/voice/AudioStreams'
@@ -16,8 +17,10 @@ import { AppShell } from './components/layout/AppShell'
 import { WorkspaceShell } from './components/layout/WorkspaceShell'
 import { MessageArea } from './components/layout/MessageArea'
 import { MemberColumn } from './components/layout/MemberColumn'
-import { SidebarBottom } from './components/layout/SidebarBottom'
-import { TopNavBar } from './components/layout/TopNavBar'
+import { SidebarBottomClassic } from './components/layout/SidebarBottomClassic'
+import { SidebarBottomString } from './components/layout/SidebarBottomString'
+import { TopNavBarClassic } from './components/layout/TopNavBarClassic'
+import { TopNavBarString } from './components/layout/TopNavBarString'
 import { ScreenShareViewer } from './components/voice/ScreenShareViewer'
 import { useRtcOrchestrator } from './lib/webrtc'
 import { toIdKey, isVoiceChannel, statusToLabel } from './lib/helpers'
@@ -463,12 +466,15 @@ function App() {
   })
 
   // ---------------------------------------------------------------------------
-  // Layout mode — 'workspace' is the default for new users; 'classic' renders the
-  // Discord-style AppShell. Both codepaths are kept live so Phase 4 settings can
-  // expose a toggle without further structural work.
+  // Layout mode — 'string' is the default for new users; 'classic' renders the
+  // Discord-style AppShell. Variants are selected here so each mode keeps its
+  // own component tree for follow-up layout work.
   // ---------------------------------------------------------------------------
   const { layoutMode, setLayoutMode } = useLayoutMode()
-  const Shell = layoutMode === 'workspace' ? WorkspaceShell : AppShell
+  const Shell = layoutMode === 'string' ? WorkspaceShell : AppShell
+  const ServerColumnComponent = layoutMode === 'string' ? ServerColumnString : ServerColumnClassic
+  const TopNavBarComponent = layoutMode === 'string' ? TopNavBarString : TopNavBarClassic
+  const SidebarBottomComponent = layoutMode === 'string' ? SidebarBottomString : SidebarBottomClassic
 
   // ---------------------------------------------------------------------------
   // JSX
@@ -491,7 +497,7 @@ function App() {
       <main style={S_main}>
         <Shell
           serverColumn={
-            <ServerColumn
+            <ServerColumnComponent
               orderedGuilds={orderedGuilds}
               selectedGuildId={selectedGuildId ?? null}
               onSelectGuild={handleSelectGuild}
@@ -507,7 +513,6 @@ function App() {
               onInviteToGuild={handleInviteToGuild}
               ownedGuildIds={ownedGuildIds}
               onReorder={handleReorderGuilds}
-              layoutMode={layoutMode}
             />
           }
           channelColumn={
@@ -540,7 +545,7 @@ function App() {
           }
           showMemberList={showMemberList}
           topNav={
-            <TopNavBar
+            <TopNavBarComponent
               isDmMode={isDmMode}
               dmName={selectedDmName}
               guildName={selectedGuild?.name}
@@ -552,7 +557,6 @@ function App() {
               showMemberList={showMemberList}
               onToggleMemberList={() => setShowMemberList(prev => !prev)}
               onInitiateDmCall={handleInitiateDmCall}
-              layoutMode={layoutMode}
               channelName={activeChannelName}
             />
           }
@@ -632,7 +636,7 @@ function App() {
           }
           inputArea={null}
           sidebarBottom={
-            <SidebarBottom
+            <SidebarBottomComponent
               showVoicePanel={true}
               currentVoiceState={currentVoiceState}
               onLeave={handleHangUpWithSfx}
@@ -653,7 +657,6 @@ function App() {
               onToggleDeafen={onToggleDeafen}
               onOpenSettings={() => setShowSettingsModal(true)}
               onOpenProfile={() => setShowProfileModal(true)}
-              layoutMode={layoutMode}
             />
           }
           memberColumn={

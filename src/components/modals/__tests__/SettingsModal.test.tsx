@@ -21,7 +21,7 @@ const baseProps = {
   onFriendStatusNotificationsChange: vi.fn(),
   dmMessageNotificationsEnabled: false,
   onDmMessageNotificationsChange: vi.fn(),
-  layoutMode: 'workspace' as const,
+  layoutMode: 'string' as const,
   onLayoutModeChange: vi.fn(),
 }
 
@@ -32,10 +32,10 @@ describe('SettingsModal', () => {
     expect(screen.getByText(/layout/i)).toBeTruthy()
   })
 
-  it('shows workspace option as selected when layoutMode is workspace', () => {
-    render(<SettingsModal {...baseProps} layoutMode="workspace" />)
-    const workspaceBtn = screen.getByRole('radio', { name: /workspace/i })
-    expect(workspaceBtn.getAttribute('aria-checked')).toBe('true')
+  it('shows string option as selected when layoutMode is string', () => {
+    render(<SettingsModal {...baseProps} layoutMode="string" />)
+    const stringBtn = screen.getByRole('radio', { name: /string/i })
+    expect(stringBtn.getAttribute('aria-checked')).toBe('true')
   })
 
   it('shows classic option as selected when layoutMode is classic', () => {
@@ -44,16 +44,16 @@ describe('SettingsModal', () => {
     expect(classicBtn.getAttribute('aria-checked')).toBe('true')
   })
 
-  it('calls onLayoutModeChange with workspace when workspace is clicked', () => {
+  it('calls onLayoutModeChange with string when string is clicked', () => {
     const onLayoutModeChange = vi.fn()
     render(<SettingsModal {...baseProps} layoutMode="classic" onLayoutModeChange={onLayoutModeChange} />)
-    fireEvent.click(screen.getByRole('radio', { name: /workspace/i }))
-    expect(onLayoutModeChange).toHaveBeenCalledWith('workspace')
+    fireEvent.click(screen.getByRole('radio', { name: /string/i }))
+    expect(onLayoutModeChange).toHaveBeenCalledWith('string')
   })
 
   it('calls onLayoutModeChange with classic when classic is clicked', () => {
     const onLayoutModeChange = vi.fn()
-    render(<SettingsModal {...baseProps} layoutMode="workspace" onLayoutModeChange={onLayoutModeChange} />)
+    render(<SettingsModal {...baseProps} layoutMode="string" onLayoutModeChange={onLayoutModeChange} />)
     fireEvent.click(screen.getByRole('radio', { name: /classic/i }))
     expect(onLayoutModeChange).toHaveBeenCalledWith('classic')
   })

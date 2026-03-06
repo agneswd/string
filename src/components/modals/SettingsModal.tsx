@@ -63,7 +63,7 @@ const S_layoutOption = (active: boolean): CSSProperties => ({
 })
 
 const LAYOUT_LABELS: Record<LayoutMode, string> = {
-  workspace: 'Workspace',
+  string: 'String',
   classic: 'Classic',
 }
 

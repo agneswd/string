@@ -36,50 +36,50 @@ describe('ServerListPane — classic mode', () => {
   })
 })
 
-describe('ServerListPane — workspace mode', () => {
+describe('ServerListPane — string mode', () => {
   it('renders as a nav with aria-label "Workspaces"', () => {
-    render(<ServerListPane {...baseProps} layoutMode="workspace" />)
+    render(<ServerListPane {...baseProps} layoutMode="string" />)
     expect(screen.getByRole('navigation', { name: /workspaces/i })).toBeDefined()
   })
 
   it('renders each guild as a button with visible text label', () => {
-    render(<ServerListPane {...baseProps} layoutMode="workspace" />)
+    render(<ServerListPane {...baseProps} layoutMode="string" />)
     // Guild names should be visible as text (not just tooltips)
     expect(screen.getByText('Alpha Corp')).toBeDefined()
     expect(screen.getByText('Beta Labs')).toBeDefined()
   })
 
   it('renders "Direct Messages" home row button', () => {
-    render(<ServerListPane {...baseProps} layoutMode="workspace" />)
+    render(<ServerListPane {...baseProps} layoutMode="string" />)
     expect(screen.getByRole('button', { name: /direct messages/i })).toBeDefined()
   })
 
   it('renders "Add Workspace" button', () => {
-    render(<ServerListPane {...baseProps} layoutMode="workspace" />)
+    render(<ServerListPane {...baseProps} layoutMode="string" />)
     expect(screen.getByRole('button', { name: /add workspace/i })).toBeDefined()
   })
 
   it('selected guild button has aria-pressed="true"', () => {
-    render(<ServerListPane {...baseProps} layoutMode="workspace" />)
+    render(<ServerListPane {...baseProps} layoutMode="string" />)
     const alphaBtn = screen.getByRole('button', { name: 'Alpha Corp' })
     expect(alphaBtn.getAttribute('aria-pressed')).toBe('true')
   })
 
   it('non-selected guild button has aria-pressed="false"', () => {
-    render(<ServerListPane {...baseProps} layoutMode="workspace" />)
+    render(<ServerListPane {...baseProps} layoutMode="string" />)
     const betaBtn = screen.getByRole('button', { name: 'Beta Labs' })
     expect(betaBtn.getAttribute('aria-pressed')).toBe('false')
   })
 
   it('shows "WORKSPACES" section label', () => {
-    render(<ServerListPane {...baseProps} layoutMode="workspace" />)
+    render(<ServerListPane {...baseProps} layoutMode="string" />)
     // Case-insensitive section label
     const label = screen.getByText(/workspaces/i)
     expect(label).toBeDefined()
   })
 
   it('home row is selected when isHomeSelected=true', () => {
-    render(<ServerListPane {...baseProps} isHomeSelected={true} layoutMode="workspace" />)
+    render(<ServerListPane {...baseProps} isHomeSelected={true} layoutMode="string" />)
     const homeBtn = screen.getByRole('button', { name: /direct messages/i })
     expect(homeBtn.getAttribute('aria-pressed')).toBe('true')
   })

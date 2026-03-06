@@ -9,16 +9,19 @@ function readLayoutMode(): LayoutMode {
     if (raw !== null && (LAYOUT_MODES as readonly string[]).includes(raw)) {
       return raw as LayoutMode
     }
+    if (raw !== null) {
+      window.localStorage.removeItem(STORAGE_KEY)
+    }
   } catch {
     // localStorage unavailable
   }
-  return 'workspace'
+  return 'string'
 }
 
 /**
  * Provides the current layout mode and a setter that persists the choice to
- * localStorage. Defaults to `'workspace'` for fresh users; existing persisted
- * values (including `'classic'`) are honoured.
+ * localStorage. Defaults to `'string'` for fresh users; existing persisted
+ * values are honoured when they match the current layout set.
  */
 export function useLayoutMode() {
   const [layoutMode, setLayoutModeState] = useState<LayoutMode>(readLayoutMode)

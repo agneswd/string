@@ -46,10 +46,10 @@ describe('THEME_TOKENS', () => {
 })
 
 describe('LAYOUT_MODES', () => {
-  it('exports a readonly tuple with classic and workspace modes', () => {
+  it('exports a readonly tuple with classic and string modes', () => {
     expect(Array.isArray(LAYOUT_MODES)).toBe(true)
     expect(LAYOUT_MODES).toContain('classic')
-    expect(LAYOUT_MODES).toContain('workspace')
+    expect(LAYOUT_MODES).toContain('string')
   })
 })
 

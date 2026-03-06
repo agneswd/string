@@ -1,7 +1,6 @@
-import { useMemo, memo } from 'react'
-import { toIdKey } from '../../lib/helpers'
-import { ServerListPane } from '../guild/ServerListPane'
-import type { GuildId } from '../guild/ServerListPane'
+import type { LayoutMode } from '../../constants/theme'
+import { ServerColumnClassic } from './ServerColumnClassic'
+import { ServerColumnString } from './ServerColumnString'
 
 export interface ServerColumnProps {
   orderedGuilds: Array<{ guildId: unknown; name: string }>
@@ -15,43 +14,16 @@ export interface ServerColumnProps {
   onInviteToGuild: (guildId: string) => void
   ownedGuildIds: Set<string>
   onReorder: (ids: string[]) => void
-  layoutMode?: 'workspace' | 'classic'
+  layoutMode?: LayoutMode
 }
 
-export const ServerColumn = memo(function ServerColumn({
-  orderedGuilds,
-  selectedGuildId,
-  onSelectGuild,
-  onHomeClick,
-  isDmMode,
-  onAddServer,
-  onLeaveGuild,
-  onDeleteGuild,
-  onInviteToGuild,
-  ownedGuildIds,
-  onReorder,
-  layoutMode = 'classic',
-}: ServerColumnProps) {
-  const guilds = useMemo(
-    () => orderedGuilds.map((guild) => ({ id: toIdKey(guild.guildId), name: guild.name })),
-    [orderedGuilds],
-  )
+export type ServerColumnVariantProps = Omit<ServerColumnProps, 'layoutMode'>
 
-  return (
-    <ServerListPane
-      guilds={guilds}
-      selectedGuildId={selectedGuildId ?? undefined}
-      onSelectGuild={onSelectGuild as (id: GuildId) => void}
-      onHomeClick={onHomeClick}
-      isHomeSelected={isDmMode || !selectedGuildId}
-      onAddServer={onAddServer}
-      onLeaveGuild={onLeaveGuild as (id: GuildId) => void}
-      onDeleteGuild={onDeleteGuild as (id: GuildId) => void}
-      onInviteToGuild={onInviteToGuild as (id: GuildId) => void}
-      ownedGuildIds={ownedGuildIds as Set<GuildId>}
-      onReorder={onReorder}
-      layoutMode={layoutMode}
-    />
-  )
-})
+export function ServerColumn({ layoutMode = 'classic', ...props }: ServerColumnProps) {
+  if (layoutMode === 'string') {
+    return <ServerColumnString {...props} />
+  }
+
+  return <ServerColumnClassic {...props} />
+}
 

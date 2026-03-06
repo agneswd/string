@@ -138,9 +138,9 @@ export type CssVarToken = keyof typeof CSS_VAR_TOKENS
 // ── Layout Modes ───────────────────────────────────────────────────────────
 
 /** Available layout modes.
- * - `workspace` — calmer workspace shell with narrower chrome (default for new users)
+ * - `string`    — calmer String shell with narrower chrome (default for new users)
  * - `classic`   — Discord-style sidebar layout (server rail + channel list + main panel)
  */
-export const LAYOUT_MODES = ['classic', 'workspace'] as const
+export const LAYOUT_MODES = ['classic', 'string'] as const
 
 export type LayoutMode = (typeof LAYOUT_MODES)[number]

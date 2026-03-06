@@ -1,5 +1,7 @@
-import { VoicePanel } from '../voice/VoicePanel'
-import { UserPanel, type UserPanelProps } from './UserPanel'
+import type { LayoutMode } from '../../constants/theme'
+import type { UserPanelProps } from './UserPanel'
+import { SidebarBottomClassic } from './SidebarBottomClassic'
+import { SidebarBottomString } from './SidebarBottomString'
 
 export interface SidebarBottomProps {
   showVoicePanel?: boolean
@@ -21,53 +23,15 @@ export interface SidebarBottomProps {
   onToggleDeafen: () => void
   onOpenSettings: () => void
   onOpenProfile: () => void
-  layoutMode?: 'workspace' | 'classic'
+  layoutMode?: LayoutMode
 }
 
-export function SidebarBottom({
-  showVoicePanel = true,
-  currentVoiceState,
-  onLeave,
-  remoteSharersCount,
-  onStartSharing,
-  onStopSharing,
-  user,
-  isMuted,
-  isDeafened,
-  muteColor,
-  deafenColor,
-  onToggleMute,
-  onToggleDeafen,
-  onOpenSettings,
-  onOpenProfile,
-  layoutMode = 'classic',
-}: SidebarBottomProps) {
-  return (
-    <>
-      {showVoicePanel && currentVoiceState && (
-        <div className="flex min-h-0 flex-col gap-3 p-2">
-          <VoicePanel
-            connected={true}
-            streaming={currentVoiceState.isStreaming ?? false}
-            onLeave={onLeave}
-            remoteSharersCount={remoteSharersCount}
-            onStartSharing={onStartSharing}
-            onStopSharing={onStopSharing}
-          />
-        </div>
-      )}
-      <UserPanel
-        user={user}
-        isMuted={isMuted}
-        isDeafened={isDeafened}
-        muteColor={muteColor}
-        deafenColor={deafenColor}
-        onToggleMute={onToggleMute}
-        onToggleDeafen={onToggleDeafen}
-        onOpenSettings={onOpenSettings}
-        onOpenProfile={onOpenProfile}
-        layoutMode={layoutMode}
-      />
-    </>
-  )
+export type SidebarBottomVariantProps = Omit<SidebarBottomProps, 'layoutMode'>
+
+export function SidebarBottom({ layoutMode = 'classic', ...props }: SidebarBottomProps) {
+  if (layoutMode === 'string') {
+    return <SidebarBottomString {...props} />
+  }
+
+  return <SidebarBottomClassic {...props} />
 }

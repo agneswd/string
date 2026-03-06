@@ -22,34 +22,34 @@ describe('TopNavBar — classic mode', () => {
   })
 })
 
-describe('TopNavBar — workspace mode', () => {
+describe('TopNavBar — string mode', () => {
   it('shows guild name as muted context prefix', () => {
-    render(<TopNavBar {...baseProps} layoutMode="workspace" channelName="general" />)
+    render(<TopNavBar {...baseProps} layoutMode="string" channelName="general" />)
     // Alpha Corp should appear as a span (muted prefix) not a <strong>
     expect(screen.getByText('Alpha Corp')).toBeDefined()
     expect(document.querySelector('strong')).toBeNull()
   })
 
   it('shows channel name in breadcrumb when channelName is provided', () => {
-    render(<TopNavBar {...baseProps} layoutMode="workspace" channelName="announcements" />)
+    render(<TopNavBar {...baseProps} layoutMode="string" channelName="announcements" />)
     expect(screen.getByText('announcements')).toBeDefined()
   })
 
   it('shows just the context label when no channelName provided', () => {
-    render(<TopNavBar {...baseProps} layoutMode="workspace" />)
+    render(<TopNavBar {...baseProps} layoutMode="string" />)
     // Name should appear once (as the primary label)
     const labels = screen.getAllByText('Alpha Corp')
     // At least one occurrence
     expect(labels.length).toBeGreaterThan(0)
   })
 
-  it('shows DM name in workspace breadcrumb when isDmMode', () => {
+  it('shows DM name in string breadcrumb when isDmMode', () => {
     render(
       <TopNavBar
         {...baseProps}
         isDmMode={true}
         dmName="Bob"
-        layoutMode="workspace"
+        layoutMode="string"
         channelName="Bob"
       />,
     )
@@ -58,7 +58,7 @@ describe('TopNavBar — workspace mode', () => {
   })
 
   it('renders member list toggle button', () => {
-    render(<TopNavBar {...baseProps} layoutMode="workspace" />)
+    render(<TopNavBar {...baseProps} layoutMode="string" />)
     expect(screen.getByTitle(/hide member list|show member list/i)).toBeDefined()
   })
 })
