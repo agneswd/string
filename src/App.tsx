@@ -13,6 +13,7 @@ import { ModalSection } from './components/layout/ModalSection'
 import { AudioStreams } from './components/voice/AudioStreams'
 import { ContextMenuOverlay } from './components/ui/ContextMenuOverlay'
 import { AppShell } from './components/layout/AppShell'
+import { WorkspaceShell } from './components/layout/WorkspaceShell'
 import { MessageArea } from './components/layout/MessageArea'
 import { MemberColumn } from './components/layout/MemberColumn'
 import { SidebarBottom } from './components/layout/SidebarBottom'
@@ -462,9 +463,12 @@ function App() {
   })
 
   // ---------------------------------------------------------------------------
-  // Layout mode (scaffolding — shell switching implemented in a later phase)
+  // Layout mode — 'workspace' is the default for new users; 'classic' renders the
+  // Discord-style AppShell. Both codepaths are kept live so Phase 4 settings can
+  // expose a toggle without further structural work.
   // ---------------------------------------------------------------------------
   const { layoutMode } = useLayoutMode()
+  const Shell = layoutMode === 'workspace' ? WorkspaceShell : AppShell
 
   // ---------------------------------------------------------------------------
   // JSX
@@ -485,7 +489,7 @@ function App() {
         />
       )}
       <main style={S_main}>
-        <AppShell
+        <Shell
           serverColumn={
             <ServerColumn
               orderedGuilds={orderedGuilds}

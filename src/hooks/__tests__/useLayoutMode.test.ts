@@ -19,9 +19,9 @@ beforeEach(() => {
 })
 
 describe('useLayoutMode', () => {
-  it('defaults to classic mode', () => {
+  it('defaults to workspace mode', () => {
     const { result } = renderHook(() => useLayoutMode())
-    expect(result.current.layoutMode).toBe('classic')
+    expect(result.current.layoutMode).toBe('workspace')
   })
 
   it('restores persisted mode from localStorage', () => {
@@ -30,10 +30,10 @@ describe('useLayoutMode', () => {
     expect(result.current.layoutMode).toBe('workspace')
   })
 
-  it('falls back to classic for unknown persisted values', () => {
+  it('falls back to workspace for unknown persisted values', () => {
     localStorage.setItem(STORAGE_KEY, 'invalid-mode')
     const { result } = renderHook(() => useLayoutMode())
-    expect(result.current.layoutMode).toBe('classic')
+    expect(result.current.layoutMode).toBe('workspace')
   })
 
   it('can toggle to workspace mode', () => {
@@ -62,13 +62,13 @@ describe('useLayoutMode', () => {
     expect(localStorage.getItem(STORAGE_KEY)).toBe('classic')
   })
 
-  it('defaults to classic when localStorage.getItem throws', () => {
+  it('defaults to workspace when localStorage.getItem throws', () => {
     vi.stubGlobal('localStorage', {
       ...localStorageMock,
       getItem: () => { throw new DOMException('SecurityError') },
     })
     const { result } = renderHook(() => useLayoutMode())
-    expect(result.current.layoutMode).toBe('classic')
+    expect(result.current.layoutMode).toBe('workspace')
   })
 
   it('keeps in-memory state when localStorage.setItem throws', () => {
