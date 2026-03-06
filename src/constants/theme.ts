@@ -1,7 +1,8 @@
 /**
  * String Design Tokens
  *
- * Neutral dark-leaning minimalist theme with subtle warm accents.
+ * Minimal dark editorial theme with warm sand accent.
+ * Source of truth: theme.md
  *
  * ## Source-of-truth contract
  * `CSS_VAR_TOKENS` (exported below) is the SINGLE canonical source of token
@@ -19,48 +20,53 @@
 // ── Palette ────────────────────────────────────────────────────────────────
 
 export const THEME_TOKENS = {
+  font: {
+    sans: "'Inter', 'Helvetica Neue', Arial, sans-serif",
+    mono: "'SFMono-Regular', Consolas, 'Liberation Mono', monospace",
+  },
+
   bg: {
-    /** Darkest — server list rail, deep sidebars */
-    deepest: '#111115',
+    /** Darkest — server list rail, base page background */
+    deepest: '#111111',
     /** App-wide background */
-    app: '#17171b',
-    /** Sidebar background */
-    sidebar: '#1c1c21',
+    app: '#111111',
+    /** Sidebar dark */
+    sidebar: '#1a1a1a',
     /** Panel / content area */
-    panel: '#202026',
+    panel: '#1a1a1a',
     /** Input fields */
-    input: '#111115',
+    input: '#111111',
     /** Hover overlay */
-    hover: '#26262d',
+    hover: '#1e1e1e',
     /** Active / selected overlay */
-    active: '#2e2e37',
+    active: '#242424',
   },
 
   text: {
-    primary: '#f0ede8',
-    secondary: '#a8a29e',
-    muted: '#78716c',
-    normal: '#e2ddd8',
+    primary: '#d4d0cb',
+    secondary: '#9e9a94',
+    muted: '#6b6860',
+    normal: '#d4d0cb',
     success: '#4ade80',
     danger: '#f87171',
   },
 
   accent: {
-    /** Warm terracotta — the primary brand colour */
-    primary: '#c07a4f',
-    hover: '#a8633b',
-    subtle: 'rgba(192, 122, 79, 0.15)',
+    /** Warm sand — the primary brand colour (theme.md: #c8b8a2) */
+    primary: '#c8b8a2',
+    hover: '#b0a08e',
+    subtle: 'rgba(200, 184, 162, 0.15)',
   },
 
   border: {
-    subtle: '#2c2c34',
-    focus: '#c07a4f',
+    subtle: '#2a2a2a',
+    focus: '#c8b8a2',
   },
 
   radius: {
-    sm: '0.25rem',
-    md: '0.375rem',
-    lg: '0.5rem',
+    sm: '2px',
+    md: '3px',
+    lg: '4px',
     full: '9999px',
   },
 
@@ -82,54 +88,57 @@ export const THEME_TOKENS = {
  * here appears verbatim in that file, preventing silent drift.
  */
 export const CSS_VAR_TOKENS = {
+  // Typography
+  '--font-sans':            "'Inter', 'Helvetica Neue', Arial, sans-serif",
+  '--font-mono':            "'SFMono-Regular', Consolas, 'Liberation Mono', monospace",
   // Surfaces
-  '--bg-deepest':            '#111115',
-  '--bg-app':                '#17171b',
-  '--bg-sidebar-dark':       '#111115',
-  '--bg-sidebar-light':      '#1c1c21',
-  '--bg-panel':              '#202026',
-  '--bg-input':              '#111115',
-  '--bg-hover':              '#26262d',
-  '--bg-active':             '#2e2e37',
-  '--bg-primary':            '#17171b',
-  '--bg-accent':             '#c07a4f',
-  '--bg-modifier-hover':     'rgba(255, 255, 255, 0.04)',
-  '--bg-modifier-selected':  'rgba(255, 255, 255, 0.08)',
-  '--bg-danger':             '#7f1d1d',
-  '--bg-danger-hover':       'rgba(248, 113, 113, 0.12)',
+  '--bg-deepest':            '#111111',
+  '--bg-app':                '#111111',
+  '--bg-sidebar-dark':       '#111111',
+  '--bg-sidebar-light':      '#1a1a1a',
+  '--bg-panel':              '#1a1a1a',
+  '--bg-input':              '#111111',
+  '--bg-hover':              '#1e1e1e',
+  '--bg-active':             '#242424',
+  '--bg-primary':            '#111111',
+  '--bg-accent':             '#c8b8a2',
+  '--bg-modifier-hover':     'rgba(255, 255, 255, 0.03)',
+  '--bg-modifier-selected':  'rgba(255, 255, 255, 0.06)',
+  '--bg-danger':             '#3a1515',
+  '--bg-danger-hover':       'rgba(200, 80, 80, 0.10)',
   // Text
-  '--text-primary':             '#f0ede8',
-  '--text-secondary':           '#a8a29e',
-  '--text-muted':               '#78716c',
-  '--text-normal':              '#e2ddd8',
-  '--text-channels-default':    '#78716c',
-  '--text-interactive-normal':  '#a8a29e',
-  '--text-interactive-hover':   '#e2ddd8',
-  '--text-interactive-active':  '#f0ede8',
-  '--text-header-primary':      '#f0ede8',
+  '--text-primary':             '#d4d0cb',
+  '--text-secondary':           '#9e9a94',
+  '--text-muted':               '#6b6860',
+  '--text-normal':              '#d4d0cb',
+  '--text-channels-default':    '#6b6860',
+  '--text-interactive-normal':  '#9e9a94',
+  '--text-interactive-hover':   '#d4d0cb',
+  '--text-interactive-active':  '#d4d0cb',
+  '--text-header-primary':      '#d4d0cb',
   '--text-success':             '#4ade80',
   '--text-danger':              '#f87171',
-  // Accent
-  '--accent-primary': '#c07a4f',
-  '--accent-hover':   '#a8633b',
-  '--accent-subtle':  'rgba(192, 122, 79, 0.15)',
-  '--brand-primary':       '#c07a4f',
-  '--brand-primary-hover': '#a8633b',
+  // Accent — warm sand (#c8b8a2, per theme.md)
+  '--accent-primary': '#c8b8a2',
+  '--accent-hover':   '#b0a08e',
+  '--accent-subtle':  'rgba(200, 184, 162, 0.15)',
+  '--brand-primary':       '#c8b8a2',
+  '--brand-primary-hover': '#b0a08e',
   // Borders
-  '--border-subtle':  '#2c2c34',
-  '--border-focus':   '#c07a4f',
-  '--border-success': 'rgba(74, 222, 128, 0.18)',
+  '--border-subtle':  '#2a2a2a',
+  '--border-focus':   '#c8b8a2',
+  '--border-success': 'rgba(74, 222, 128, 0.15)',
   // Success subtle surface
-  '--bg-success-subtle': 'rgba(74, 222, 128, 0.07)',
+  '--bg-success-subtle': 'rgba(74, 222, 128, 0.06)',
   // Status indicator dots
   '--status-online':  '#23a55a',
   '--status-idle':    '#f0b232',
   '--status-dnd':     '#f23f43',
   '--status-offline': '#80848e',
-  // Radius
-  '--radius-sm':   '0.25rem',
-  '--radius-md':   '0.375rem',
-  '--radius-lg':   '0.5rem',
+  // Radius — square/near-square per theme.md
+  '--radius-sm':   '2px',
+  '--radius-md':   '3px',
+  '--radius-lg':   '4px',
   '--radius-full': '9999px',
 } as const
 

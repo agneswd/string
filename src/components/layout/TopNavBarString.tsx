@@ -30,32 +30,36 @@ export function TopNavBarString({
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+        {/* String identity mark — flat, thin-bordered, square */}
         <span
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            height: 28,
-            padding: '0 10px',
-            borderRadius: 999,
+            height: 22,
+            padding: '0 7px',
+            borderRadius: 2,
             border: '1px solid var(--border-subtle)',
-            backgroundColor: 'var(--bg-deepest)',
+            backgroundColor: 'transparent',
             color: 'var(--accent-primary)',
-            fontSize: 12,
-            fontWeight: 700,
-            letterSpacing: '0.08em',
+            fontSize: 10,
+            fontWeight: 600,
+            letterSpacing: '0.1em',
             textTransform: 'uppercase',
             whiteSpace: 'nowrap',
+            userSelect: 'none',
           }}
         >
-          String//
+          string
         </span>
+
+        {/* Breadcrumb context */}
         {!isHomeView ? (
           <>
             {showSingleContextLabel ? (
               <span
                 style={{
                   fontSize: 12,
-                  fontWeight: 600,
+                  fontWeight: 400,
                   color: 'var(--text-muted)',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
@@ -68,8 +72,8 @@ export function TopNavBarString({
               <>
                 <span
                   style={{
-                    fontSize: 12,
-                    fontWeight: 600,
+                    fontSize: 11,
+                    fontWeight: 400,
                     color: 'var(--text-muted)',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
@@ -78,14 +82,14 @@ export function TopNavBarString({
                 >
                   {contextLabel}
                 </span>
-                <span style={{ color: 'var(--border-subtle)', fontSize: 14, userSelect: 'none' }}>/</span>
+                <span style={{ color: 'var(--border-subtle)', fontSize: 12, userSelect: 'none' }}>/</span>
                 <span
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 6,
-                    fontSize: 14,
-                    fontWeight: 600,
+                    gap: 5,
+                    fontSize: 13,
+                    fontWeight: 500,
                     color: 'var(--text-primary)',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
@@ -93,9 +97,9 @@ export function TopNavBarString({
                   }}
                 >
                   {isDmMode ? (
-                    <MessageSquare style={{ width: 14, height: 14, flexShrink: 0, color: 'var(--text-muted)' }} />
+                    <MessageSquare style={{ width: 13, height: 13, flexShrink: 0, color: 'var(--text-muted)' }} />
                   ) : (
-                    <Hash style={{ width: 14, height: 14, flexShrink: 0, color: 'var(--text-muted)' }} />
+                    <Hash style={{ width: 13, height: 13, flexShrink: 0, color: 'var(--text-muted)' }} />
                   )}
                   {channelLabel}
                 </span>
@@ -103,31 +107,36 @@ export function TopNavBarString({
             )}
           </>
         ) : (
-          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.04em' }}>
-            shell chrome
+          <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
+            home
           </span>
         )}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+      {/* Actions */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
         {isDmMode && selectedDmChannel && !currentVoiceState && !outgoingCall && (
           <button
             onClick={() => onInitiateDmCall(selectedDmChannelId!)}
             title={dmCallActive ? 'Rejoin Call' : 'Start Voice Call'}
             style={{
-              background: dmCallActive ? 'rgba(59,165,93,0.15)' : 'transparent',
-              border: 'none',
-              borderRadius: 6,
-              padding: '4px 6px',
+              background: dmCallActive ? 'var(--bg-success-subtle)' : 'transparent',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 2,
+              padding: '3px 6px',
               cursor: 'pointer',
-              color: dmCallActive ? '#3ba55d' : 'var(--text-muted)',
+              color: dmCallActive ? 'var(--status-online)' : 'var(--text-muted)',
               display: 'flex',
               alignItems: 'center',
               gap: 4,
             }}
           >
-            <Phone style={{ width: 18, height: 18 }} />
-            {dmCallActive && <span style={{ fontSize: 12, fontWeight: 600 }}>Rejoin</span>}
+            <Phone style={{ width: 14, height: 14 }} />
+            {dmCallActive && (
+              <span style={{ fontSize: 11, fontWeight: 500, fontFamily: 'var(--font-mono)' }}>
+                rejoin
+              </span>
+            )}
           </button>
         )}
         {!isHomeView && (
@@ -137,15 +146,15 @@ export function TopNavBarString({
             style={{
               background: showMemberList ? 'var(--bg-active)' : 'transparent',
               border: '1px solid var(--border-subtle)',
-              borderRadius: 8,
-              padding: '4px 6px',
+              borderRadius: 2,
+              padding: '3px 6px',
               cursor: 'pointer',
-              color: showMemberList ? 'var(--text-normal)' : 'var(--text-muted)',
+              color: showMemberList ? 'var(--text-primary)' : 'var(--text-muted)',
               display: 'flex',
               alignItems: 'center',
             }}
           >
-            <Users style={{ width: 18, height: 18 }} />
+            <Users style={{ width: 14, height: 14 }} />
           </button>
         )}
       </div>

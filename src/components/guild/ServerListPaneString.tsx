@@ -11,6 +11,7 @@ const WS_ROW_H = 36
 
 function StringRow({
   label,
+  ariaLabel,
   isSelected,
   hasUnread,
   unreadCount,
@@ -22,6 +23,7 @@ function StringRow({
   children,
 }: {
   label: string
+  ariaLabel?: string
   isSelected: boolean
   hasUnread?: boolean
   unreadCount?: number
@@ -47,7 +49,7 @@ function StringRow({
       onContextMenu={onContextMenu}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      aria-label={label}
+      aria-label={ariaLabel ?? label}
       aria-pressed={isSelected}
       style={{
         display: 'flex',
@@ -57,8 +59,8 @@ function StringRow({
         height: WS_ROW_H,
         padding: '0 8px 0 10px',
         border: 'none',
-        borderLeft: isSelected ? '3px solid var(--accent-primary)' : '3px solid transparent',
-        borderRadius: '0 6px 6px 0',
+        borderLeft: isSelected ? '2px solid var(--accent-primary)' : '2px solid transparent',
+        borderRadius: '0 2px 2px 0',
         backgroundColor: bg,
         cursor: 'pointer',
         textAlign: 'left',
@@ -70,14 +72,15 @@ function StringRow({
     >
       <div
         style={{
-          width: 28,
-          height: 28,
-          borderRadius: 6,
+          width: 26,
+          height: 26,
+          borderRadius: 3,
           backgroundColor: isHome
             ? 'var(--accent-primary)'
             : isSelected
-            ? 'var(--accent-subtle, rgba(192,122,79,0.25))'
-            : 'var(--bg-sidebar-light)',
+            ? 'var(--accent-subtle)'
+            : 'var(--bg-hover)',
+          border: isSelected && !isHome ? '1px solid var(--border-subtle)' : '1px solid transparent',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -89,7 +92,7 @@ function StringRow({
         }}
       >
         {!iconUrl && (
-          <span style={{ color: isHome ? '#fff' : isSelected ? 'var(--accent-primary)' : 'var(--text-muted)', fontSize: 12, fontWeight: 700 }}>
+          <span style={{ color: isHome ? 'var(--bg-deepest)' : isSelected ? 'var(--accent-primary)' : 'var(--text-muted)', fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
             {children ?? initials ?? '#'}
           </span>
         )}
@@ -100,9 +103,9 @@ function StringRow({
           flex: 1,
           minWidth: 0,
           fontFamily: 'var(--font-mono)',
-          fontSize: 13,
-          fontWeight: isSelected ? 600 : 400,
-          color: isSelected ? 'var(--text-primary)' : hovered ? 'var(--text-normal)' : 'var(--text-secondary)',
+          fontSize: 12,
+          fontWeight: isSelected ? 500 : 400,
+          color: isSelected ? 'var(--text-primary)' : hovered ? 'var(--text-secondary)' : 'var(--text-muted)',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
@@ -116,14 +119,15 @@ function StringRow({
         <span
           style={{
             minWidth: 16,
-            height: 16,
-            padding: '0 4px',
-            borderRadius: 8,
+            height: 14,
+            padding: '0 3px',
+            borderRadius: 2,
             backgroundColor: 'var(--status-dnd)',
-            color: 'var(--text-primary)',
-            fontSize: 11,
-            fontWeight: 700,
-            lineHeight: '16px',
+            color: '#fff',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            fontWeight: 600,
+            lineHeight: '14px',
             textAlign: 'center',
             flexShrink: 0,
           }}
@@ -205,16 +209,16 @@ export const ServerListPaneString = memo(function ServerListPaneString({
         overflowY: 'auto',
         scrollbarWidth: 'none',
         boxSizing: 'border-box',
-        paddingBottom: 12,
+        paddingBottom: 8,
       }}
     >
       <div
         style={{
-          padding: '16px 12px 6px',
+          padding: '14px 12px 5px',
           fontFamily: 'var(--font-mono)',
-          fontSize: 10,
-          fontWeight: 700,
-          letterSpacing: '0.08em',
+          fontSize: 9,
+          fontWeight: 500,
+          letterSpacing: '0.12em',
           textTransform: 'uppercase',
           color: 'var(--text-muted)',
           userSelect: 'none',
@@ -356,11 +360,12 @@ export const ServerListPaneString = memo(function ServerListPaneString({
             top: contextMenu.y,
             left: contextMenu.x,
             zIndex: 9999,
-            backgroundColor: '#111214',
-            borderRadius: 8,
-            padding: '6px 8px',
-            minWidth: 188,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+            backgroundColor: 'var(--bg-deepest)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 2,
+            padding: '4px 6px',
+            minWidth: 172,
+            boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
           }}
           role="menu"
         >
@@ -369,7 +374,7 @@ export const ServerListPaneString = memo(function ServerListPaneString({
             icon={<UserPlus width={16} height={16} />}
             onClick={() => { onInviteToGuild?.(contextMenu.guildId); closeContextMenu() }}
           />
-          <div style={{ height: 1, backgroundColor: '#2e2f34', margin: '4px 0' }} />
+          <div style={{ height: 1, backgroundColor: 'var(--border-subtle)', margin: '4px 0' }} />
           <ContextMenuItem
             label="Leave Server"
             danger
@@ -383,7 +388,7 @@ export const ServerListPaneString = memo(function ServerListPaneString({
           />
           {ownedGuildIds?.has(contextMenu.guildId) && (
             <>
-              <div style={{ height: 1, backgroundColor: '#2e2f34', margin: '4px 0' }} />
+              <div style={{ height: 1, backgroundColor: 'var(--border-subtle)', margin: '4px 0' }} />
               <ContextMenuItem
                 label="Delete Server"
                 danger

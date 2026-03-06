@@ -37,10 +37,10 @@ describe('THEME_TOKENS', () => {
     }
   })
 
-  it('radius tokens are rem-based strings', () => {
+  it('radius tokens are valid size strings (rem or px)', () => {
     for (const val of Object.values(THEME_TOKENS.radius)) {
       expect(typeof val).toBe('string')
-      expect(val).toMatch(/rem$|^9999px$/)
+      expect(val).toMatch(/rem$|px$|^9999px$/)
     }
   })
 })
