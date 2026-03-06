@@ -517,6 +517,7 @@ function App() {
           }
           channelColumn={
             <ChannelColumn
+              layoutMode={layoutMode}
               isDmMode={isDmMode}
               selectedGuildId={selectedGuildId}
               dmListItems={dmListItems}
@@ -662,6 +663,7 @@ function App() {
           }
           memberColumn={
             <MemberColumn
+              layoutMode={layoutMode}
               isDmMode={isDmMode}
               guildName={selectedGuild?.name}
               friends={friends}

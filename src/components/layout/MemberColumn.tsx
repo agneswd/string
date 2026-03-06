@@ -1,5 +1,5 @@
 import { useMemo, memo } from 'react'
-import { MemberListPane, type MemberListItem, type MemberListPaneProps } from '../guild/MemberListPane'
+import { MemberListPane, type MemberListItem, type MemberListPaneProps, type MemberLayoutMode } from '../guild/MemberListPane'
 
 export interface MemberColumnProps {
   isDmMode: boolean
@@ -15,6 +15,8 @@ export interface MemberColumnProps {
   usersByIdentity: Map<string, any>
   onViewProfile: MemberListPaneProps['onViewProfile']
   localUserId?: string
+  /** Controls visual treatment passed through to MemberListPane. Defaults to 'classic'. */
+  layoutMode?: MemberLayoutMode
 }
 
 export const MemberColumn = memo(function MemberColumn({
@@ -26,6 +28,7 @@ export const MemberColumn = memo(function MemberColumn({
   usersByIdentity,
   onViewProfile,
   localUserId,
+  layoutMode,
 }: MemberColumnProps) {
   const title = isDmMode
     ? 'Friends'
@@ -54,6 +57,7 @@ export const MemberColumn = memo(function MemberColumn({
       members={members}
       onViewProfile={onViewProfile}
       localUserId={localUserId}
+      layoutMode={layoutMode}
     />
   )
 })

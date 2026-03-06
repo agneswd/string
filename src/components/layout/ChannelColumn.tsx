@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { DmListPane, type DmListItem, type DmChannelId } from '../dm/DmListPane'
 import { ChannelListPane, type ChannelListItem, type VoiceChannelUser } from '../guild/ChannelListPane'
 import type { GuildId } from '../guild/ServerListPane'
+import type { LayoutMode } from '../../constants/theme'
 
 export interface ChannelColumnProps {
   isDmMode: boolean
@@ -27,6 +28,8 @@ export interface ChannelColumnProps {
   onToggleLocalMuteUser: (id: string) => void
   localIdentity?: string
   getAvatarUrl: (id: string) => string | undefined
+  /** Controls which DM list variant is rendered. Defaults to 'classic'. */
+  layoutMode?: LayoutMode
 }
 
 export function ChannelColumn(props: ChannelColumnProps) {
@@ -44,6 +47,7 @@ export function ChannelColumn(props: ChannelColumnProps) {
           createButtonLabel="New DM"
           onShowFriends={props.onShowFriends}
           activeCallChannelIds={props.activeCallChannelIds}
+          layoutMode={props.layoutMode ?? 'classic'}
         />
       </div>
     )
@@ -51,6 +55,7 @@ export function ChannelColumn(props: ChannelColumnProps) {
 
   return (
     <ChannelListPane
+      layoutMode={props.layoutMode ?? 'classic'}
       guildName={props.guildName}
       channels={props.channels}
       selectedChannelId={props.selectedTextChannelId}
