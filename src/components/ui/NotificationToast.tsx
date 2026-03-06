@@ -48,9 +48,9 @@ const CONTAINER: CSSProperties = {
 
 const toastStyle = (type: NotificationItem['type']): CSSProperties => ({
   position: 'relative',
-  background: type === 'error' ? '#ed4245' : '#2b2d31',
-  color: '#fff',
-  borderRadius: 8,
+  background: type === 'error' ? 'var(--bg-danger, #7f1d1d)' : 'var(--bg-hover)',
+  color: 'var(--text-primary)',
+  borderRadius: 'var(--radius-lg, 8px)',
   padding: '12px 16px',
   fontSize: 14,
   fontWeight: 500,
@@ -59,13 +59,13 @@ const toastStyle = (type: NotificationItem['type']): CSSProperties => ({
   pointerEvents: 'auto',
   overflow: 'hidden',
   width: '100%',
-  border: type === 'error' ? 'none' : '1px solid #3f4147',
+  border: type === 'error' ? '1px solid rgba(248,113,113,0.3)' : '1px solid var(--border-subtle)',
   animation: 'toastSlideIn 0.2s ease-out',
 })
 
 const subtitleStyle: CSSProperties = {
   fontSize: 12,
-  color: '#b5bac1',
+  color: 'var(--text-secondary)',
   marginTop: 4,
   overflow: 'hidden',
   textOverflow: 'ellipsis',
@@ -78,7 +78,7 @@ const closeBtn: CSSProperties = {
   right: 8,
   background: 'none',
   border: 'none',
-  color: '#b5bac1',
+  color: 'var(--text-secondary)',
   cursor: 'pointer',
   fontSize: 16,
   fontWeight: 700,
@@ -119,7 +119,7 @@ const SingleToast = memo(function SingleToast({
           left: 0,
           height: 3,
           width: '100%',
-          background: notification.type === 'error' ? 'rgba(255,255,255,0.4)' : '#5865f2',
+          background: notification.type === 'error' ? 'rgba(255,255,255,0.4)' : 'var(--accent-primary)',
           borderRadius: '0 0 0 8px',
           animation: `shrinkWidth ${duration}ms linear forwards`,
           transformOrigin: 'left',

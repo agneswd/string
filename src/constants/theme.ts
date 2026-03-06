@@ -96,6 +96,7 @@ export const CSS_VAR_TOKENS = {
   '--bg-modifier-hover':     'rgba(255, 255, 255, 0.04)',
   '--bg-modifier-selected':  'rgba(255, 255, 255, 0.08)',
   '--bg-danger':             '#7f1d1d',
+  '--bg-danger-hover':       'rgba(248, 113, 113, 0.12)',
   // Text
   '--text-primary':             '#f0ede8',
   '--text-secondary':           '#a8a29e',

@@ -49,8 +49,8 @@ export const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ user, onClos
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }} onClick={onClose}>
     <div ref={ref} style={{
-      background: '#232428', borderRadius: 8, width: 300,
-      boxShadow: '0 8px 16px rgba(0,0,0,0.24)', border: '1px solid #1e1f22',
+      background: 'var(--bg-panel)', borderRadius: 'var(--radius-lg)', width: 300,
+      boxShadow: '0 12px 32px rgba(0,0,0,0.5)', border: '1px solid var(--border-subtle)',
       overflow: 'hidden',
     }} onClick={e => e.stopPropagation()}>
       {/* Banner/header */}
@@ -61,14 +61,14 @@ export const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ user, onClos
         {user.avatarUrl ? (
           <img src={user.avatarUrl} alt="" style={{
             width: 60, height: 60, borderRadius: '50%',
-            border: '4px solid #232428', objectFit: 'cover',
+            border: '4px solid var(--bg-panel)', objectFit: 'cover',
           }} />
         ) : (
           <div style={{
             width: 60, height: 60, borderRadius: '50%',
             backgroundColor: color, display: 'flex', alignItems: 'center',
             justifyContent: 'center', color: '#fff', fontSize: 24, fontWeight: 700,
-            border: '4px solid #232428',
+            border: '4px solid var(--bg-panel)',
           }}>
             {getInitial(user.displayName)}
           </div>
@@ -77,23 +77,23 @@ export const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ user, onClos
 
       {/* Info */}
       <div style={{ padding: '8px 16px 16px' }}>
-        <div style={{ fontSize: 20, fontWeight: 700, color: '#f2f3f5' }}>{user.displayName}</div>
-        <div style={{ fontSize: 13, color: '#b5bac1' }}>{user.username}</div>
+        <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-header-primary)' }}>{user.displayName}</div>
+        <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{user.username}</div>
         {user.status && (
-          <div style={{ marginTop: 8, fontSize: 13, color: '#b5bac1', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ marginTop: 8, fontSize: 13, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
             {user.status === 'Online' ? (
-              <><Circle size={10} fill="#43b581" stroke="none" /> Online</>
+              <><Circle size={10} fill="var(--status-online)" stroke="none" /> Online</>
             ) : user.status === 'DoNotDisturb' ? (
-              <><Circle size={10} fill="#ed4245" stroke="none" /> Do Not Disturb</>
+              <><Circle size={10} fill="var(--status-dnd)" stroke="none" /> Do Not Disturb</>
             ) : user.status === 'Away' ? (
-              <><Circle size={10} fill="#faa61a" stroke="none" /> Away</>
+              <><Circle size={10} fill="var(--status-idle)" stroke="none" /> Away</>
             ) : (
-              <><Circle size={10} fill="none" stroke="#747f8d" strokeWidth={2} /> Offline</>
+              <><Circle size={10} fill="none" stroke="var(--status-offline)" strokeWidth={2} /> Offline</>
             )}
           </div>
         )}
         {user.bio && (
-          <div style={{ marginTop: 12, padding: '12px', background: '#2b2d31', borderRadius: 8, fontSize: 13, color: '#dbdee1', lineHeight: 1.4 }}>
+          <div style={{ marginTop: 12, padding: '12px', background: 'var(--bg-hover)', borderRadius: 'var(--radius-md)', fontSize: 13, color: 'var(--text-normal)', lineHeight: 1.4 }}>
             {user.bio}
           </div>
         )}

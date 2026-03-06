@@ -467,7 +467,7 @@ function App() {
   // Discord-style AppShell. Both codepaths are kept live so Phase 4 settings can
   // expose a toggle without further structural work.
   // ---------------------------------------------------------------------------
-  const { layoutMode } = useLayoutMode()
+  const { layoutMode, setLayoutMode } = useLayoutMode()
   const Shell = layoutMode === 'workspace' ? WorkspaceShell : AppShell
 
   // ---------------------------------------------------------------------------
@@ -709,6 +709,8 @@ function App() {
           onFriendStatusNotificationsChange={setFriendStatusNotificationsEnabled}
           dmMessageNotificationsEnabled={dmMessageNotificationsEnabled}
           onDmMessageNotificationsChange={setDmMessageNotificationsEnabled}
+          layoutMode={layoutMode}
+          onLayoutModeChange={setLayoutMode}
         />
 
         <ContextMenuOverlay
