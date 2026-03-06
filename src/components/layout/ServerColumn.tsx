@@ -4,7 +4,7 @@ import { ServerListPane } from '../guild/ServerListPane'
 import type { GuildId } from '../guild/ServerListPane'
 
 export interface ServerColumnProps {
-  orderedGuilds: Array<{ guildId: any; name: string }>
+  orderedGuilds: Array<{ guildId: unknown; name: string }>
   selectedGuildId: string | null
   onSelectGuild: (id: string) => void
   onHomeClick: () => void
@@ -15,6 +15,7 @@ export interface ServerColumnProps {
   onInviteToGuild: (guildId: string) => void
   ownedGuildIds: Set<string>
   onReorder: (ids: string[]) => void
+  layoutMode?: 'workspace' | 'classic'
 }
 
 export const ServerColumn = memo(function ServerColumn({
@@ -29,6 +30,7 @@ export const ServerColumn = memo(function ServerColumn({
   onInviteToGuild,
   ownedGuildIds,
   onReorder,
+  layoutMode = 'classic',
 }: ServerColumnProps) {
   const guilds = useMemo(
     () => orderedGuilds.map((guild) => ({ id: toIdKey(guild.guildId), name: guild.name })),
@@ -48,6 +50,8 @@ export const ServerColumn = memo(function ServerColumn({
       onInviteToGuild={onInviteToGuild as (id: GuildId) => void}
       ownedGuildIds={ownedGuildIds as Set<GuildId>}
       onReorder={onReorder}
+      layoutMode={layoutMode}
     />
   )
 })
+

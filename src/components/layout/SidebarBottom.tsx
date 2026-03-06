@@ -21,6 +21,7 @@ export interface SidebarBottomProps {
   onToggleDeafen: () => void
   onOpenSettings: () => void
   onOpenProfile: () => void
+  layoutMode?: 'workspace' | 'classic'
 }
 
 export function SidebarBottom({
@@ -39,6 +40,7 @@ export function SidebarBottom({
   onToggleDeafen,
   onOpenSettings,
   onOpenProfile,
+  layoutMode = 'classic',
 }: SidebarBottomProps) {
   return (
     <>
@@ -64,6 +66,7 @@ export function SidebarBottom({
         onToggleDeafen={onToggleDeafen}
         onOpenSettings={onOpenSettings}
         onOpenProfile={onOpenProfile}
+        layoutMode={layoutMode}
       />
     </>
   )

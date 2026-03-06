@@ -5,14 +5,14 @@ type ClassValue = string | undefined | null | false
 const cx = (...values: ClassValue[]) => values.filter(Boolean).join(' ')
 
 /**
- * WorkspaceShell — the default layout for String.
+ * WorkspaceShell — default layout for String in workspace mode.
  *
- * Structural differences from the classic (Discord-style) `AppShell`:
- *  - Narrower server rail (56px, no explicit right border — bg diff provides separation)
+ * Structurally distinct from the classic Discord-style AppShell:
+ *  - Wide workspace rail (200px) with text-labelled rows, not icon stack
  *  - Narrower channel/member sidebars (220px)
- *  - Lower top-nav chrome (2.75rem / 44px, no bottom border — bg diff only)
- *  - Input area uses box-shadow separator instead of a top border
- *  - Overall: calmer silhouette, more like a generic workspace product
+ *  - Taller product-bar top nav (3rem) — room for breadcrumb-style context
+ *  - Main content area rendered as an inset card (border-radius, inner margin)
+ *  - No explicit rail border — background step provides visual separation
  */
 export interface WorkspaceShellProps {
   serverColumn: ReactNode
@@ -61,30 +61,30 @@ export function WorkspaceShell({
         width: '100%',
         minHeight: 0,
         overflow: 'hidden',
-        backgroundColor: 'var(--bg-app)',
+        backgroundColor: 'var(--bg-deepest)',
         color: 'var(--text-primary)',
         fontFamily: 'var(--font-sans)',
       }}
     >
-      {/* Server rail — narrower, no right border (bg shift creates visual separation) */}
+      {/* Workspace rail — wide sidebar, text-label rows, no icon-stack */}
       <aside
         className={cx('workspace-shell__servers', serverColumnClassName)}
         style={{
-          width: '56px',
+          width: '200px',
           flexShrink: 0,
           backgroundColor: 'var(--bg-deepest)',
           overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          padding: '0.5rem 0',
-          gap: '0.25rem',
+          padding: 0,
+          /* hide scrollbar */
+          scrollbarWidth: 'none',
         }}
       >
         {serverColumn}
       </aside>
 
-      {/* Channel sidebar — slightly narrower, unified with sidebar bg */}
+      {/* Channel sidebar */}
       <div
         style={{
           display: 'flex',
@@ -113,10 +113,11 @@ export function WorkspaceShell({
             style={{
               flexShrink: 0,
               backgroundColor: 'var(--bg-deepest)',
-              padding: '0.625rem',
+              padding: '0.875rem',
               display: 'flex',
               flexDirection: 'column',
               gap: '0.5rem',
+              borderTop: '1px solid var(--border-subtle)',
             }}
           >
             {sidebarBottom}
@@ -124,7 +125,7 @@ export function WorkspaceShell({
         )}
       </div>
 
-      {/* Main content pane */}
+      {/* Main content — inset card look: small margin + rounded top corners */}
       <main
         className={cx('workspace-shell__main', mainClassName)}
         style={{
@@ -134,20 +135,23 @@ export function WorkspaceShell({
           flexDirection: 'column',
           backgroundColor: 'var(--bg-panel)',
           position: 'relative',
+          margin: '6px 6px 0 4px',
+          borderRadius: '8px 8px 0 0',
+          overflow: 'hidden',
         }}
       >
-        {/* Flat, minimal top navigation — lower chrome height, no bottom border */}
+        {/* Product-bar top nav — taller, breadcrumb-friendly */}
         <header
           className={cx('workspace-shell__top-nav', topNavClassName)}
           style={{
-            height: '2.75rem',
+            height: '3rem',
             flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
-            padding: '0 0.875rem',
+            padding: '0 1rem',
             backgroundColor: 'var(--bg-panel)',
             zIndex: 10,
-            boxShadow: '0 1px 0 0 var(--border-subtle)',
+            borderBottom: '1px solid var(--border-subtle)',
           }}
         >
           {topNav}
@@ -201,3 +205,4 @@ export function WorkspaceShell({
     </div>
   )
 }
+

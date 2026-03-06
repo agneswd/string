@@ -507,6 +507,7 @@ function App() {
               onInviteToGuild={handleInviteToGuild}
               ownedGuildIds={ownedGuildIds}
               onReorder={handleReorderGuilds}
+              layoutMode={layoutMode}
             />
           }
           channelColumn={
@@ -551,6 +552,8 @@ function App() {
               showMemberList={showMemberList}
               onToggleMemberList={() => setShowMemberList(prev => !prev)}
               onInitiateDmCall={handleInitiateDmCall}
+              layoutMode={layoutMode}
+              channelName={activeChannelName}
             />
           }
           messageArea={
@@ -650,6 +653,7 @@ function App() {
               onToggleDeafen={onToggleDeafen}
               onOpenSettings={() => setShowSettingsModal(true)}
               onOpenProfile={() => setShowProfileModal(true)}
+              layoutMode={layoutMode}
             />
           }
           memberColumn={

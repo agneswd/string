@@ -27,11 +27,11 @@ describe('WorkspaceShell', () => {
     expect(screen.getByTestId('input-area')).toBeDefined()
   })
 
-  it('server rail has 56px width', () => {
+  it('server rail has 200px width (workspace uses text-label rows, not icon stack)', () => {
     const { container } = render(<WorkspaceShell {...defaultProps} />)
     const serverAside = container.querySelector('.workspace-shell__servers') as HTMLElement
     expect(serverAside).toBeTruthy()
-    expect(serverAside.style.width).toBe('56px')
+    expect(serverAside.style.width).toBe('200px')
   })
 
   it('channel sidebar has 220px width', () => {
@@ -44,11 +44,19 @@ describe('WorkspaceShell', () => {
     expect(sidebarWrapper.style.width).toBe('220px')
   })
 
-  it('top nav header has 2.75rem height', () => {
+  it('top nav header has 3rem height (workspace uses taller product-bar)', () => {
     const { container } = render(<WorkspaceShell {...defaultProps} />)
     const header = container.querySelector('.workspace-shell__top-nav') as HTMLElement
     expect(header).toBeTruthy()
-    expect(header.style.height).toBe('2.75rem')
+    expect(header.style.height).toBe('3rem')
+  })
+
+  it('main card area has an inset appearance via margin', () => {
+    const { container } = render(<WorkspaceShell {...defaultProps} />)
+    const main = container.querySelector('.workspace-shell__main') as HTMLElement
+    expect(main).toBeTruthy()
+    // The workspace main area has borderRadius for a card-inset look
+    expect(main.style.borderRadius).toBeTruthy()
   })
 
   it('shows member column when showMemberList is true', () => {
