@@ -8,7 +8,6 @@ if (typeof document !== 'undefined') {
     style.id = styleId
     style.textContent = `
       @keyframes shrinkWidth { from { transform: scaleX(1); } to { transform: scaleX(0); } }
-      @keyframes toastSlideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     `
     document.head.appendChild(style)
   }
@@ -48,25 +47,25 @@ const CONTAINER: CSSProperties = {
 
 const toastStyle = (type: NotificationItem['type']): CSSProperties => ({
   position: 'relative',
-  background: type === 'error' ? 'var(--bg-danger, #7f1d1d)' : 'var(--bg-hover)',
+  background: type === 'error' ? 'var(--bg-danger, #3a1515)' : 'var(--bg-panel)',
   color: 'var(--text-primary)',
-  borderRadius: 'var(--radius-lg, 8px)',
-  padding: '12px 16px',
-  fontSize: 14,
+  borderRadius: '2px',
+  padding: '10px 14px',
+  fontSize: 13,
   fontWeight: 500,
-  boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+  boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
   cursor: type === 'message' ? 'pointer' : 'default',
   pointerEvents: 'auto',
   overflow: 'hidden',
   width: '100%',
-  border: type === 'error' ? '1px solid rgba(248,113,113,0.3)' : '1px solid var(--border-subtle)',
-  animation: 'toastSlideIn 0.2s ease-out',
+  border: type === 'error' ? '1px solid rgba(248,113,113,0.2)' : '1px solid var(--border-subtle)',
 })
 
 const subtitleStyle: CSSProperties = {
-  fontSize: 12,
-  color: 'var(--text-secondary)',
-  marginTop: 4,
+  fontSize: 11,
+  fontFamily: 'var(--font-mono)',
+  color: 'var(--text-muted)',
+  marginTop: 3,
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
@@ -117,10 +116,10 @@ const SingleToast = memo(function SingleToast({
           position: 'absolute',
           bottom: 0,
           left: 0,
-          height: 3,
+          height: 2,
           width: '100%',
-          background: notification.type === 'error' ? 'rgba(255,255,255,0.4)' : 'var(--accent-primary)',
-          borderRadius: '0 0 0 8px',
+          background: notification.type === 'error' ? 'rgba(248,113,113,0.5)' : 'var(--accent-primary)',
+          borderRadius: '0',
           animation: `shrinkWidth ${duration}ms linear forwards`,
           transformOrigin: 'left',
         }}

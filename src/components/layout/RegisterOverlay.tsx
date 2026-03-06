@@ -37,11 +37,11 @@ export function RegisterOverlay({ onRegister, onLoginAsUser }: RegisterOverlayPr
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.7)' }}>
-      <div style={{ backgroundColor: 'var(--bg-primary, #313338)', padding: '32px', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '16px', minWidth: '400px', maxWidth: '440px' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.6)' }}>
+      <div style={{ backgroundColor: 'var(--bg-panel, #1a1a1a)', border: '1px solid var(--border-subtle, #2a2a2a)', padding: '32px', borderRadius: '2px', display: 'flex', flexDirection: 'column', gap: '16px', minWidth: '380px', maxWidth: '420px' }}>
         <form onSubmit={handleRegister} style={S_formCol}>
-          <h2 style={{ color: 'var(--text-primary)', fontSize: '24px', fontWeight: 700, textAlign: 'center' }}>Welcome!</h2>
-          <p style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>Create your account to get started</p>
+          <h2 style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontSize: '1.1rem', fontWeight: 600, textAlign: 'center', letterSpacing: '0.02em' }}>Welcome</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center' }}>Create your account to get started</p>
           <label style={S_labelCol}>
             <span style={S_labelSpan}>USERNAME</span>
             <input value={username} onChange={e => setUsername(e.target.value)} placeholder="Username" required style={S_input} />
@@ -50,7 +50,7 @@ export function RegisterOverlay({ onRegister, onLoginAsUser }: RegisterOverlayPr
             <span style={S_labelSpan}>DISPLAY NAME</span>
             <input value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Display Name" required style={S_input} />
           </label>
-          <button type="submit" style={{ padding: '10px 16px', borderRadius: '4px', border: 'none', backgroundColor: 'var(--accent-primary, #5865f2)', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: '16px' }}>
+          <button type="submit" style={{ padding: '9px 16px', borderRadius: '2px', border: 'none', backgroundColor: 'var(--accent-primary, #c8b8a2)', color: '#111111', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}>
             Register
           </button>
         </form>
@@ -70,8 +70,8 @@ export function RegisterOverlay({ onRegister, onLoginAsUser }: RegisterOverlayPr
                 type="button"
                 onClick={() => { setShowLoginForm(!showLoginForm); setLoginError(null); }}
                 style={{
-                  background: 'none', border: 'none', color: 'var(--accent-primary, #5865f2)',
-                  cursor: 'pointer', fontSize: '13px', padding: 0, textAlign: 'center', width: '100%',
+                  background: 'none', border: 'none', color: 'var(--accent-primary, #c8b8a2)',
+                  cursor: 'pointer', fontSize: '12px', fontFamily: 'var(--font-mono)', padding: 0, textAlign: 'center', width: '100%',
                 }}
               >
                 {showLoginForm ? 'Back to Register' : 'Login as existing user'}
@@ -89,16 +89,16 @@ export function RegisterOverlay({ onRegister, onLoginAsUser }: RegisterOverlayPr
                     />
                   </label>
                   {loginError && (
-                    <div style={{ color: '#ed4245', fontSize: '13px' }}>{loginError}</div>
+                    <div style={{ color: 'var(--text-danger, #f87171)', fontSize: '12px', fontFamily: 'var(--font-mono)' }}>{loginError}</div>
                   )}
                   <button
                     type="button"
                     onClick={handleLogin}
                     disabled={!loginUsername.trim()}
                     style={{
-                      padding: '10px 16px', borderRadius: '4px', border: 'none',
-                      backgroundColor: loginUsername.trim() ? '#3ba55d' : 'rgba(59,165,93,0.4)',
-                      color: '#fff', fontWeight: 600, cursor: loginUsername.trim() ? 'pointer' : 'not-allowed', fontSize: '14px',
+                      padding: '9px 16px', borderRadius: '2px', border: 'none',
+                      backgroundColor: loginUsername.trim() ? 'var(--accent-primary, #c8b8a2)' : 'var(--bg-active, #242424)',
+                      color: loginUsername.trim() ? '#111111' : 'var(--text-muted)', fontWeight: 600, cursor: loginUsername.trim() ? 'pointer' : 'not-allowed', fontSize: '13px',
                     }}
                   >
                     Login

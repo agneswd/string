@@ -1,165 +1,17 @@
-import React, { useState, useCallback, useRef, useEffect, useMemo, type CSSProperties } from 'react'
-import { Check } from 'lucide-react'
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 
 import { Modal } from './Modal'
-import { getAvatarColor, getInitial, avatarBytesToUrl, setProfileColor as persistProfileColor } from '../../lib/avatarUtils'
+import { avatarBytesToUrl, setProfileColor as persistProfileColor } from '../../lib/avatarUtils'
+import { compressAvatarFile, MAX_AVATAR_BYTES } from './profile/avatarProcessing'
+import type { ProfileUser, ProfileSettingsModalProps } from './profile/types'
+import { getStatusTag, getStatusColor } from './profile/constants'
+import { S_section, S_label, S_input, S_textarea, S_charCount, S_saveBtn, S_saveBtnDisabled } from './profile/styles'
+import { ProfileAvatarSection } from './profile/ProfileAvatarSection'
+import { ProfileColorSection } from './profile/ProfileColorSection'
+import { ProfileStatusSection } from './profile/ProfileStatusSection'
 
-// ── Types ────────────────────────────────────────────────────────────────────
-
-export interface ProfileUser {
-  displayName: string
-  username: string
-  bio?: string | null
-  status: { tag: string } | unknown
-  avatarBytes?: Uint8Array | null
-}
-
-export interface ProfileSettingsModalProps {
-  isOpen: boolean
-  onClose: () => void
-  currentUser: ProfileUser | null
-  onUpdateProfile: (params: { displayName?: string | null; bio?: string | null; avatarBytes?: Uint8Array | null; profileColor?: string | null }) => Promise<void>
-  onSetStatus: (statusTag: string) => void
-}
-
-// ── Status options ───────────────────────────────────────────────────────────
-
-const STATUS_OPTIONS = [
-  { tag: 'Online', label: 'Online', color: '#43b581' },
-  { tag: 'DoNotDisturb', label: 'Do Not Disturb', color: '#ed4245' },
-  { tag: 'Offline', label: 'Appear as Offline', color: '#747f8d' },
-] as const
-
-function getStatusTag(status: unknown): string {
-  if (!status) return 'Online'
-  if (typeof status === 'string') return status
-  if (typeof status === 'object' && status !== null) {
-    const s = status as Record<string, unknown>
-    if (typeof s.tag === 'string') return s.tag
-    const keys = Object.keys(s)
-    if (keys.length > 0) return keys[0]
-  }
-  return 'Online'
-}
-
-function getStatusColor(tag: string): string {
-  return STATUS_OPTIONS.find((s) => s.tag === tag)?.color ?? '#43b581'
-}
-
-// ── Styles ───────────────────────────────────────────────────────────────────
-
-const S_section: CSSProperties = { display: 'flex', flexDirection: 'column', gap: '16px' }
-const S_label: CSSProperties = { fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary, #b5bac1)', marginBottom: '4px' }
-const S_input: CSSProperties = { padding: '10px', borderRadius: '4px', border: 'none', backgroundColor: '#1e1f22', color: 'var(--text-primary, #dbdee1)', fontSize: '14px', width: '100%', boxSizing: 'border-box', outline: 'none' }
-const S_textarea: CSSProperties = { ...S_input, resize: 'vertical', minHeight: '80px', fontFamily: 'inherit' }
-const S_avatarContainer: CSSProperties = { display: 'flex', alignItems: 'center', gap: '16px' }
-const S_charCount: CSSProperties = { fontSize: '11px', color: 'var(--text-muted, #949ba4)', textAlign: 'right', marginTop: '4px' }
-const S_saveBtn: CSSProperties = {
-  padding: '10px 24px', borderRadius: '4px', border: 'none',
-  backgroundColor: 'var(--accent-primary, #5865f2)', color: '#fff',
-  fontWeight: 600, fontSize: '14px', cursor: 'pointer', marginTop: '8px',
-}
-const S_saveBtnDisabled: CSSProperties = { ...S_saveBtn, opacity: 0.5, cursor: 'not-allowed' }
-const S_statusBtn: CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: '8px',
-  padding: '8px 12px', borderRadius: '4px', border: '2px solid transparent',
-  backgroundColor: '#1e1f22', color: 'var(--text-primary, #dbdee1)',
-  cursor: 'pointer', fontSize: '14px', width: '100%', boxSizing: 'border-box',
-}
-const S_statusBtnActive: CSSProperties = { ...S_statusBtn, borderColor: 'var(--accent-primary, #5865f2)' }
-const S_uploadBtn: CSSProperties = {
-  padding: '6px 14px', borderRadius: '4px', border: 'none',
-  backgroundColor: 'var(--accent-primary, #5865f2)', color: '#fff',
-  fontWeight: 600, fontSize: '13px', cursor: 'pointer',
-}
-
-const PROFILE_COLORS = [
-  '#5865f2', '#3ba55c', '#faa61a', '#ed4245', '#9b59b6',
-  '#e91e63', '#1abc9c', '#2ecc71', '#3498db', '#e67e22',
-  '#f1c40f', '#95a5a6',
-]
-
-const MAX_AVATAR_BYTES = 102_400
-const MAX_AVATAR_DIMENSION = 256
-const MIN_COMPRESS_QUALITY = 0.45
-const DEFAULT_COMPRESS_QUALITY = 0.86
-
-const fileToDataUrl = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onerror = () => reject(new Error('Failed to read image file'))
-    reader.onload = () => resolve(String(reader.result ?? ''))
-    reader.readAsDataURL(file)
-  })
-
-const loadImage = (src: string): Promise<HTMLImageElement> =>
-  new Promise((resolve, reject) => {
-    const image = new Image()
-    image.onload = () => resolve(image)
-    image.onerror = () => reject(new Error('Failed to load image for processing'))
-    image.src = src
-  })
-
-const canvasToBlob = (canvas: HTMLCanvasElement, mimeType: string, quality?: number): Promise<Blob | null> =>
-  new Promise((resolve) => {
-    canvas.toBlob((blob) => resolve(blob), mimeType, quality)
-  })
-
-const resizeAvatarToCanvas = (image: HTMLImageElement): HTMLCanvasElement => {
-  const width = image.naturalWidth || image.width
-  const height = image.naturalHeight || image.height
-  const scale = Math.min(1, MAX_AVATAR_DIMENSION / Math.max(width, height))
-  const targetWidth = Math.max(1, Math.round(width * scale))
-  const targetHeight = Math.max(1, Math.round(height * scale))
-
-  const canvas = document.createElement('canvas')
-  canvas.width = targetWidth
-  canvas.height = targetHeight
-
-  const context = canvas.getContext('2d')
-  if (!context) {
-    throw new Error('Image processing is not available in this browser')
-  }
-
-  context.clearRect(0, 0, targetWidth, targetHeight)
-  context.drawImage(image, 0, 0, targetWidth, targetHeight)
-  return canvas
-}
-
-const compressAvatarFile = async (file: File): Promise<Blob> => {
-  const sourceDataUrl = await fileToDataUrl(file)
-  const image = await loadImage(sourceDataUrl)
-  const canvas = resizeAvatarToCanvas(image)
-
-  let quality = DEFAULT_COMPRESS_QUALITY
-  let bestBlob: Blob | null = null
-
-  while (quality >= MIN_COMPRESS_QUALITY) {
-    const maybeBlob = await canvasToBlob(canvas, 'image/webp', quality)
-    if (!maybeBlob) {
-      break
-    }
-
-    bestBlob = maybeBlob
-    if (maybeBlob.size <= MAX_AVATAR_BYTES) {
-      return maybeBlob
-    }
-    quality = Number((quality - 0.08).toFixed(2))
-  }
-
-  if (bestBlob && bestBlob.size <= MAX_AVATAR_BYTES) {
-    return bestBlob
-  }
-
-  const pngFallback = await canvasToBlob(canvas, 'image/png')
-  if (pngFallback && pngFallback.size <= MAX_AVATAR_BYTES) {
-    return pngFallback
-  }
-
-  throw new Error('Avatar must be ≤ 100 KB after compression')
-}
-
-// ── Component ────────────────────────────────────────────────────────────────
+// Re-export so existing consumers (App.tsx, ModalSection.tsx) keep working
+export type { ProfileUser, ProfileSettingsModalProps }
 
 export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
   isOpen,
@@ -215,7 +67,7 @@ export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
         }
         setUploadedPreview(null)
         avatarDirtyRef.current = false
-        const serverColor = (currentUser as any).profileColor ?? ''
+        const serverColor = currentUser.profileColor ?? ''
         setProfileColor(serverColor)
         initialProfileColor.current = serverColor
       } else {
@@ -315,8 +167,10 @@ export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
       const params: { displayName?: string | null; bio?: string | null; avatarBytes?: Uint8Array | null; profileColor?: string | null } = {}
       let hasProfileChange = false
 
-      if (editDisplayName.trim() && editDisplayName.trim() !== currentUser.displayName) {
-        params.displayName = editDisplayName.trim()
+      const trimmedDisplayName = editDisplayName.trim()
+      const originalDisplayName = currentUser.displayName ?? ''
+      if (trimmedDisplayName && trimmedDisplayName !== originalDisplayName) {
+        params.displayName = trimmedDisplayName
         hasProfileChange = true
       }
 
@@ -358,12 +212,13 @@ export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
   if (!currentUser) return null
 
   const name = currentUser.displayName || currentUser.username || '?'
+  // Detects changes while keeping display-name clearing unsupported by the backend
   const hasChanges = (() => {
-    if (!currentUser) return false
     const originalStatus = getStatusTag(currentUser.status)
     const currentBio = (currentUser.bio as string) ?? ''
+    const originalDisplayName = currentUser.displayName ?? ''
     return (
-      (editDisplayName.trim() !== '' && editDisplayName.trim() !== currentUser.displayName) ||
+      (!!editDisplayName.trim() && editDisplayName.trim() !== originalDisplayName) ||
       editBio !== currentBio ||
       editStatus !== originalStatus ||
       avatarBytes !== null ||
@@ -374,59 +229,14 @@ export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Profile Settings">
       <div style={S_section}>
-        {/* Avatar */}
-        <div>
-          <div style={S_label}>AVATAR</div>
-          <div style={S_avatarContainer}>
-            <div style={{ position: 'relative' }}>
-              {avatarPreview ? (
-                <img
-                  src={avatarPreview}
-                  alt="Avatar"
-                  style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover' }}
-                />
-              ) : (
-                <div style={{
-                  width: 64, height: 64, borderRadius: '50%',
-                  backgroundColor: profileColor || getAvatarColor(name),
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#fff', fontSize: '24px', fontWeight: 700,
-                }}>
-                  {getInitial(name)}
-                </div>
-              )}
-              {/* Status dot on preview avatar */}
-              <div style={{
-                position: 'absolute', bottom: 0, right: 0,
-                width: 16, height: 16, borderRadius: '50%',
-                backgroundColor: getStatusColor(editStatus),
-                border: '3px solid #2b2d31',
-              }} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                style={S_uploadBtn}
-              >
-                Upload Avatar
-              </button>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted, #949ba4)' }}>
-                Max 100 KB, image only
-              </span>
-              {avatarError && (
-                <span style={{ fontSize: '11px', color: '#ed4245' }}>{avatarError}</span>
-              )}
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarUpload}
-              style={{ display: 'none' }}
-            />
-          </div>
-        </div>
+        <ProfileAvatarSection
+          avatarPreview={avatarPreview}
+          name={name}
+          profileColor={profileColor}
+          statusColor={getStatusColor(editStatus)}
+          avatarError={avatarError}
+          onUploadClick={() => fileInputRef.current?.click()}
+        />
 
         {/* Display Name */}
         <div>
@@ -441,7 +251,7 @@ export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
             onBlur={() => setFocusedField(null)}
             style={{
               ...S_input,
-              boxShadow: focusedField === 'displayName' ? '0 0 0 2px #5865f2' : 'none',
+              boxShadow: focusedField === 'displayName' ? '0 0 0 1px var(--border-focus)' : 'none',
               transition: 'box-shadow 0.15s ease',
             }}
           />
@@ -460,62 +270,16 @@ export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
             onBlur={() => setFocusedField(null)}
             style={{
               ...S_textarea,
-              boxShadow: focusedField === 'bio' ? '0 0 0 2px #5865f2' : 'none',
+              boxShadow: focusedField === 'bio' ? '0 0 0 1px var(--border-focus)' : 'none',
               transition: 'box-shadow 0.15s ease',
             }}
           />
           <div style={S_charCount}>{editBio.length}/500</div>
         </div>
 
-        {/* Profile Color */}
-        <div>
-          <div style={S_label}>PROFILE COLOR</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {PROFILE_COLORS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => {
-                  setProfileColor(c)
-                }}
-                style={{
-                  width: 32, height: 32, borderRadius: '50%', border: profileColor === c ? '2px solid #fff' : '2px solid transparent',
-                  backgroundColor: c, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  padding: 0, outline: 'none',
-                }}
-                aria-label={`Select color ${c}`}
-              >
-                {profileColor === c && (
-                  <Check size={14} color="#fff" strokeWidth={2} />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
+        <ProfileColorSection profileColor={profileColor} onChange={setProfileColor} />
+        <ProfileStatusSection editStatus={editStatus} onChange={setEditStatus} />
 
-        {/* Status */}
-        <div>
-          <div style={S_label}>STATUS</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {STATUS_OPTIONS.map((opt) => (
-              <button
-                key={opt.tag}
-                type="button"
-                onClick={() => setEditStatus(opt.tag)}
-                style={editStatus === opt.tag ? S_statusBtnActive : S_statusBtn}
-              >
-                <div style={{
-                  width: 10, height: 10, borderRadius: '50%',
-                  backgroundColor: opt.color,
-                  flexShrink: 0,
-                }} />
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Save */}
         <button
           type="button"
           onClick={handleSave}
@@ -524,6 +288,14 @@ export const ProfileSettingsModal = React.memo(function ProfileSettingsModal({
         >
           {saving ? 'Saving...' : 'Save Changes'}
         </button>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleAvatarUpload}
+          style={{ display: 'none' }}
+        />
       </div>
     </Modal>
   )

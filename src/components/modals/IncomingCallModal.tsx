@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, type CSSProperties } from 'react'
+import React, { useEffect, useRef, useCallback, type CSSProperties } from 'react'
 import { Phone, PhoneOff } from 'lucide-react'
 
 export interface IncomingCallModalProps {
@@ -22,38 +22,34 @@ const overlay: CSSProperties = {
 }
 
 const card: CSSProperties = {
-  background: '#1e1f22',
-  borderRadius: 12,
-  padding: '40px 48px',
+  background: 'var(--bg-panel)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: '2px',
+  padding: '36px 44px',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   gap: 16,
-  boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
   minWidth: 280,
 }
 
-const avatarOuter = (pulse: boolean): CSSProperties => ({
-  width: 96,
-  height: 96,
+const avatarOuter: CSSProperties = {
+  width: 72,
+  height: 72,
   borderRadius: '50%',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  background: '#2b2d31',
-  border: '3px solid #43b581',
-  boxShadow: pulse
-    ? '0 0 0 8px rgba(67, 181, 129, 0.3)'
-    : '0 0 0 0 rgba(67, 181, 129, 0)',
-  transition: 'box-shadow 0.8s ease',
+  background: 'var(--bg-active)',
+  border: '2px solid var(--border-subtle)',
   overflow: 'hidden',
   flexShrink: 0,
-})
+}
 
 const avatarText: CSSProperties = {
-  fontSize: 36,
-  fontWeight: 700,
-  color: '#f0f1f5',
+  fontSize: 28,
+  fontWeight: 600,
+  color: 'var(--text-primary)',
   userSelect: 'none',
 }
 
@@ -65,14 +61,15 @@ const avatarImg: CSSProperties = {
 }
 
 const callerNameStyle: CSSProperties = {
-  fontSize: 20,
+  fontSize: 16,
   fontWeight: 600,
-  color: '#f0f1f5',
+  color: 'var(--text-primary)',
 }
 
 const subtitleStyle: CSSProperties = {
-  fontSize: 14,
-  color: '#b5bac1',
+  fontSize: 12,
+  fontFamily: 'var(--font-mono)',
+  color: 'var(--text-muted)',
   marginBottom: 8,
 }
 
@@ -83,9 +80,9 @@ const buttonRow: CSSProperties = {
 }
 
 const btnBase: CSSProperties = {
-  width: 56,
-  height: 56,
-  borderRadius: '50%',
+  width: 48,
+  height: 48,
+  borderRadius: '2px',
   border: 'none',
   cursor: 'pointer',
   display: 'flex',
@@ -96,14 +93,15 @@ const btnBase: CSSProperties = {
   padding: 0,
 }
 
-const acceptBtn: CSSProperties = { ...btnBase, background: '#43b581' }
-const declineBtn: CSSProperties = { ...btnBase, background: '#ed4245' }
+// Use the same muted editorial green as the call UI palette (callTheme.statusGreen)
+const acceptBtn: CSSProperties = { ...btnBase, background: '#5a9e7a' }
+const declineBtn: CSSProperties = { ...btnBase, background: '#b94040' }
 
 /* ── Icons ── */
 
-const PhoneIcon = () => <Phone style={{ width: 28, height: 28 }} />
+const PhoneIcon = () => <Phone style={{ width: 22, height: 22 }} />
 
-const PhoneDownIcon = () => <PhoneOff style={{ width: 28, height: 28 }} />
+const PhoneDownIcon = () => <PhoneOff style={{ width: 22, height: 22 }} />
 
 /* ── Component ── */
 
@@ -119,14 +117,6 @@ export const IncomingCallModal = React.memo(function IncomingCallModal({
   // Auto-focus the container so keyboard shortcuts work immediately
   useEffect(() => {
     containerRef.current?.focus()
-  }, [])
-
-  // Toggle pulse for animation (CSS transition-driven)
-  const [pulse, setPulse] = useState(true)
-
-  useEffect(() => {
-    const id = setInterval(() => setPulse((p) => !p), 800)
-    return () => clearInterval(id)
   }, [])
 
   // Ringtone: two-tone arpeggio via Web Audio API
@@ -180,8 +170,8 @@ export const IncomingCallModal = React.memo(function IncomingCallModal({
   return (
     <div ref={containerRef} tabIndex={-1} style={overlay} role="dialog" aria-label={`Incoming call from ${callerName}`} onKeyDown={handleKeyDown}>
       <div style={card}>
-        {/* Avatar with pulse ring */}
-        <div style={avatarOuter(pulse)}>
+        {/* Avatar */}
+        <div style={avatarOuter}>
           {callerAvatarUrl ? (
             <img src={callerAvatarUrl} alt={callerName} style={avatarImg} />
           ) : (
@@ -224,9 +214,10 @@ export const IncomingCallModal = React.memo(function IncomingCallModal({
             style={{
               background: 'none',
               border: 'none',
-              color: '#b5bac1',
+              color: 'var(--text-muted)',
               cursor: 'pointer',
-              fontSize: 13,
+              fontSize: 12,
+              fontFamily: 'var(--font-mono)',
               fontWeight: 500,
               padding: '4px 12px',
               marginTop: 8,

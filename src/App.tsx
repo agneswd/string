@@ -700,10 +700,13 @@ function App() {
           currentUser={me as ProfileSettingsModalProps['currentUser']}
           onUpdateProfile={async (params) => {
             await actions.updateProfile({
+              // null → undefined: displayName cannot be cleared (backend requires 1-64 chars)
               displayName: params.displayName ?? undefined,
-              bio: params.bio ?? undefined,
+              // null → '' so the reducer's isEmpty guard fires and clears the field
+              bio: params.bio === null ? '' : params.bio,
               avatarBytes: params.avatarBytes ?? undefined,
-              profileColor: params.profileColor ?? undefined,
+              // null → '' so the reducer's isEmpty guard fires and clears the field
+              profileColor: params.profileColor === null ? '' : params.profileColor,
             })
           }}
           onSetStatus={(statusTag) => {

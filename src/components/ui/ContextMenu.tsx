@@ -53,17 +53,18 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
   return (
     <div ref={ref} style={{
       position: 'fixed', top: pos.y, left: pos.x, zIndex: 10001,
-      background: 'var(--bg-deepest)', borderRadius: 'var(--radius-md)', padding: '6px 8px',
-      minWidth: 180, boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+      background: 'var(--bg-panel)', borderRadius: '2px', padding: '4px 0',
+      minWidth: 180, boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
       border: '1px solid var(--border-subtle)',
     }}>
       {items.map((item, i) => (
         <button key={i} onClick={() => { if (!item.disabled) { item.onClick(); onClose() } }} disabled={item.disabled} style={{
           display: 'flex', alignItems: 'center', gap: 8,
-          width: '100%', padding: '6px 8px', border: 'none',
-          borderRadius: 'var(--radius-sm)', background: 'transparent',
+          width: '100%', padding: '6px 12px', border: 'none',
+          borderRadius: '0',
+          background: 'transparent',
           color: item.danger ? 'var(--text-danger)' : 'var(--text-secondary)',
-          fontSize: 14, cursor: item.disabled ? 'not-allowed' : 'pointer', textAlign: 'left',
+          fontSize: 13, cursor: item.disabled ? 'not-allowed' : 'pointer', textAlign: 'left',
           opacity: item.disabled ? 0.5 : 1,
         }}
         onMouseEnter={e => {

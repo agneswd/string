@@ -27,8 +27,8 @@ export interface VoicePanelProps {
 /* ── Inline-style helpers ── */
 const styles = {
   root: {
-    background: 'var(--bg-sidebar-dark, #1e1f22)',
-    borderTop: '1px solid var(--border-subtle, #2d3342)',
+    background: 'var(--bg-sidebar-dark, #111111)',
+    borderTop: '1px solid var(--border-subtle, #2a2a2a)',
     padding: 0,
     display: 'flex',
     flexDirection: 'column',
@@ -45,10 +45,10 @@ const styles = {
   } as CSSProperties,
 
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: '50%',
-    background: '#3ba55d',
+    width: 6,
+    height: 6,
+    borderRadius: 1,
+    background: '#5a9e7a',
     flexShrink: 0,
   } as CSSProperties,
 
@@ -61,15 +61,18 @@ const styles = {
   } as CSSProperties,
 
   statusText: {
-    fontWeight: 600,
-    fontSize: 13,
-    color: '#3ba55d',
+    fontFamily: 'var(--font-mono, "SFMono-Regular", Consolas, monospace)',
+    fontWeight: 500,
+    fontSize: 11,
+    letterSpacing: '0.04em',
+    color: '#5a9e7a',
     lineHeight: 1.2,
   } as CSSProperties,
 
   channelName: {
+    fontFamily: 'var(--font-mono, "SFMono-Regular", Consolas, monospace)',
     fontSize: 11,
-    color: 'var(--text-secondary, #9ca3af)',
+    color: 'var(--text-muted, #6b6860)',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -77,6 +80,7 @@ const styles = {
     alignItems: 'center',
     gap: 4,
     lineHeight: 1.2,
+    letterSpacing: '0.03em',
   } as CSSProperties,
 
   /* user list */
@@ -103,23 +107,24 @@ const styles = {
     width: 24,
     height: 24,
     borderRadius: '50%',
-    background: 'var(--bg-active, #3a4152)',
+    background: 'var(--bg-active, #2a2a2a)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontSize: 11,
-    fontWeight: 700,
-    color: 'var(--text-primary, #f0f1f5)',
+    fontWeight: 500,
+    color: 'var(--text-primary, #d4d0cb)',
     flexShrink: 0,
     boxSizing: 'border-box',
-    border: speaking ? '2px solid #3ba55d' : '2px solid transparent',
+    // muted speaking ring – no glow, no shadow
+    border: speaking ? '2px solid #5a9e7a' : '2px solid transparent',
     transition: 'border-color .15s ease',
     overflow: 'hidden',
   }),
 
   userName: (muted: boolean): CSSProperties => ({
-    fontSize: 13,
-    color: muted ? 'var(--text-muted, #6b7280)' : 'var(--text-primary, #f0f1f5)',
+    fontSize: 12,
+    color: muted ? 'var(--text-muted, #6b6860)' : 'var(--text-primary, #d4d0cb)',
     flex: 1,
     whiteSpace: 'nowrap',
     overflow: 'hidden',
@@ -136,19 +141,18 @@ const styles = {
   disconnectBtn: (hovered: boolean): CSSProperties => ({
     width: 24,
     height: 24,
-    borderRadius: '50%',
+    // square – no pill shape
+    borderRadius: 2,
     border: 'none',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: '#ed4245',
-    color: '#fff',
-    transition: 'opacity .15s ease, filter .15s ease',
+    background: hovered ? '#a02828' : '#b03030',
+    color: '#d4d0cb',
+    transition: 'background .15s ease',
     padding: 0,
     flexShrink: 0,
-    opacity: hovered ? 0.85 : 1,
-    filter: hovered ? 'brightness(1.15)' : 'none',
   }),
 }
 
@@ -168,21 +172,22 @@ const SmallDeafIcon = () => (
 
 /* ── Component ── */
 
-/* ── Static share button styles ── */
+/* ── Static share button styles (square, flat, no glow) ── */
 const shareButtonBase: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  width: 32,
-  height: 32,
-  borderRadius: '4px',
-  border: 'none',
+  width: 28,
+  height: 28,
+  borderRadius: 2,
+  border: '1px solid #2a2a2a',
   cursor: 'pointer',
   padding: 0,
   flexShrink: 0,
+  transition: 'background 0.15s, color 0.15s',
 }
-const shareButtonActive: CSSProperties = { ...shareButtonBase, backgroundColor: 'rgba(59,165,93,0.2)', color: '#3ba55d' }
-const shareButtonInactive: CSSProperties = { ...shareButtonBase, backgroundColor: 'transparent', color: '#b5bac1' }
+const shareButtonActive: CSSProperties = { ...shareButtonBase, backgroundColor: '#1e1e1e', borderColor: '#3a3a3a', color: '#5a9e7a' }
+const shareButtonInactive: CSSProperties = { ...shareButtonBase, backgroundColor: 'transparent', borderColor: '#2a2a2a', color: '#6b6860' }
 
 export const VoicePanel = React.memo(function VoicePanel({
   connected,
