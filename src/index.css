@@ -62,6 +62,16 @@ input:focus, textarea:focus, select:focus, button:focus-visible {
   /* Borders */
   --border-subtle: #2c2c34;
   --border-focus:  #c07a4f;
+  --border-success: rgba(74, 222, 128, 0.18);
+
+  /* Success subtle surface */
+  --bg-success-subtle: rgba(74, 222, 128, 0.07);
+
+  /* Status indicator dots */
+  --status-online:  #23a55a;
+  --status-idle:    #f0b232;
+  --status-dnd:     #f23f43;
+  --status-offline: #80848e;
 
   /* Radius */
   --radius-sm:   0.25rem;

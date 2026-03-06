@@ -115,8 +115,16 @@ export const CSS_VAR_TOKENS = {
   '--brand-primary':       '#c07a4f',
   '--brand-primary-hover': '#a8633b',
   // Borders
-  '--border-subtle': '#2c2c34',
-  '--border-focus':  '#c07a4f',
+  '--border-subtle':  '#2c2c34',
+  '--border-focus':   '#c07a4f',
+  '--border-success': 'rgba(74, 222, 128, 0.18)',
+  // Success subtle surface
+  '--bg-success-subtle': 'rgba(74, 222, 128, 0.07)',
+  // Status indicator dots
+  '--status-online':  '#23a55a',
+  '--status-idle':    '#f0b232',
+  '--status-dnd':     '#f23f43',
+  '--status-offline': '#80848e',
   // Radius
   '--radius-sm':   '0.25rem',
   '--radius-md':   '0.375rem',

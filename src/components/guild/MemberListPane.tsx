@@ -40,8 +40,8 @@ const ROOT: React.CSSProperties = {
   height: '100%',
   display: 'flex',
   flexDirection: 'column',
-  background: '#2b2d31',
-  borderLeft: '1px solid #1f2023',
+  background: 'var(--bg-sidebar-light)',
+  borderLeft: '1px solid var(--border-subtle)',
 }
 
 const SCROLL: React.CSSProperties = {
@@ -51,22 +51,22 @@ const SCROLL: React.CSSProperties = {
 }
 
 const GROUP_HEADER: React.CSSProperties = {
-  padding: '18px 8px 4px',
-  fontSize: 12,
-  fontWeight: 600,
+  padding: '16px 8px 4px',
+  fontSize: 11,
+  fontWeight: 700,
   lineHeight: '16px',
-  letterSpacing: '0.02em',
+  letterSpacing: '0.06em',
   textTransform: 'uppercase',
-  color: '#949ba4',
+  color: 'var(--text-muted)',
   userSelect: 'none',
 }
 
 const MEMBER_ROW: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: 12,
-  padding: '4px 8px',
-  borderRadius: 4,
+  gap: 10,
+  padding: '5px 8px',
+  borderRadius: 6,
   cursor: 'pointer',
   transition: 'background .12s',
 }
@@ -92,7 +92,7 @@ const STATUS_DOT: React.CSSProperties = {
   width: 10,
   height: 10,
   borderRadius: '50%',
-  border: '2px solid #2b2d31',
+  border: '2px solid var(--bg-sidebar-light)',
 }
 
 const NAME: React.CSSProperties = {
@@ -128,7 +128,7 @@ export const MemberListPane = memo(function MemberListPane({ members, title, onV
           <MemberGroup label={`Offline — ${offline.length}`} members={offline} showStatusDot={false} onViewProfile={onViewProfile} localUserId={localUserId} />
         )}
         {members.length === 0 && (
-          <p style={{ color: '#949ba4', fontSize: 13, textAlign: 'center', padding: '24px 8px' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', padding: '32px 8px', lineHeight: 1.6 }}>
             No members
           </p>
         )}
@@ -160,19 +160,20 @@ const MemberGroup = memo(function MemberGroup({ label, members, showStatusDot, o
   )
 })
 
-const MemberRow = memo(function MemberRow({ member, showStatusDot, onViewProfile, localUserId }: { member: MemberListItem; showStatusDot: boolean; onViewProfile?: (user: { displayName: string; username: string; bio?: string; status?: string; avatarUrl?: string }, x: number, y: number) => void; localUserId?: MemberId }) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const MemberRow = memo(function MemberRow({ member, showStatusDot, onViewProfile, localUserId: _localUserId }: { member: MemberListItem; showStatusDot: boolean; onViewProfile?: (user: { displayName: string; username: string; bio?: string; status?: string; avatarUrl?: string }, x: number, y: number) => void; localUserId?: MemberId }) {
   const displayName = member.displayName || member.username
   const initial = getInitial(displayName)
   const online = isOnline(member.status)
   const baseAvatarColor = getAvatarColor(displayName)
   const avatarColor = member.profileColor || baseAvatarColor
-  const nameColor = member.profileColor || (online ? '#f2f3f5' : '#71767d')
+  const nameColor = member.profileColor || (online ? 'var(--text-interactive-active)' : 'var(--text-muted)')
 
   return (
     <li
       style={MEMBER_ROW}
       onMouseEnter={(e) => {
-        ;(e.currentTarget as HTMLElement).style.background = '#35373c'
+        ;(e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'
       }}
       onMouseLeave={(e) => {
         ;(e.currentTarget as HTMLElement).style.background = 'transparent'
@@ -214,13 +215,13 @@ const MemberRow = memo(function MemberRow({ member, showStatusDot, onViewProfile
 function statusDotColor(status: string): string {
   switch (status.toLowerCase()) {
     case 'online':
-      return '#23a55a'
+      return 'var(--status-online)'
     case 'idle':
-      return '#f0b232'
+      return 'var(--status-idle)'
     case 'dnd':
     case 'do not disturb':
-      return '#f23f43'
+      return 'var(--status-dnd)'
     default:
-      return '#80848e'
+      return 'var(--status-offline)'
   }
 }

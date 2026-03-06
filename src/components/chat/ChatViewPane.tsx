@@ -182,10 +182,12 @@ const S: Record<string, CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     background: 'var(--bg-input)',
-    borderRadius: 8,
+    borderRadius: 10,
     padding: '0 16px',
     minHeight: 44,
     boxSizing: 'border-box',
+    border: '1px solid var(--border-subtle)',
+    transition: 'border-color 0.2s',
   },
   composerInput: {
     flex: 1,
@@ -303,7 +305,7 @@ export const ChatViewPane = React.memo(function ChatViewPane({
           <>
             <div style={{
               width: 24, height: 24, borderRadius: '50%',
-              backgroundColor: profileColor || '#5865f2',
+              backgroundColor: profileColor || 'var(--accent-primary)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: '#fff', fontSize: 12, fontWeight: 600, marginRight: 8, flexShrink: 0,
               overflow: 'hidden',
@@ -327,11 +329,14 @@ export const ChatViewPane = React.memo(function ChatViewPane({
       {/* ── Call active banner ── */}
       {callActive && (
         <div style={{
-          padding: '10px 16px', background: '#248046', color: '#fff',
-          display: 'flex', alignItems: 'center', gap: 8, fontSize: 14,
+          padding: '8px 16px',
+          background: 'var(--bg-success-subtle)',
+          borderBottom: '1px solid var(--border-success)',
+          color: 'var(--text-success)',
+          display: 'flex', alignItems: 'center', gap: 8, fontSize: 13,
           fontWeight: 500,
         }}>
-          <Phone style={{ width: 18, height: 18 }} />
+          <Phone style={{ width: 16, height: 16 }} />
           Voice call in progress
         </div>
       )}
@@ -570,7 +575,7 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
           right: 16,
           display: 'flex',
           gap: 2,
-          background: 'var(--bg-panel, #2b2d31)',
+          background: 'var(--bg-panel)',
           borderRadius: 4,
           border: '1px solid var(--border-subtle)',
           padding: 2,
@@ -582,7 +587,7 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
             </button>
           )}
           {canEditOrDelete && onDeleteMessage && (
-            <button type="button" onClick={() => onDeleteMessage(message.id)} style={{...actionBtnStyle, color: '#ed4245'}} title="Delete" aria-label="Delete message">
+            <button type="button" onClick={() => onDeleteMessage(message.id)} style={{...actionBtnStyle, color: 'var(--text-danger)'}} title="Delete" aria-label="Delete message">
               <Trash2 size={16} />
             </button>
           )}

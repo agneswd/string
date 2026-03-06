@@ -9,9 +9,9 @@ if (typeof document !== 'undefined' && !document.getElementById('channel-list-ho
   const style = document.createElement('style')
   style.id = 'channel-list-hover-styles'
   style.textContent = `
-    .clp-header:hover { background-color: rgba(79,84,92,0.24) !important; }
-    .clp-create-btn:hover { color: #dbdee1 !important; }
-    .clp-control-btn:hover { background-color: rgba(79,84,92,0.32) !important; }
+    .clp-header:hover { background-color: var(--bg-hover) !important; }
+    .clp-create-btn:hover { color: var(--text-interactive-hover) !important; }
+    .clp-control-btn:hover { background-color: var(--bg-hover) !important; }
   `
   document.head.appendChild(style)
 }
@@ -73,23 +73,23 @@ export interface ChannelListPaneProps {
 /* ------------------------------------------------------------------ */
 
 const colors = {
-  bg: '#2b2d31',
-  bgHeader: '#2b2d31',
-  bgHeaderBorder: '#1f2023',
-  bgHover: 'rgba(79,84,92,0.32)',
-  bgSelected: 'rgba(79,84,92,0.6)',
-  bgUserPanel: '#232428',
-  textCategory: '#949ba4',
-  textChannel: '#949ba4',
-  textChannelHover: '#dbdee1',
-  textChannelActive: '#ffffff',
-  textGuildName: '#ffffff',
-  textUserName: '#f2f3f5',
-  textUserStatus: '#949ba4',
-  badgeBg: '#f23f43',
+  bg: 'var(--bg-sidebar-light)',
+  bgHeader: 'var(--bg-sidebar-light)',
+  bgHeaderBorder: 'var(--border-subtle)',
+  bgHover: 'var(--bg-hover)',
+  bgSelected: 'var(--bg-active)',
+  bgUserPanel: 'var(--bg-sidebar-dark)',
+  textCategory: 'var(--text-muted)',
+  textChannel: 'var(--text-channels-default)',
+  textChannelHover: 'var(--text-interactive-hover)',
+  textChannelActive: 'var(--text-interactive-active)',
+  textGuildName: 'var(--text-header-primary)',
+  textUserName: 'var(--text-primary)',
+  textUserStatus: 'var(--text-muted)',
+  badgeBg: 'var(--text-danger)',
   badgeText: '#ffffff',
-  iconMuted: '#f23f43',
-  iconDefault: '#b5bac1',
+  iconMuted: 'var(--text-danger)',
+  iconDefault: 'var(--text-interactive-normal)',
 } as const
 
 const S = {
@@ -235,7 +235,7 @@ const S = {
     width: 32,
     height: 32,
     borderRadius: '50%',
-    backgroundColor: '#5865f2',
+    backgroundColor: 'var(--accent-primary)',
     color: '#fff',
     display: 'flex',
     alignItems: 'center',
@@ -394,8 +394,8 @@ export function ChannelListPane({
         : {}),
       ...(isCurrentVoice
         ? {
-            backgroundColor: 'rgba(59,165,93,0.15)',
-            boxShadow: 'inset 2px 0 0 #3ba55d',
+            backgroundColor: 'var(--accent-subtle)',
+            boxShadow: 'inset 2px 0 0 var(--text-success)',
           }
         : {}),
     }
@@ -436,7 +436,7 @@ export function ChannelListPane({
               gap: '6px',
               padding: '2px 8px 2px 44px',
               fontSize: '13px',
-              color: 'var(--text-channels-default, #949ba4)',
+              color: 'var(--text-channels-default)',
             }}
           >
             <div
@@ -454,7 +454,7 @@ export function ChannelListPane({
                 flexShrink: 0,
                 overflow: 'hidden',
                 border: user.isSpeaking
-                  ? '2px solid #3ba55d'
+                  ? '2px solid var(--text-success)'
                   : '2px solid transparent',
                 transition: 'border-color 0.15s',
               }}
@@ -477,7 +477,7 @@ export function ChannelListPane({
             {user.isStreaming && (
               <>
                 <button onClick={(e) => { e.stopPropagation(); onViewScreenShare?.(user.identity); }} style={{
-                  backgroundColor: '#ed4245',
+                  backgroundColor: 'var(--text-danger)',
                   color: '#fff',
                   fontSize: '10px',
                   fontWeight: 700,
@@ -509,7 +509,7 @@ export function ChannelListPane({
             )}
             {locallyMutedUsers?.has(user.identity) && (
               <span title="Locally muted" style={{ opacity: 0.9, display: 'flex', alignItems: 'center' }}>
-                <MicOff size={16} color="#ed4245" />
+                <MicOff size={16} color="var(--text-danger)" />
               </span>
             )}
           </div>
