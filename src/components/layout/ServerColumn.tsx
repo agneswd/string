@@ -3,7 +3,10 @@ import { ServerColumnClassic } from './ServerColumnClassic'
 import { ServerColumnString } from './ServerColumnString'
 
 export interface ServerColumnProps {
-  orderedGuilds: Array<{ guildId: unknown; name: string }>
+  orderedGuilds: Array<{ guildId: unknown; name: string; avatarBytes?: Uint8Array | null }>
+  dmQuickEntries?: Array<{ channelId: string; label: string; avatarUrl?: string; unreadCount?: number; hasActiveCall?: boolean }>
+  selectedDmChannelId?: string
+  onSelectDmChannel?: (channelId: string) => void
   selectedGuildId: string | null
   onSelectGuild: (id: string) => void
   onHomeClick: () => void

@@ -9,8 +9,19 @@ export interface GuildListItem {
   iconUrl?: string
 }
 
+export interface DmQuickEntry {
+  channelId: string
+  label: string
+  avatarUrl?: string
+  unreadCount?: number
+  hasActiveCall?: boolean
+}
+
 export interface ServerListPaneVariantProps {
   guilds: GuildListItem[]
+  dmQuickEntries?: DmQuickEntry[]
+  selectedDmChannelId?: string
+  onSelectDmChannel?: (channelId: string) => void
   selectedGuildId?: GuildId
   onSelectGuild?: (guildId: GuildId) => void
   onHomeClick?: () => void
@@ -193,6 +204,7 @@ export function ServerIcon({
   isSelected,
   hasUnread,
   unreadCount,
+  statusBadge,
   iconUrl,
   bgActive,
   bgHover,
@@ -204,6 +216,7 @@ export function ServerIcon({
   isSelected: boolean
   hasUnread?: boolean
   unreadCount?: number
+  statusBadge?: ReactNode
   iconUrl?: string
   bgActive?: string
   bgHover?: string
@@ -263,6 +276,8 @@ export function ServerIcon({
       {!!unreadCount && unreadCount > 0 && (
         <span style={badgeStyle}>{unreadCount > 99 ? '99+' : unreadCount}</span>
       )}
+
+      {statusBadge}
 
       <Tooltip text={label} visible={hovered} />
     </div>

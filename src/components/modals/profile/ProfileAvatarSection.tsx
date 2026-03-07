@@ -69,8 +69,8 @@ export const ProfileAvatarSection = React.memo(function ProfileAvatarSection({
           />
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0, flex: '1 1 220px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
             <button type="button" onClick={onUploadClick} style={S_uploadBtn} className="string-outline-button">
               Upload Avatar
             </button>

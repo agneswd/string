@@ -70,7 +70,7 @@ describe('MemberListPane', () => {
 
   it('renders the owner crown icon for owner members', () => {
     renderPane({ members: [...members, ownerMember] })
-    const crown = screen.getByRole('img', { name: /server owner/i })
+    const crown = screen.getByRole('img', { name: /loom owner/i })
     expect(crown).toBeTruthy()
   })
 

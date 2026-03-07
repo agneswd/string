@@ -6,6 +6,7 @@ import type { AppData } from './useAppData'
 import type { ActionFeedback } from './useActionFeedback'
 import type { DmCallEvent, DmChannel, DmMessage } from '../module_bindings/types'
 import { toIdKey, identityToString, formatTimestamp, compareById, toSortableBigInt } from '../lib/helpers'
+import { readNavigationState, writeNavigationState } from '../lib/navigationStateStorage'
 
 interface ReactionEntry {
   emoji: string
@@ -87,20 +88,33 @@ export function useDmChat({
   setActionError,
   setActionStatus,
 }: UseDmChatParams) {
+  const storedNavigationState = readNavigationState()
   const {
     dmChannels,
     dmParticipants,
     dmMessages,
     dmReactions,
     dmCallEvents,
+    dmUnreadCountsByChannel,
     dmLastMessageByChannel,
     identityString,
     usersByIdentity,
     extendedActions,
   } = appData
 
-  const [selectedDmChannelId, setSelectedDmChannelId] = useState<string | undefined>(undefined)
-  const [hiddenDmChannelIds, setHiddenDmChannelIds] = useState<Set<string>>(() => new Set())
+  const [selectedDmChannelId, setSelectedDmChannelId] = useState<string | undefined>(storedNavigationState.selectedDmChannelId)
+  const [hiddenDmChannelIds, setHiddenDmChannelIds] = useState<Set<string>>(() => new Set(storedNavigationState.hiddenDmChannelIds ?? []))
+
+  const participantsByChannel = useMemo(() => {
+    const groupedParticipants = new Map<string, string[]>()
+    for (const participant of dmParticipants) {
+      const channelId = toIdKey(participant.dmChannelId)
+      const nextParticipants = groupedParticipants.get(channelId) ?? []
+      nextParticipants.push(identityToString(participant.identity))
+      groupedParticipants.set(channelId, nextParticipants)
+    }
+    return groupedParticipants
+  }, [dmParticipants])
 
   const myDmChannels = useMemo(() => {
     if (!identityString) {
@@ -113,22 +127,34 @@ export function useDmChat({
         .map((participant) => toIdKey(participant.dmChannelId)),
     )
 
-    return dmChannels
+    const availableChannels = dmChannels
       .filter((channel) => dmIdsForMe.has(toIdKey(channel.dmChannelId)))
       .slice()
       .sort((left, right) => compareById(left.dmChannelId, right.dmChannelId))
-  }, [dmChannels, dmParticipants, identityString])
 
-  const directDmChannelIdByFriendIdentity = useMemo(() => {
-    const participantsByChannel = new Map<string, string[]>()
+    const canonicalDirectChannels = new Map<string, DmChannel>()
+    const nonDirectChannels: DmChannel[] = []
 
-    for (const participant of dmParticipants) {
-      const channelId = toIdKey(participant.dmChannelId)
-      const current = participantsByChannel.get(channelId) ?? []
-      current.push(identityToString(participant.identity))
-      participantsByChannel.set(channelId, current)
+    for (const channel of availableChannels) {
+      const channelId = toIdKey(channel.dmChannelId)
+      const uniqueParticipants = Array.from(new Set(participantsByChannel.get(channelId) ?? []))
+      const otherParticipants = uniqueParticipants.filter((participantId) => participantId !== identityString)
+
+      if (uniqueParticipants.length === 2 && otherParticipants.length === 1) {
+        const existingChannel = canonicalDirectChannels.get(otherParticipants[0])
+        if (!existingChannel || compareById(existingChannel.dmChannelId, channel.dmChannelId) < 0) {
+          canonicalDirectChannels.set(otherParticipants[0], channel)
+        }
+        continue
+      }
+
+      nonDirectChannels.push(channel)
     }
 
+    return [...nonDirectChannels, ...canonicalDirectChannels.values()].sort((left, right) => compareById(left.dmChannelId, right.dmChannelId))
+  }, [dmChannels, dmParticipants, identityString, participantsByChannel])
+
+  const directDmChannelIdByFriendIdentity = useMemo(() => {
     const result = new Map<string, string>()
     if (!identityString) {
       return result
@@ -148,7 +174,7 @@ export function useDmChat({
     }
 
     return result
-  }, [dmParticipants, identityString, myDmChannels])
+  }, [identityString, myDmChannels, participantsByChannel])
 
   useEffect(() => {
     const availableChannelIds = new Set(myDmChannels.map((channel) => toIdKey(channel.dmChannelId)))
@@ -157,6 +183,14 @@ export function useDmChat({
       return next.size === current.size ? current : next
     })
   }, [myDmChannels])
+
+  useEffect(() => {
+    writeNavigationState({ selectedDmChannelId })
+  }, [selectedDmChannelId])
+
+  useEffect(() => {
+    writeNavigationState({ hiddenDmChannelIds: Array.from(hiddenDmChannelIds) })
+  }, [hiddenDmChannelIds])
 
   const dmListItems = useMemo(() => {
     const mapUserStatus = (tag: string): 'online' | 'idle' | 'dnd' | 'offline' => {
@@ -168,52 +202,63 @@ export function useDmChat({
       }
     }
 
-    return myDmChannels.map((channel) => {
-      const dmChannelKey = toIdKey(channel.dmChannelId)
-      const otherParticipantIds = dmParticipants
-        .filter((participant) => toIdKey(participant.dmChannelId) === dmChannelKey)
-        .map((participant) => identityToString(participant.identity))
-        .filter((participantId) => participantId && participantId !== identityString)
+    return myDmChannels
+      .map((channel) => {
+        const dmChannelKey = toIdKey(channel.dmChannelId)
+        const otherParticipantIds = dmParticipants
+          .filter((participant) => toIdKey(participant.dmChannelId) === dmChannelKey)
+          .map((participant) => identityToString(participant.identity))
+          .filter((participantId) => participantId && participantId !== identityString)
 
-      const primaryOtherUser = otherParticipantIds.length > 0
-        ? usersByIdentity.get(otherParticipantIds[0])
-        : undefined
+        const primaryOtherUser = otherParticipantIds.length > 0
+          ? usersByIdentity.get(otherParticipantIds[0])
+          : undefined
 
-      const names = otherParticipantIds.map((participantId) => {
-        const participantUser = usersByIdentity.get(participantId)
-        return participantUser?.displayName ?? participantUser?.username ?? participantId.slice(0, 12)
+        const names = otherParticipantIds.map((participantId) => {
+          const participantUser = usersByIdentity.get(participantId)
+          return participantUser?.displayName ?? participantUser?.username ?? participantId.slice(0, 12)
+        })
+
+        let status: 'online' | 'idle' | 'dnd' | 'offline' = 'offline'
+        if (primaryOtherUser?.status && typeof primaryOtherUser.status === 'object' && 'tag' in primaryOtherUser.status) {
+          status = mapUserStatus((primaryOtherUser.status as { tag: string }).tag)
+        }
+
+        const avatarUrl = avatarBytesToUrl(primaryOtherUser?.avatarBytes)
+        const profileColor = primaryOtherUser?.profileColor ?? undefined
+
+        if (otherParticipantIds.length > 0 && !primaryOtherUser) {
+          status = 'offline'
+        }
+
+        const latestDmMessage = dmLastMessageByChannel.get(dmChannelKey)
+        const unreadCount = dmUnreadCountsByChannel.get(dmChannelKey) ?? 0
+
+        return {
+          id: dmChannelKey,
+          name: names.length > 0 ? names.join(', ') : `dm-${dmChannelKey}`,
+          avatarUrl,
+          profileColor,
+          status,
+          unreadCount,
+          lastMessage: latestDmMessage ? String(latestDmMessage.content ?? '') : undefined,
+          sortTime: latestDmMessage ? timestampToMillis(latestDmMessage.sentAt) : 0,
+          sortId: latestDmMessage?.dmMessageId ? toSortableBigInt(latestDmMessage.dmMessageId) : null,
+        }
       })
+      .sort((left, right) => {
+        if (left.sortTime !== right.sortTime) {
+          return right.sortTime - left.sortTime
+        }
 
-      // Derive status from the first other participant
-      let status: 'online' | 'idle' | 'dnd' | 'offline' = 'offline'
-      if (primaryOtherUser?.status && typeof primaryOtherUser.status === 'object' && 'tag' in primaryOtherUser.status) {
-        status = mapUserStatus((primaryOtherUser.status as { tag: string }).tag)
-      }
+        if (left.sortId !== null && right.sortId !== null && left.sortId !== right.sortId) {
+          return left.sortId < right.sortId ? 1 : -1
+        }
 
-      const avatarUrl = avatarBytesToUrl(primaryOtherUser?.avatarBytes)
-      const profileColor = primaryOtherUser?.profileColor ?? undefined
-
-      if (otherParticipantIds.length > 0 && !primaryOtherUser) {
-        status = 'offline'
-      }
-
-      const latestDmMessage = dmLastMessageByChannel.get(dmChannelKey)
-      const myParticipant = dmParticipants.find((p) => toIdKey(p.dmChannelId) === dmChannelKey && identityToString(p.identity) === identityString)
-      const lastReadId = myParticipant?.lastReadMessageId ? toSortableBigInt(myParticipant.lastReadMessageId) : null
-      const latestMessageId = latestDmMessage?.dmMessageId ? toSortableBigInt(latestDmMessage.dmMessageId) : null
-      const hasUnread = latestMessageId && latestDmMessage?.authorIdentity && identityToString(latestDmMessage.authorIdentity) !== identityString && (!lastReadId || latestMessageId > lastReadId) ? 1 : 0
-
-      return {
-        id: dmChannelKey,
-        name: names.length > 0 ? names.join(', ') : `dm-${dmChannelKey}`,
-        avatarUrl,
-        profileColor,
-        status,
-        unreadCount: hasUnread,
-        lastMessage: latestDmMessage ? String(latestDmMessage.content ?? '') : undefined,
-      }
-    })
-  }, [dmParticipants, identityString, myDmChannels, usersByIdentity, dmLastMessageByChannel])
+        return left.name.localeCompare(right.name)
+      })
+      .map(({ sortTime: _sortTime, sortId: _sortId, ...item }) => item)
+  }, [dmLastMessageByChannel, dmParticipants, dmUnreadCountsByChannel, identityString, myDmChannels, usersByIdentity])
 
   const selectedDmChannel = useMemo(
     () => myDmChannels.find((channel) => toIdKey(channel.dmChannelId) === selectedDmChannelId) ?? null,
@@ -240,7 +285,11 @@ export function useDmChat({
 
     for (const friendIdentity of friendIdentityById.values()) {
       const friendIdentityStr = identityToString(friendIdentity)
-      if (!friendIdentityStr || directDmChannelIdByFriendIdentity.has(friendIdentityStr)) {
+      if (
+        !friendIdentityStr
+        || directDmChannelIdByFriendIdentity.has(friendIdentityStr)
+        || identityString.localeCompare(friendIdentityStr) > 0
+      ) {
         continue
       }
 

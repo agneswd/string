@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useCallback, type CSSProperties } from 'react'
 import { Phone, PhoneOff } from 'lucide-react'
+import { trackAudioContext, untrackAudioContext } from '../../lib/connection'
 
 export interface IncomingCallModalProps {
   callerName: string
@@ -126,7 +127,10 @@ export const IncomingCallModal = React.memo(function IncomingCallModal({
 
     const playRing = () => {
       try {
-        if (!ctx) ctx = new AudioContext()
+        if (!ctx) {
+          ctx = new AudioContext()
+          trackAudioContext(ctx)
+        }
         const now = ctx.currentTime
 
         // Two-tone ring pattern: 440Hz then 520Hz
@@ -155,7 +159,12 @@ export const IncomingCallModal = React.memo(function IncomingCallModal({
 
     return () => {
       if (intervalId !== undefined) clearInterval(intervalId)
-      try { ctx?.close() } catch { /* */ }
+      try {
+        if (ctx) {
+          ctx.close()
+          untrackAudioContext(ctx)
+        }
+      } catch { /* */ }
     }
   }, [])
 

@@ -16,7 +16,7 @@ export function TopNavBarString({
   onInitiateDmCall,
   channelName,
 }: TopNavBarVariantProps) {
-  const contextLabel = isDmMode ? (dmName ?? 'Direct Messages') : (guildName ?? 'Workspace')
+  const contextLabel = isDmMode ? (dmName ?? 'Direct Messages') : (guildName ?? 'Loom')
   const channelLabel = isHomeView ? null : (channelName ?? (isDmMode ? dmName : null))
   const showSingleContextLabel = !isHomeView && (channelLabel == null || channelLabel === contextLabel)
   const badgeLabel = isHomeView ? 'home' : contextLabel

@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 
 // ── Static styles (extracted to avoid re-allocation on every render) ──────────
-export const S_appShell: CSSProperties = { display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }
+export const S_appShell: CSSProperties = { display: 'flex', flexDirection: 'column', height: '100dvh', minHeight: '100dvh', overflow: 'hidden' }
 export const S_main: CSSProperties = { flex: 1, display: 'flex', minHeight: 0, height: '100%', overflow: 'hidden' }
 export const S_userPanel: CSSProperties = {
   display: 'flex', alignItems: 'center', padding: '0 8px', height: '48px',

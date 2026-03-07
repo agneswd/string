@@ -1,4 +1,4 @@
-import { type FormEvent, useState, useMemo, useCallback } from 'react'
+import { type FormEvent, useState, useMemo, useCallback, useEffect } from 'react'
 import { Search } from 'lucide-react'
 import { useLayoutMode } from '../../hooks/useLayoutMode'
 import { buildPanelStyles, buildHoverCSS } from './friends/FriendsStyles'
@@ -48,6 +48,17 @@ export function FriendRequestPanel({
   const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; ok: boolean } | null>(null)
   const [addFocused, setAddFocused] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
+  const [isMobileViewport, setIsMobileViewport] = useState(false)
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 640px)')
+    const applyMatch = (matches: boolean) => setIsMobileViewport(matches)
+
+    applyMatch(mediaQuery.matches)
+    const handleChange = (event: MediaQueryListEvent) => applyMatch(event.matches)
+    mediaQuery.addEventListener('change', handleChange)
+    return () => mediaQuery.removeEventListener('change', handleChange)
+  }, [])
 
   const pendingCount = incomingRequests.length + outgoingRequests.length + (guildInvites?.length ?? 0)
 
@@ -196,10 +207,14 @@ export function FriendRequestPanel({
 
       {/* Tab bar */}
       <div style={s.toolbar}>
-        <span style={s.toolbarTitle}>
-          Friends
-        </span>
-        <div style={s.divider} />
+        {!isMobileViewport && (
+          <>
+            <span style={s.toolbarTitle}>
+              Friends
+            </span>
+            <div style={s.divider} />
+          </>
+        )}
 
         {(['online', 'all', 'pending'] as const).map((tab) => (
           <button

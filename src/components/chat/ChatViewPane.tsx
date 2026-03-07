@@ -8,8 +8,8 @@
  * file under 500 LOC.
  */
 
-import React, { type FormEvent, useEffect, useRef, useMemo, useCallback, type CSSProperties } from 'react'
-import { Phone } from 'lucide-react'
+import React, { type FormEvent, useEffect, useRef, useMemo, useCallback, useState, type CSSProperties } from 'react'
+import { ChevronDown, Phone } from 'lucide-react'
 import { type ReactionBarItem } from './ReactionBar'
 import { ChatMessageRow } from './view/ChatMessageRow'
 import type { LayoutMode } from '../../constants/theme'
@@ -50,6 +50,7 @@ const S: Record<string, CSSProperties> = {
     minWidth: 0,
     minHeight: 0,
     overflow: 'hidden',
+    position: 'relative',
   },
   header: {
     height: 48,
@@ -77,13 +78,13 @@ const S: Record<string, CSSProperties> = {
     overflowX: 'hidden',
     display: 'flex',
     flexDirection: 'column',
-    padding: '0 0 8px 0',
+    padding: '0 0 16px 0',
     margin: 0,
     listStyle: 'none',
     minHeight: 0,
   },
   composerWrap: {
-    padding: '0 16px 24px 16px',
+    padding: '12px 16px 24px 16px',
     flexShrink: 0,
     boxSizing: 'border-box',
     position: 'relative',
@@ -98,6 +99,26 @@ const S: Record<string, CSSProperties> = {
     fontSize: '0.9375rem',
     padding: '11px 0',
     lineHeight: '1.375rem',
+  },
+  jumpToLatestButton: {
+    position: 'absolute',
+    right: 16,
+    bottom: 84,
+    width: 40,
+    height: 40,
+    padding: 0,
+    borderRadius: 2,
+    border: '1px solid var(--border-subtle)',
+    background: 'var(--bg-panel)',
+    color: 'var(--text-primary)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    zIndex: 50,
+    boxSizing: 'border-box',
+    overflow: 'visible',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.28)',
   },
 }
 
@@ -127,6 +148,19 @@ export const ChatViewPane = React.memo(function ChatViewPane({
 }: ChatViewPaneProps) {
   const listRef = useRef<HTMLUListElement>(null)
   const bottomRef = useRef<HTMLLIElement>(null)
+  const composerInputRef = useRef<HTMLInputElement>(null)
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false)
+
+  const updateJumpButtonVisibility = useCallback(() => {
+    const list = listRef.current
+    if (!list) {
+      setShowJumpToLatest(false)
+      return
+    }
+
+    const distanceFromBottom = list.scrollHeight - list.scrollTop - list.clientHeight
+    setShowJumpToLatest(distanceFromBottom > 48)
+  }, [])
 
   // Auto-scroll to bottom when new messages arrive
   const prevLastMsgId = useRef<string | number | undefined>(undefined)
@@ -137,7 +171,27 @@ export const ChatViewPane = React.memo(function ChatViewPane({
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
     prevLastMsgId.current = lastId
-  }, [messages])
+    updateJumpButtonVisibility()
+  }, [messages, updateJumpButtonVisibility])
+
+  useEffect(() => {
+    const list = listRef.current
+    if (!list) {
+      return
+    }
+
+    updateJumpButtonVisibility()
+    list.addEventListener('scroll', updateJumpButtonVisibility)
+
+    return () => {
+      list.removeEventListener('scroll', updateJumpButtonVisibility)
+    }
+  }, [updateJumpButtonVisibility])
+
+  const handleJumpToLatest = useCallback(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    setShowJumpToLatest(false)
+  }, [])
 
   const handleSubmit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
@@ -145,6 +199,9 @@ export const ChatViewPane = React.memo(function ChatViewPane({
       const msg = composerValue.trim()
       if (!msg) return
       onSend(msg)
+      requestAnimationFrame(() => {
+        composerInputRef.current?.focus()
+      })
     },
     [composerValue, onSend],
   )
@@ -300,9 +357,22 @@ export const ChatViewPane = React.memo(function ChatViewPane({
         <li ref={bottomRef} role="presentation" aria-hidden="true" />
       </ul>
 
+      {showJumpToLatest && (
+        <button
+          type="button"
+          aria-label="Jump to latest message"
+          title="Jump to latest"
+          onClick={handleJumpToLatest}
+          style={S.jumpToLatestButton}
+        >
+          <ChevronDown size={24} strokeWidth={2.5} aria-hidden="true" style={{ display: 'block' }} />
+        </button>
+      )}
+
       <form style={S.composerWrap} onSubmit={handleSubmit}>
         <div className="chat-composer-box" style={composerBoxStyle}>
           <input
+            ref={composerInputRef}
             style={S.composerInput}
             value={composerValue}
             onChange={(e) => onComposerChange(e.target.value)}
@@ -312,6 +382,8 @@ export const ChatViewPane = React.memo(function ChatViewPane({
           <button
             type="submit"
             disabled={!composerValue.trim()}
+            onMouseDown={(event) => event.preventDefault()}
+            onPointerDown={(event) => event.preventDefault()}
             style={sendBtnStyle}
           >
             Send

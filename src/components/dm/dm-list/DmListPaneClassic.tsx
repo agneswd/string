@@ -9,11 +9,24 @@ import type { DmListPaneProps, DmChannelId } from './types'
 
 /* ── Status indicator colors ── */
 const STATUS_COLORS: Record<string, string> = {
-  online: '#23a55a',
-  idle: '#f0b232',
-  dnd: '#f23f43',
-  offline: '#80848e',
+  online: 'var(--status-online)',
+  idle: 'var(--status-idle)',
+  dnd: 'var(--status-dnd)',
+  offline: 'var(--status-offline)',
 }
+
+const CLASSIC_DM_COLORS = {
+  background: 'var(--bg-sidebar-light)',
+  panel: 'var(--bg-panel)',
+  border: 'var(--border-subtle)',
+  hover: 'var(--bg-hover)',
+  active: 'var(--bg-active)',
+  textPrimary: 'var(--text-primary)',
+  textSecondary: 'var(--text-secondary)',
+  textMuted: 'var(--text-muted)',
+  textDanger: 'var(--text-danger)',
+  textSuccess: 'var(--text-success)',
+} as const
 
 /* ── Styles ── */
 const rootStyle: React.CSSProperties = {
@@ -21,8 +34,8 @@ const rootStyle: React.CSSProperties = {
   flexDirection: 'column',
   height: '100%',
   minHeight: 0,
-  background: '#2b2d31',
-  color: '#949ba4',
+  background: CLASSIC_DM_COLORS.background,
+  color: CLASSIC_DM_COLORS.textMuted,
   fontFamily: 'gg sans, Noto Sans, Helvetica Neue, Helvetica, Arial, sans-serif',
 }
 
@@ -33,7 +46,7 @@ const headerStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  borderBottom: '1px solid #1f2023',
+  borderBottom: `1px solid ${CLASSIC_DM_COLORS.border}`,
   boxShadow: '0 1px 0 rgba(0,0,0,.2), 0 1.5px 0 rgba(0,0,0,.06)',
 }
 
@@ -50,8 +63,8 @@ const searchInputStyle: React.CSSProperties = {
   outline: 'none',
   padding: '0 8px',
   fontSize: 13,
-  background: '#1e1f22',
-  color: '#dbdee1',
+  background: CLASSIC_DM_COLORS.panel,
+  color: CLASSIC_DM_COLORS.textPrimary,
 }
 
 const navBtnStyle = (active: boolean, hovered: boolean): React.CSSProperties => ({
@@ -67,8 +80,8 @@ const navBtnStyle = (active: boolean, hovered: boolean): React.CSSProperties => 
   textAlign: 'left' as const,
   fontSize: 15,
   fontWeight: 500,
-  background: active ? 'rgba(79,84,92,.6)' : hovered ? 'rgba(79,84,92,.32)' : 'transparent',
-  color: active ? '#f2f3f5' : hovered ? '#dbdee1' : '#949ba4',
+  background: active ? CLASSIC_DM_COLORS.active : hovered ? CLASSIC_DM_COLORS.hover : 'transparent',
+  color: active ? CLASSIC_DM_COLORS.textPrimary : hovered ? CLASSIC_DM_COLORS.textPrimary : CLASSIC_DM_COLORS.textMuted,
   transition: 'background .12s, color .12s',
 })
 
@@ -78,7 +91,7 @@ const sectionLabelStyle: React.CSSProperties = {
   fontWeight: 600,
   letterSpacing: '0.02em',
   textTransform: 'uppercase',
-  color: '#949ba4',
+  color: CLASSIC_DM_COLORS.textMuted,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
@@ -104,8 +117,8 @@ const itemStyle = (active: boolean, hovered: boolean): React.CSSProperties => ({
   cursor: 'pointer',
   width: 'calc(100% - 16px)',
   textAlign: 'left' as const,
-  background: active ? 'rgba(79,84,92,.6)' : hovered ? 'rgba(79,84,92,.32)' : 'transparent',
-  color: active ? '#f2f3f5' : hovered ? '#dbdee1' : '#949ba4',
+  background: active ? CLASSIC_DM_COLORS.active : hovered ? CLASSIC_DM_COLORS.hover : 'transparent',
+  color: active ? CLASSIC_DM_COLORS.textPrimary : hovered ? CLASSIC_DM_COLORS.textPrimary : CLASSIC_DM_COLORS.textMuted,
   transition: 'background .12s, color .12s',
   position: 'relative' as const,
 })
@@ -139,7 +152,7 @@ const statusDotStyle = (status: string): React.CSSProperties => ({
   width: 10,
   height: 10,
   borderRadius: '50%',
-  border: '2.5px solid #2b2d31',
+  border: `2.5px solid ${CLASSIC_DM_COLORS.background}`,
   background: STATUS_COLORS[status] ?? STATUS_COLORS.offline,
   boxSizing: 'content-box',
 })
@@ -167,7 +180,7 @@ const previewTextStyle: React.CSSProperties = {
   whiteSpace: 'nowrap',
   fontSize: 12,
   lineHeight: '16px',
-  color: '#949ba4',
+  color: CLASSIC_DM_COLORS.textMuted,
 }
 
 const closeStyle = (visible: boolean): React.CSSProperties => ({
@@ -179,7 +192,7 @@ const closeStyle = (visible: boolean): React.CSSProperties => ({
   borderRadius: '50%',
   border: 'none',
   background: 'transparent',
-  color: '#b5bac1',
+  color: CLASSIC_DM_COLORS.textSecondary,
   cursor: 'pointer',
   flexShrink: 0,
   padding: 0,
@@ -191,8 +204,8 @@ const badgeStyle: React.CSSProperties = {
   height: 16,
   borderRadius: 8,
   padding: '0 5px',
-  background: '#f23f43',
-  color: '#fff',
+  background: CLASSIC_DM_COLORS.textDanger,
+  color: 'var(--bg-deepest)',
   fontSize: 11,
   fontWeight: 700,
   display: 'flex',
@@ -237,6 +250,20 @@ export const DmListPaneClassic = memo(function DmListPaneClassic({
       style={rootStyle}
       aria-label="Direct Messages"
     >
+      {/* ── Search ── */}
+      <header style={headerStyle}>
+        <div style={searchWrapStyle}>
+          <input
+            type="search"
+            placeholder="Search Direct Messages"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            style={searchInputStyle}
+            aria-label="Search direct messages"
+          />
+        </div>
+      </header>
+
       {/* ── Nav buttons ── */}
       <div style={navBtnPadStyle}>
         <button
@@ -264,7 +291,7 @@ export const DmListPaneClassic = memo(function DmListPaneClassic({
             style={{
               background: 'transparent',
               border: 'none',
-              color: '#949ba4',
+              color: CLASSIC_DM_COLORS.textMuted,
               cursor: 'pointer',
               fontSize: 18,
               lineHeight: 1,
@@ -283,7 +310,7 @@ export const DmListPaneClassic = memo(function DmListPaneClassic({
             style={{
               padding: '16px 20px',
               fontSize: 13,
-              color: '#6d6f78',
+              color: CLASSIC_DM_COLORS.textMuted,
               textAlign: 'center',
             }}
           >
@@ -294,7 +321,7 @@ export const DmListPaneClassic = memo(function DmListPaneClassic({
           const key = String(channel.id)
           const isActive = key === String(selectedChannelId)
           const isHovered = hoveredId === channel.id
-          const bg = channel.avatarUrl ? '#2b2d31' : getAvatarColor(channel.name)
+          const bg = channel.avatarUrl ? CLASSIC_DM_COLORS.background : getAvatarColor(channel.name)
           const status = channel.status ?? 'offline'
 
           return (
@@ -332,7 +359,7 @@ export const DmListPaneClassic = memo(function DmListPaneClassic({
                   <span style={{ ...nameTextStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
                     {channel.name}
                     {activeCallChannelIds?.has(String(channel.id)) && (
-                      <Phone style={{ width: 14, height: 14, color: '#43b581', flexShrink: 0 }} aria-label="In call" />
+                      <Phone style={{ width: 14, height: 14, color: CLASSIC_DM_COLORS.textSuccess, flexShrink: 0 }} aria-label="In call" />
                     )}
                   </span>
                   {channel.lastMessage && (
@@ -359,7 +386,7 @@ export const DmListPaneClassic = memo(function DmListPaneClassic({
                       borderRadius: '50%',
                       border: 'none',
                       background: 'transparent',
-                      color: '#b5bac1',
+                      color: CLASSIC_DM_COLORS.textSecondary,
                       cursor: 'pointer',
                       flexShrink: 0,
                       padding: 0,
@@ -411,19 +438,6 @@ export const DmListPaneClassic = memo(function DmListPaneClassic({
         })}
       </ul>
 
-      {/* ── Search bar (footer position, matches Phase 1 layout) ── */}
-      <header style={headerStyle}>
-        <div style={searchWrapStyle}>
-          <input
-            type="text"
-            placeholder="Search Direct Messages"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            style={searchInputStyle}
-            aria-label="Search direct messages"
-          />
-        </div>
-      </header>
     </nav>
   )
 })

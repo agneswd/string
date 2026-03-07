@@ -38,8 +38,7 @@ describe('SidebarBottom — layoutMode forwarding to UserPanel', () => {
     const { container } = render(
       <SidebarBottom {...baseProps} layoutMode="string" />,
     )
-    // Workspace UserPanel: fallback avatar uses borderRadius: '8px'
-    const rectAvatar = container.querySelector<HTMLElement>('div[style*="border-radius: 8px"]')
+    const rectAvatar = container.querySelector<HTMLElement>('div[style*="border-radius: var(--radius-sm)"]')
     expect(rectAvatar).toBeTruthy()
   })
 

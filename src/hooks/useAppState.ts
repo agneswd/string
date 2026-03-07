@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ProfilePopupUser } from '../components/social/UserProfilePopup'
 import type { NotificationItem } from '../components/ui/NotificationToast'
-import { getConn } from '../lib/connection'
 
 export type ProfilePopupState = { userId: string } | null
 export type GuildPopupState = { guildId: string } | null
-import { stringStore } from '../lib/stringStore'
 
 export interface AppStateParams {
   /** From voice hook: key identifying the screen share being viewed */
@@ -40,8 +38,8 @@ export function useAppState(params: AppStateParams) {
   // Derived mute/deafen values
   const isMuted = currentVoiceIsMuted ?? preMuted
   const isDeafened = currentVoiceIsDeafened ?? preDeafened
-  const muteColor = isMuted ? '#ed4245' : '#b5bac1'
-  const deafenColor = isDeafened ? '#ed4245' : '#b5bac1'
+  const muteColor = isMuted ? 'var(--text-danger)' : 'var(--text-secondary)'
+  const deafenColor = isDeafened ? 'var(--text-danger)' : 'var(--text-secondary)'
 
   // ---------------------------------------------------------------------------
   // Local state
@@ -106,21 +104,6 @@ export function useAppState(params: AppStateParams) {
     return () => clearTimeout(timer)
   }, [connectionStatus])
 
-  // Auth callbacks
-  const onRegister = useCallback(async (username: string, displayName: string): Promise<void> => {
-    await runAction(async () => {
-      await actions.registerUser({ username, displayName })
-    }, 'Registered')
-  }, [runAction, actions])
-
-  const onLoginAsUser = useCallback(async (loginUsername: string): Promise<void> => {
-    const conn = getConn()
-    await conn.reducers.loginAsUser({ username: loginUsername })
-    // Disconnect and reconnect so the store syncs fresh data without a page reload
-    stringStore.disconnect()
-    stringStore.connect()
-  }, [])
-
   // Audio streams derived from remoteStreams
   const audioStreams = useMemo(
     () => Array.from(remoteStreams.entries()).filter(([key]) => key.endsWith(':audio')),
@@ -144,8 +127,6 @@ export function useAppState(params: AppStateParams) {
     toggleLocalMuteUser,
     handleToggleScreenShare,
     viewingScreenStream,
-    onRegister,
-    onLoginAsUser,
     audioStreams,
     isMuted,
     isDeafened,

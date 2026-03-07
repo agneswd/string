@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, memo, type MouseEvent, type ReactNode } from 'react'
-import { UserPlus, LogOut, Clipboard, Trash2, LineSquiggle, Info, Settings } from 'lucide-react'
+import { UserPlus, LogOut, Clipboard, Trash2, LineSquiggle, Info, Settings, Phone } from 'lucide-react'
 import {
   ContextMenuItem,
   getInitials,
@@ -18,6 +18,8 @@ function StringRow({
   iconUrl,
   initials,
   isHome,
+  compact = false,
+  statusBadge,
   onClick,
   onContextMenu,
   children,
@@ -30,6 +32,8 @@ function StringRow({
   iconUrl?: string
   initials?: string
   isHome?: boolean
+  compact?: boolean
+  statusBadge?: ReactNode
   onClick?: () => void
   onContextMenu?: (e: MouseEvent<HTMLButtonElement>) => void
   children?: ReactNode
@@ -54,16 +58,17 @@ function StringRow({
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '10px',
+        justifyContent: compact ? 'center' : 'flex-start',
+        gap: compact ? '0' : '10px',
         width: '100%',
-        height: WS_ROW_H,
-        padding: '0 8px 0 10px',
+        height: compact ? 44 : WS_ROW_H,
+        padding: compact ? '0' : '0 8px 0 10px',
         border: 'none',
-        borderLeft: isSelected ? '2px solid var(--accent-primary)' : '2px solid transparent',
-        borderRadius: '0 2px 2px 0',
+        borderLeft: compact ? 'none' : isSelected ? '2px solid var(--accent-primary)' : '2px solid transparent',
+        borderRadius: compact ? '10px' : '0 2px 2px 0',
         backgroundColor: bg,
         cursor: 'pointer',
-        textAlign: 'left',
+        textAlign: compact ? 'center' : 'left',
         boxSizing: 'border-box',
         transition: 'background-color 0.1s ease',
         flexShrink: 0,
@@ -72,9 +77,9 @@ function StringRow({
     >
       <div
         style={{
-          width: 26,
-          height: 26,
-          borderRadius: 3,
+          width: compact ? 32 : 26,
+          height: compact ? 32 : 26,
+          borderRadius: compact ? 8 : 3,
           backgroundColor: isHome
             ? 'var(--accent-primary)'
             : isSelected
@@ -92,28 +97,31 @@ function StringRow({
         }}
       >
         {!iconUrl && (
-          <span style={{ color: isHome ? 'var(--bg-deepest)' : isSelected ? 'var(--accent-primary)' : 'var(--text-muted)', fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
+          <span style={{ color: isHome ? 'var(--bg-deepest)' : isSelected ? 'var(--accent-primary)' : 'var(--text-muted)', fontSize: compact ? 12 : 11, fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
             {children ?? initials ?? '#'}
           </span>
         )}
+        {statusBadge}
       </div>
 
-      <span
-        style={{
-          flex: 1,
-          minWidth: 0,
-          fontFamily: 'var(--font-mono)',
-          fontSize: 12,
-          fontWeight: isSelected ? 500 : 400,
-          color: isSelected ? 'var(--text-primary)' : hovered ? 'var(--text-secondary)' : 'var(--text-muted)',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          lineHeight: 1.3,
-        }}
-      >
-        {label}
-      </span>
+      {!compact && (
+        <span
+          style={{
+            flex: 1,
+            minWidth: 0,
+            fontFamily: 'var(--font-mono)',
+            fontSize: 12,
+            fontWeight: isSelected ? 500 : 400,
+            color: isSelected ? 'var(--text-primary)' : hovered ? 'var(--text-secondary)' : 'var(--text-muted)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            lineHeight: 1.3,
+          }}
+        >
+          {label}
+        </span>
+      )}
 
       {!!unreadCount && unreadCount > 0 && (
         <span
@@ -152,6 +160,9 @@ function StringRow({
 
 export const ServerListPaneString = memo(function ServerListPaneString({
   guilds,
+  dmQuickEntries = [],
+  selectedDmChannelId,
+  onSelectDmChannel,
   selectedGuildId,
   onSelectGuild,
   onHomeClick,
@@ -165,7 +176,8 @@ export const ServerListPaneString = memo(function ServerListPaneString({
   ownedGuildIds,
   onReorder,
   className,
-}: ServerListPaneVariantProps) {
+  compact = false,
+}: ServerListPaneVariantProps & { compact?: boolean }) {
   const homeSelected = isHomeSelected ?? selectedGuildId === undefined
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
@@ -199,7 +211,7 @@ export const ServerListPaneString = memo(function ServerListPaneString({
   return (
     <nav
       className={className}
-      aria-label="Workspaces"
+      aria-label="Looms"
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -211,40 +223,80 @@ export const ServerListPaneString = memo(function ServerListPaneString({
         overflowY: 'auto',
         scrollbarWidth: 'none',
         boxSizing: 'border-box',
-        paddingBottom: 8,
+        padding: compact ? '8px 6px' : '0 0 8px',
       }}
     >
-      <div
-        style={{
-          padding: '14px 12px 5px',
-          fontFamily: 'var(--font-mono)',
-          fontSize: 9,
-          fontWeight: 500,
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
-          color: 'var(--text-muted)',
-          userSelect: 'none',
-        }}
-      >
-        Workspaces
-      </div>
+      {!compact && (
+        <div
+          style={{
+            padding: '14px 12px 5px',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 9,
+            fontWeight: 500,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: 'var(--text-muted)',
+            userSelect: 'none',
+          }}
+        >
+          Looms
+        </div>
+      )}
 
-      <div style={{ padding: '0 6px 0 0' }}>
+      <div style={{ padding: compact ? '0' : '0 6px 0 0' }}>
         <StringRow
           label="Direct Messages"
           isSelected={homeSelected}
           isHome
+          compact={compact}
           onClick={onHomeClick}
         >
           <LineSquiggle size={14} />
         </StringRow>
       </div>
 
+      <div style={{ padding: compact ? '0' : '0 6px 0 0', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {dmQuickEntries.map((entry) => (
+          <StringRow
+            key={entry.channelId}
+            label={entry.label}
+            isSelected={selectedDmChannelId === entry.channelId}
+            hasUnread={Boolean(entry.unreadCount)}
+            unreadCount={entry.unreadCount}
+            iconUrl={entry.avatarUrl}
+            initials={getInitials(entry.label) || '#'}
+            compact={compact}
+            onClick={() => onSelectDmChannel?.(entry.channelId)}
+            statusBadge={entry.hasActiveCall ? (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: -2,
+                  right: -2,
+                  width: compact ? 16 : 14,
+                  height: compact ? 16 : 14,
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--status-online)',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: `2px solid var(--bg-deepest)`,
+                  boxSizing: 'border-box',
+                }}
+              >
+                <Phone size={compact ? 8 : 7} />
+              </span>
+            ) : undefined}
+          />
+        ))}
+      </div>
+
       <div
         style={{
           height: 1,
           backgroundColor: 'var(--border-subtle)',
-          margin: '6px 12px',
+          margin: compact ? '8px 10px' : '6px 12px',
           flexShrink: 0,
         }}
       />
@@ -259,7 +311,7 @@ export const ServerListPaneString = memo(function ServerListPaneString({
           display: 'flex',
           flexDirection: 'column',
           gap: 2,
-          padding: '0 6px 0 0',
+          padding: compact ? '0' : '0 6px 0 0',
         }}
       >
         {guildItems.map((guild) => {
@@ -325,6 +377,7 @@ export const ServerListPaneString = memo(function ServerListPaneString({
                 unreadCount={guild.unreadCount}
                 iconUrl={guild.iconUrl}
                 initials={guild.initials || '#'}
+                compact={compact}
                 onClick={() => onSelectGuild?.(guild.id)}
                 onContextMenu={(e) => {
                   e.preventDefault()
@@ -340,16 +393,17 @@ export const ServerListPaneString = memo(function ServerListPaneString({
         style={{
           height: 1,
           backgroundColor: 'var(--border-subtle)',
-          margin: '6px 12px',
+          margin: compact ? '8px 10px' : '6px 12px',
           flexShrink: 0,
         }}
       />
 
-      <div style={{ padding: '0 6px 0 0' }}>
+      <div style={{ padding: compact ? '0' : '0 6px 0 0' }}>
         <StringRow
-          label="Add Workspace"
+          label="Add Loom"
           isSelected={false}
           initials="+"
+          compact={compact}
           onClick={onAddServer}
         />
       </div>
@@ -372,13 +426,13 @@ export const ServerListPaneString = memo(function ServerListPaneString({
           role="menu"
         >
           <ContextMenuItem
-            label="View Server Info"
+            label="View Loom Info"
             icon={<Info width={16} height={16} />}
             onClick={() => { onViewGuildInfo?.(contextMenu.guildId); closeContextMenu() }}
           />
           {ownedGuildIds?.has(contextMenu.guildId) && (
             <ContextMenuItem
-              label="Server Settings"
+              label="Loom Settings"
               icon={<Settings width={16} height={16} />}
               onClick={() => { onOpenGuildSettings?.(contextMenu.guildId); closeContextMenu() }}
             />
@@ -391,13 +445,13 @@ export const ServerListPaneString = memo(function ServerListPaneString({
           />
           <div style={{ height: 1, backgroundColor: 'var(--border-subtle)', margin: '4px 0' }} />
           <ContextMenuItem
-            label="Leave Server"
+            label="Leave Loom"
             danger
             icon={<LogOut width={16} height={16} />}
             onClick={() => { onLeaveGuild?.(contextMenu.guildId); closeContextMenu() }}
           />
           <ContextMenuItem
-            label="Copy Server ID"
+            label="Copy Loom ID"
             icon={<Clipboard width={16} height={16} />}
             onClick={() => { navigator.clipboard.writeText(String(contextMenu.guildId)); closeContextMenu() }}
           />
@@ -405,7 +459,7 @@ export const ServerListPaneString = memo(function ServerListPaneString({
             <>
               <div style={{ height: 1, backgroundColor: 'var(--border-subtle)', margin: '4px 0' }} />
               <ContextMenuItem
-                label="Delete Server"
+                label="Delete Loom"
                 danger
                 icon={<Trash2 width={16} height={16} />}
                 onClick={() => { onDeleteGuild?.(contextMenu.guildId); setContextMenu(null) }}

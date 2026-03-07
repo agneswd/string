@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { ServerListPane } from '../ServerListPane'
 
 const baseGuilds = [
@@ -21,9 +21,9 @@ const baseProps = {
 }
 
 describe('ServerListPane — classic mode', () => {
-  it('renders as a nav with aria-label "Servers"', () => {
+  it('renders as a nav with aria-label "Looms"', () => {
     render(<ServerListPane {...baseProps} layoutMode="classic" />)
-    expect(screen.getByRole('navigation', { name: /servers/i })).toBeDefined()
+    expect(screen.getByRole('navigation', { name: /looms/i })).toBeDefined()
   })
 
   it('renders each guild as a button with aria-label and aria-pressed', () => {
@@ -37,9 +37,9 @@ describe('ServerListPane — classic mode', () => {
 })
 
 describe('ServerListPane — string mode', () => {
-  it('renders as a nav with aria-label "Workspaces"', () => {
+  it('renders as a nav with aria-label "Looms"', () => {
     render(<ServerListPane {...baseProps} layoutMode="string" />)
-    expect(screen.getByRole('navigation', { name: /workspaces/i })).toBeDefined()
+    expect(screen.getByRole('navigation', { name: /looms/i })).toBeDefined()
   })
 
   it('renders each guild as a button with visible text label', () => {
@@ -54,9 +54,9 @@ describe('ServerListPane — string mode', () => {
     expect(screen.getByRole('button', { name: /direct messages/i })).toBeDefined()
   })
 
-  it('renders "Add Workspace" button', () => {
+  it('renders "Add Loom" button', () => {
     render(<ServerListPane {...baseProps} layoutMode="string" />)
-    expect(screen.getByRole('button', { name: /add workspace/i })).toBeDefined()
+    expect(screen.getByRole('button', { name: /add loom/i })).toBeDefined()
   })
 
   it('selected guild button has aria-pressed="true"', () => {
@@ -71,10 +71,9 @@ describe('ServerListPane — string mode', () => {
     expect(betaBtn.getAttribute('aria-pressed')).toBe('false')
   })
 
-  it('shows "WORKSPACES" section label', () => {
+  it('shows "LOOMS" section label', () => {
     render(<ServerListPane {...baseProps} layoutMode="string" />)
-    // Case-insensitive section label
-    const label = screen.getByText(/workspaces/i)
+    const label = screen.getByText(/looms/i)
     expect(label).toBeDefined()
   })
 
@@ -82,5 +81,37 @@ describe('ServerListPane — string mode', () => {
     render(<ServerListPane {...baseProps} isHomeSelected={true} layoutMode="string" />)
     const homeBtn = screen.getByRole('button', { name: /direct messages/i })
     expect(homeBtn.getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('renders DM quick-entry buttons between home and guilds', () => {
+    render(
+      <ServerListPane
+        {...baseProps}
+        layoutMode="string"
+        dmQuickEntries={[
+          { channelId: 'dm-1', label: 'Alice', unreadCount: 2 },
+        ]}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: 'Alice' })).toBeDefined()
+    expect(screen.getByText('2')).toBeDefined()
+  })
+
+  it('selects a DM quick entry when pressed', () => {
+    const onSelectDmChannel = vi.fn()
+    render(
+      <ServerListPane
+        {...baseProps}
+        layoutMode="classic"
+        onSelectDmChannel={onSelectDmChannel}
+        dmQuickEntries={[
+          { channelId: 'dm-2', label: 'Bob' },
+        ]}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bob' }))
+    expect(onSelectDmChannel).toHaveBeenCalledWith('dm-2')
   })
 })

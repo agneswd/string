@@ -154,6 +154,7 @@ const CORE_SUBSCRIPTION_QUERIES = [
 export type StringState = {
   connectionStatus: ConnectionStatus
   identity: Identity | null
+  coreTablesReady: boolean
   dmMessagesHydrated: boolean
   users: User[]
   myProfile: User | null
@@ -190,6 +191,7 @@ class StringStore {
   private state: StringState = {
     connectionStatus: 'idle',
     identity: null,
+    coreTablesReady: false,
     dmMessagesHydrated: false,
     users: [],
     myProfile: null,
@@ -281,7 +283,7 @@ class StringStore {
     initConnection({
       onConnect: (identity) => {
         this.beginDmHydrationReplayWindow()
-        this.updateState({ identity, connectionStatus: 'connected', dmMessagesHydrated: false, error: null })
+        this.updateState({ identity, connectionStatus: 'connected', coreTablesReady: false, dmMessagesHydrated: false, error: null })
         this.attachRealtime(getConn())
         this.syncFromCache()
       },
@@ -294,6 +296,7 @@ class StringStore {
         this.updateState({
           connectionStatus: 'disconnected',
           identity: null,
+          coreTablesReady: false,
           users: [],
           myProfile: null,
           guilds: [],
@@ -331,6 +334,7 @@ class StringStore {
         this.clearHotIndexes()
         this.updateState({
           connectionStatus: 'error',
+          coreTablesReady: false,
           dmMessagesHydrated: false,
           error: err.message,
         })
@@ -357,7 +361,7 @@ class StringStore {
       console.warn('Disconnect failed:', e)
     }
 
-    this.updateState({ connectionStatus: 'disconnected', identity: null, dmMessagesHydrated: false })
+    this.updateState({ connectionStatus: 'disconnected', identity: null, coreTablesReady: false, dmMessagesHydrated: false })
   }
 
   /**
@@ -550,7 +554,7 @@ class StringStore {
         if (!this.realtimeAttached) {
           this.beginDmHydrationReplayWindow()
         }
-        this.updateState({ identity, connectionStatus: 'connected', dmMessagesHydrated: false, error: null })
+        this.updateState({ identity, connectionStatus: 'connected', coreTablesReady: this.coreSubscription !== null && !this.coreSubscription.isEnded(), dmMessagesHydrated: false, error: null })
         this.attachRealtime(conn)
         this.syncFromCache()
       }
@@ -567,6 +571,7 @@ class StringStore {
       this.coreSubscription = conn
         .subscriptionBuilder()
         .onApplied(() => {
+          this.updateState({ coreTablesReady: true, error: null })
           this.syncFromCache()
         })
         .onError(() => {

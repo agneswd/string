@@ -42,6 +42,7 @@ export interface AppModalsProps {
   onCloseProfile: () => void
   currentUser: ProfileSettingsModalProps['currentUser']
   onUpdateProfile: (params: {
+    username?: string | null
     displayName?: string | null
     bio?: string | null
     avatarBytes?: Uint8Array | null
@@ -55,14 +56,27 @@ export interface AppModalsProps {
   // Settings Modal
   showSettingsModal: boolean
   onCloseSettings: () => void
+  settingsInitialSection?: 'general' | 'account'
   uiSoundLevel: number
   onUiSoundLevelChange: (v: number) => void
+  callSoundLevel: number
+  onCallSoundLevelChange: (v: number) => void
+  dmAlertSoundLevel: number
+  onDmAlertSoundLevelChange: (v: number) => void
+  friendAlertSoundLevel: number
+  onFriendAlertSoundLevelChange: (v: number) => void
+  voiceDefaultVolume: number
+  onVoiceDefaultVolumeChange: (v: number) => void
   friendStatusNotificationsEnabled: boolean
   onFriendStatusNotificationsChange: (v: boolean) => void
   dmMessageNotificationsEnabled: boolean
   onDmMessageNotificationsChange: (v: boolean) => void
   layoutMode: LayoutMode
   onLayoutModeChange: (v: LayoutMode) => void
+  settingsUsername?: string | null
+  settingsDisplayName?: string | null
+  settingsAvatarUrl?: string | null
+  settingsProfileColor?: string | null
   guildPopup: GuildPopupInfo | null
   onCloseGuildPopup: () => void
   // Context Menu / Profile Popup Overlay
@@ -76,11 +90,17 @@ export function AppModals({
   showInviteModal, onCloseInvite, friends, onInviteFriend,
   showProfileModal, onCloseProfile, currentUser, onUpdateProfile, onSetStatus,
   showGuildSettingsModal, onCloseGuildSettings, currentGuild, onUpdateGuild,
-  showSettingsModal, onCloseSettings,
+  showSettingsModal, onCloseSettings, settingsInitialSection,
   uiSoundLevel, onUiSoundLevelChange,
+  callSoundLevel, onCallSoundLevelChange,
+  dmAlertSoundLevel, onDmAlertSoundLevelChange,
+  friendAlertSoundLevel, onFriendAlertSoundLevelChange,
+  voiceDefaultVolume, onVoiceDefaultVolumeChange,
   friendStatusNotificationsEnabled, onFriendStatusNotificationsChange,
   dmMessageNotificationsEnabled, onDmMessageNotificationsChange,
-  layoutMode, onLayoutModeChange, guildPopup, onCloseGuildPopup,
+  layoutMode, onLayoutModeChange,
+  settingsUsername, settingsDisplayName, settingsAvatarUrl, settingsProfileColor,
+  guildPopup, onCloseGuildPopup,
   contextMenuOverlay,
 }: AppModalsProps) {
   return (
@@ -111,6 +131,7 @@ export function AppModals({
         currentUser={currentUser}
         onUpdateProfile={async (params) => {
           await onUpdateProfile({
+            username: params.username ?? undefined,
             displayName: params.displayName ?? undefined,
             bio: params.bio === null ? '' : params.bio,
             avatarBytes: params.avatarBytes === null ? null : (params.avatarBytes ?? undefined),
@@ -129,14 +150,27 @@ export function AppModals({
       <SettingsModal
         isOpen={showSettingsModal}
         onClose={onCloseSettings}
+        initialSection={settingsInitialSection}
         uiSoundLevel={uiSoundLevel}
         onUiSoundLevelChange={onUiSoundLevelChange}
+        callSoundLevel={callSoundLevel}
+        onCallSoundLevelChange={onCallSoundLevelChange}
+        dmAlertSoundLevel={dmAlertSoundLevel}
+        onDmAlertSoundLevelChange={onDmAlertSoundLevelChange}
+        friendAlertSoundLevel={friendAlertSoundLevel}
+        onFriendAlertSoundLevelChange={onFriendAlertSoundLevelChange}
+        voiceDefaultVolume={voiceDefaultVolume}
+        onVoiceDefaultVolumeChange={onVoiceDefaultVolumeChange}
         friendStatusNotificationsEnabled={friendStatusNotificationsEnabled}
         onFriendStatusNotificationsChange={onFriendStatusNotificationsChange}
         dmMessageNotificationsEnabled={dmMessageNotificationsEnabled}
         onDmMessageNotificationsChange={onDmMessageNotificationsChange}
         layoutMode={layoutMode}
         onLayoutModeChange={onLayoutModeChange}
+        username={settingsUsername}
+        displayName={settingsDisplayName}
+        avatarUrl={settingsAvatarUrl}
+        profileColor={settingsProfileColor}
       />
 
       <ContextMenuOverlay {...contextMenuOverlay} />

@@ -240,7 +240,7 @@ export function useGuildActions({
       name: params.name ?? null,
       bio: params.bio ?? null,
       avatarBytes: params.avatarBytes ?? null,
-    }), 'Server updated')
+    }), 'Loom updated')
   }, [selectedGuild, runAction, callActionOrReducer, setActionError])
 
   const onInviteFriend = useCallback((friendIdentity: unknown) => {
@@ -264,20 +264,20 @@ export function useGuildActions({
         callActionOrReducer(undefined, 'leaveGuild', {
           guildId: typeof guildId === 'string' ? BigInt(guildId) : guildId,
         }),
-      'Left the server',
+      'Left the Loom',
     );
     setSelectedGuildId(undefined);
   }, [runAction, callActionOrReducer, setSelectedGuildId]);
 
   const onDeleteGuild = useCallback((guildId: number | bigint | string) => {
-    if (!confirm('Are you sure you want to delete this server? This action cannot be undone.')) return;
+    if (!confirm('Are you sure you want to delete this Loom? This action cannot be undone.')) return;
     void runAction(async () => {
       const conn = getConn();
       const reducers = conn.reducers as unknown as Record<string, ((...args: unknown[]) => Promise<void>) | undefined>;
       const fn = reducers['deleteGuild'] ?? reducers['delete_guild'];
       if (!fn) throw new Error('deleteGuild reducer not available');
       await fn({ guildId: typeof guildId === 'string' ? BigInt(guildId) : guildId });
-    }, 'Server deleted');
+    }, 'Loom deleted');
     setSelectedGuildId(undefined);
   }, [runAction, setSelectedGuildId]);
 

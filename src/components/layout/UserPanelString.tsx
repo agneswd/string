@@ -14,10 +14,13 @@ export function UserPanelString({
   onOpenSettings,
   onOpenProfile,
 }: UserPanelVariantProps) {
+  const [hovered, setHovered] = useState(false)
+
   if (!user) return null
 
   const avatarUrl = user.avatarUrl ?? avatarBytesToUrl(user.avatarBytes)
   const displayName = user.displayName ?? user.username ?? '?'
+  const secondaryLabel = hovered ? `@${user.username ?? 'unknown'}` : (user.status?.toLowerCase() ?? 'online')
 
   const statusColor = (() => {
     if (user.status === 'DoNotDisturb') return 'var(--status-dnd)'
@@ -34,6 +37,8 @@ export function UserPanelString({
         gap: '10px',
         minWidth: 0,
       }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       {/* Identity row */}
       <div
@@ -94,7 +99,7 @@ export function UserPanelString({
             letterSpacing: '0.03em',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
-            {user.status?.toLowerCase() ?? 'online'}
+            {secondaryLabel}
           </div>
         </div>
       </div>

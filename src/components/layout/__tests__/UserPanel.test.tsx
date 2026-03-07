@@ -148,6 +148,14 @@ describe('UserPanel — string mode', () => {
     await userEvent.click(screen.getByTitle(/^deafen$/i))
     expect(onToggleDeafen).toHaveBeenCalledTimes(1)
   })
+
+  it('shows the username in the secondary line while hovering the user panel', () => {
+    render(<UserPanel {...baseProps} layoutMode="string" />)
+    const profileRow = screen.getByTitle('@alice')
+    expect(screen.getByText('online')).toBeTruthy()
+    fireEvent.mouseEnter(profileRow.parentElement as HTMLElement)
+    expect(screen.getByText('@alice')).toBeTruthy()
+  })
 })
 
 // ── classic mode ──────────────────────────────────────────────────────────
@@ -188,6 +196,21 @@ describe('UserPanel — classic mode', () => {
     render(<UserPanel {...baseProps} onToggleMute={onToggleMute} layoutMode="classic" />)
     await userEvent.click(screen.getByTitle(/^mute$/i))
     expect(onToggleMute).toHaveBeenCalledTimes(1)
+  })
+
+  it('classic buttons get a hover background treatment', () => {
+    render(<UserPanel {...baseProps} layoutMode="classic" />)
+    const settingsButton = screen.getByRole('button', { name: /open settings/i }) as HTMLElement
+    fireEvent.mouseEnter(settingsButton)
+    expect(settingsButton.style.backgroundColor).toContain('var(--bg-hover)')
+  })
+
+  it('shows the username in the secondary line while hovering in classic mode', () => {
+    render(<UserPanel {...baseProps} layoutMode="classic" />)
+    const profileRow = screen.getByTitle('@alice')
+    expect(screen.getByText('Online')).toBeTruthy()
+    fireEvent.mouseEnter(profileRow.parentElement as HTMLElement)
+    expect(screen.getByText('@alice')).toBeTruthy()
   })
 
   it('defaults to classic mode when layoutMode is omitted', () => {

@@ -15,6 +15,7 @@ export interface ProfileSettingsModalProps {
   onClose: () => void
   currentUser: ProfileUser | null
   onUpdateProfile: (params: {
+    username?: string | null
     displayName?: string | null
     bio?: string | null
     avatarBytes?: Uint8Array | null

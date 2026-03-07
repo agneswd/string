@@ -29,7 +29,9 @@ export interface ChannelColumnProps {
   voiceChannelUsers?: Map<string | number, VoiceChannelUser[]>
   currentVoiceChannelId?: string | number
   locallyMutedUsers: Set<string>
+  voiceUserVolumes: Record<string, number>
   onToggleLocalMuteUser: (id: string) => void
+  onSetVoiceUserVolume: (id: string, volume: number) => void
   localIdentity?: string
   getAvatarUrl: (id: string) => string | undefined
   /** Controls which DM list variant is rendered. Defaults to 'classic'. */
@@ -73,7 +75,9 @@ export function ChannelColumn(props: ChannelColumnProps) {
       voiceChannelUsers={props.voiceChannelUsers}
       currentVoiceChannelId={props.currentVoiceChannelId}
       locallyMutedUsers={props.locallyMutedUsers}
+      voiceUserVolumes={props.voiceUserVolumes}
       onToggleLocalMuteUser={props.onToggleLocalMuteUser}
+      onSetVoiceUserVolume={props.onSetVoiceUserVolume}
       localIdentity={props.localIdentity}
       getAvatarUrl={props.getAvatarUrl}
     />

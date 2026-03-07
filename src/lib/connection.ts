@@ -170,9 +170,37 @@ export function runAllCleanups(): void {
 // ---------------------------------------------------------------------------
 const _audioContexts = new Set<AudioContext>();
 const _audioCtxListeners = new Map<AudioContext, () => void>();
+const _audioElements = new Set<HTMLAudioElement>();
+const _audioElementListeners = new Map<HTMLAudioElement, () => void>();
 const _mediaStreams = new Set<MediaStream>();
 const _mediaStreamListeners = new Map<MediaStream, { track: MediaStreamTrack, listener: () => void }[]>();
 const _peerConnections = new Set<RTCPeerConnection>();
+
+export function trackAudioElement(audio: HTMLAudioElement): void {
+  if (_audioElements.has(audio)) return;
+  _audioElements.add(audio);
+
+  const cleanup = () => {
+    audio.removeEventListener('ended', cleanup);
+    audio.removeEventListener('error', cleanup);
+    _audioElementListeners.delete(audio);
+    _audioElements.delete(audio);
+  };
+
+  _audioElementListeners.set(audio, cleanup);
+  audio.addEventListener('ended', cleanup);
+  audio.addEventListener('error', cleanup);
+}
+
+export function untrackAudioElement(audio: HTMLAudioElement): void {
+  const cleanup = _audioElementListeners.get(audio);
+  if (cleanup) {
+    audio.removeEventListener('ended', cleanup);
+    audio.removeEventListener('error', cleanup);
+    _audioElementListeners.delete(audio);
+  }
+  _audioElements.delete(audio);
+}
 
 export function trackAudioContext(ctx: AudioContext): void {
   // Idempotent: skip if already tracked to avoid leaking the previous listener
@@ -239,6 +267,16 @@ export function untrackPeerConnection(pc: RTCPeerConnection): void {
 }
 
 export function closeAllTrackedResources(): void {
+  for (const audio of Array.from(_audioElements)) {
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.src = '';
+      audio.load();
+    } catch { /* ignore */ }
+    untrackAudioElement(audio);
+  }
+
   // Close all AudioContexts and remove their statechange listeners
   for (const ctx of _audioContexts) {
     try {

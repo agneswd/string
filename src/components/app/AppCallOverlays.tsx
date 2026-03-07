@@ -2,10 +2,10 @@
  * AppCallOverlays
  *
  * Renders all fullscreen / floating overlays that are not modals:
- * call banner, audio streams, incoming-call dialog, screen-share viewer,
- * register screen, and notification toasts.
+ * audio streams, incoming-call dialog, screen-share viewer,
+ * and notification toasts.
  */
-import { CallBanner, IncomingCallModal, RegisterOverlay } from '../index'
+import { IncomingCallModal } from '../index'
 import { AudioStreams } from '../voice/AudioStreams'
 import { ScreenShareViewer } from '../voice/ScreenShareViewer'
 import { NotificationToast, type NotificationItem } from '../ui/NotificationToast'
@@ -30,6 +30,8 @@ export interface AppCallOverlaysProps {
   audioStreams: AudioStreamEntry[]
   isDeafened: boolean
   locallyMutedUsers: Set<string>
+  voiceDefaultVolume: number
+  voiceUserVolumes: Record<string, number>
   // Incoming call modal
   incomingCall: { callId: unknown; callerIdentity: unknown } | null
   ignoredCallIds: Set<string>
@@ -41,12 +43,6 @@ export interface AppCallOverlaysProps {
   // Screen share viewer
   viewingScreenStream: MediaStream | null
   onCloseScreenShare: () => void
-  // Register overlay
-  me: unknown
-  initialLoadComplete: boolean
-  connectionStatus: string | undefined
-  onRegister: (username: string, displayName: string) => void
-  onLoginAsUser: (token: string) => void
   // Notifications
   notifications: NotificationItem[]
   onDismissNotification: (id: string) => void
@@ -55,33 +51,20 @@ export interface AppCallOverlaysProps {
 export function AppCallOverlays({
   showCallBanner, currentVoiceState, outgoingCall, callBannerProps,
   onCancelCall, onNavigateToCall,
-  audioStreams, isDeafened, locallyMutedUsers,
+  audioStreams, isDeafened, locallyMutedUsers, voiceDefaultVolume, voiceUserVolumes,
   incomingCall, ignoredCallIds, usersByIdentity, getAvatarUrlForUser,
   onAcceptCall, onDeclineCall, onIgnoreCall,
   viewingScreenStream, onCloseScreenShare,
-  me, initialLoadComplete, connectionStatus,
-  onRegister, onLoginAsUser,
   notifications, onDismissNotification,
 }: AppCallOverlaysProps) {
   return (
     <>
-      {showCallBanner && (
-        <CallBanner
-          currentVoiceState={currentVoiceState}
-          outgoingCall={outgoingCall}
-          calleeName={callBannerProps.calleeName}
-          onCancelCall={onCancelCall}
-          isDmCall={callBannerProps.isDmCall}
-          callName={callBannerProps.callName}
-          isOnCallPage={callBannerProps.isOnCallPage}
-          onNavigateToCall={onNavigateToCall}
-        />
-      )}
-
       <AudioStreams
         audioStreams={audioStreams}
         isDeafened={isDeafened}
         locallyMutedUsers={locallyMutedUsers}
+        defaultVolume={voiceDefaultVolume}
+        userVolumes={voiceUserVolumes}
       />
 
       {incomingCall && !ignoredCallIds.has(String(incomingCall.callId)) && (() => {
@@ -104,10 +87,6 @@ export function AppCallOverlays({
           sharerName="Screen Share"
           onClose={onCloseScreenShare}
         />
-      )}
-
-      {!me && initialLoadComplete && connectionStatus === 'connected' && (
-        <RegisterOverlay onRegister={onRegister} onLoginAsUser={onLoginAsUser} />
       )}
 
       <NotificationToast notifications={notifications} onDismiss={onDismissNotification} />

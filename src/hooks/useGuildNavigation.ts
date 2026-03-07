@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AppData } from './useAppData'
 import type { Channel, VoiceState } from '../module_bindings/types'
 import { toIdKey, identityToString, isCategoryChannel, isTextChannel, isVoiceChannel } from '../lib/helpers'
+import { readNavigationState, writeNavigationState } from '../lib/navigationStateStorage'
 
 function compareGuildChannels(left: Channel, right: Channel): number {
   const leftParent = left.categoryId == null ? '' : toIdKey(left.categoryId)
@@ -70,18 +71,19 @@ export function useGuildNavigation({
   selectedDmChannelId,
 }: GuildNavigationParams): GuildNavigation {
   const { state, identityString } = appData
+  const storedNavigationState = readNavigationState()
 
   // -------------------------------------------------------------------------
   // State
   // -------------------------------------------------------------------------
-  const [selectedGuildId, setSelectedGuildId] = useState<string | undefined>(undefined)
-  const [selectedTextChannelId, setSelectedTextChannelId] = useState<string | undefined>(undefined)
-  const [selectedVoiceChannelId, setSelectedVoiceChannelId] = useState<string | undefined>(undefined)
+  const [selectedGuildId, setSelectedGuildId] = useState<string | undefined>(storedNavigationState.selectedGuildId)
+  const [selectedTextChannelId, setSelectedTextChannelId] = useState<string | undefined>(storedNavigationState.selectedTextChannelId)
+  const [selectedVoiceChannelId, setSelectedVoiceChannelId] = useState<string | undefined>(storedNavigationState.selectedVoiceChannelId)
 
   // -------------------------------------------------------------------------
   // Ref
   // -------------------------------------------------------------------------
-  const homeViewActiveRef = useRef(false)
+  const homeViewActiveRef = useRef(storedNavigationState.homeViewActive)
 
   // -------------------------------------------------------------------------
   // Memos
@@ -163,6 +165,7 @@ export function useGuildNavigation({
   useEffect(() => {
     if (memberGuilds.length === 0) {
       if (selectedGuildId !== undefined) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedGuildId(undefined)
       }
       return
@@ -182,10 +185,11 @@ export function useGuildNavigation({
     }
   }, [memberGuilds, selectedGuildId, selectedDmChannelId])
 
-  // Auto-select first text channel
+  // Clear invalid text channel selection, but do not auto-enter a channel.
   useEffect(() => {
     if (textChannels.length === 0) {
       if (selectedTextChannelId !== undefined) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedTextChannelId(undefined)
       }
       return
@@ -196,14 +200,17 @@ export function useGuildNavigation({
       textChannels.some((channel) => toIdKey(channel.channelId) === selectedTextChannelId)
 
     if (!hasSelectedTextChannel) {
-      setSelectedTextChannelId(toIdKey(textChannels[0].channelId))
+      if (selectedTextChannelId !== undefined) {
+        setSelectedTextChannelId(undefined)
+      }
     }
   }, [selectedTextChannelId, textChannels])
 
-  // Auto-select voice channel, prefer active voice state channel
+  // Keep voice selection aligned with an active call, but do not auto-enter voice panes.
   useEffect(() => {
     if (voiceChannels.length === 0) {
       if (selectedVoiceChannelId !== undefined) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedVoiceChannelId(undefined)
       }
       return
@@ -220,7 +227,9 @@ export function useGuildNavigation({
       voiceChannels.some((channel) => toIdKey(channel.channelId) === preferredVoiceChannelId)
 
     if (!hasPreferredVoiceChannel) {
-      setSelectedVoiceChannelId(toIdKey(voiceChannels[0].channelId))
+      if (selectedVoiceChannelId !== undefined) {
+        setSelectedVoiceChannelId(undefined)
+      }
       return
     }
 
@@ -228,6 +237,15 @@ export function useGuildNavigation({
       setSelectedVoiceChannelId(preferredVoiceChannelId)
     }
   }, [currentVoiceState, selectedVoiceChannelId, voiceChannels])
+
+  useEffect(() => {
+    writeNavigationState({
+      homeViewActive: homeViewActiveRef.current,
+      selectedGuildId,
+      selectedTextChannelId,
+      selectedVoiceChannelId,
+    })
+  }, [selectedGuildId, selectedTextChannelId, selectedVoiceChannelId])
 
   // -------------------------------------------------------------------------
   // Return

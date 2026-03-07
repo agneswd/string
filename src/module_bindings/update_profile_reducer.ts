@@ -11,6 +11,7 @@ import {
 } from "spacetimedb";
 
 export default {
+  username: __t.option(__t.string()),
   displayName: __t.option(__t.string()),
   bio: __t.option(__t.string()),
   avatarBytes: __t.option(__t.byteArray()),

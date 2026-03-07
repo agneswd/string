@@ -38,6 +38,7 @@ export function buildPanelStyles(layoutMode: LayoutMode) {
       borderBottom: '1px solid var(--border-subtle)',
       gap: 8,
       flexShrink: 0,
+      overflowX: 'auto',
     } satisfies CSSProperties,
 
     toolbarTitle: {
@@ -129,8 +130,8 @@ export function buildPanelStyles(layoutMode: LayoutMode) {
       width: '100%',
       padding: '6px 12px 6px 32px',
       borderRadius: isString ? 'var(--radius-sm)' : 4,
-      border: isString ? '1px solid var(--border-subtle)' : 'none',
-      backgroundColor: 'var(--bg-input)',
+      border: '1px solid var(--border-subtle)',
+      backgroundColor: isString ? 'var(--bg-input)' : 'var(--bg-panel)',
       color: 'var(--text-primary)',
       fontSize: 13,
       fontFamily: isString ? 'var(--font-mono)' : undefined,
@@ -141,8 +142,8 @@ export function buildPanelStyles(layoutMode: LayoutMode) {
       width: '100%',
       padding: '6px 12px 6px 32px',
       borderRadius: isString ? 'var(--radius-sm)' : 4,
-      border: isString ? '1px solid var(--border-focus)' : 'none',
-      backgroundColor: 'var(--bg-input)',
+      border: `1px solid ${isString ? 'var(--border-focus)' : 'var(--accent-primary)'}`,
+      backgroundColor: isString ? 'var(--bg-input)' : 'var(--bg-panel)',
       color: 'var(--text-primary)',
       fontSize: 13,
       fontFamily: isString ? 'var(--font-mono)' : undefined,
@@ -290,9 +291,11 @@ export function buildPanelStyles(layoutMode: LayoutMode) {
     addInputRow: (focused: boolean): CSSProperties => ({
       display: 'flex',
       alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: 8,
       backgroundColor: 'var(--bg-input)',
       borderRadius: isString ? 'var(--radius-sm)' : 8,
-      padding: '4px 4px 4px 16px',
+      padding: '8px 12px',
       border: focused
         ? '1px solid var(--border-focus)'
         : '1px solid var(--border-subtle)',
@@ -300,7 +303,8 @@ export function buildPanelStyles(layoutMode: LayoutMode) {
     }),
 
     addInput: {
-      flex: 1,
+      flex: '1 1 180px',
+      minWidth: 0,
       border: 'none',
       backgroundColor: 'transparent',
       color: 'var(--text-primary)',
@@ -328,6 +332,7 @@ export function buildPanelStyles(layoutMode: LayoutMode) {
       transition: 'opacity .15s, background-color .15s',
       whiteSpace: 'nowrap',
       flexShrink: 0,
+      maxWidth: '100%',
     }),
 
     statusDot: (color: string): CSSProperties => ({

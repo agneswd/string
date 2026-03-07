@@ -94,6 +94,15 @@ describe('ChannelListPane', () => {
     expect(onSelectChannel).toHaveBeenCalledWith('ch1')
   })
 
+  it('keeps inset spacing on both sides for string-layout channel hover and selection rows', () => {
+    renderPane({ layoutMode: 'string', selectedChannelId: 'ch1' })
+    const btn = screen.getByRole('button', { name: /general/i }) as HTMLButtonElement
+
+    expect(btn.style.width).toBe('calc(100% - 12px)')
+    expect(btn.style.marginLeft).toBe('6px')
+    expect(btn.style.marginRight).toBe('6px')
+  })
+
   it('does not trigger channel selection after dragging a voice channel', () => {
     const onSelectChannel = vi.fn()
     renderPane({ channels: mixedChannels, onSelectChannel })

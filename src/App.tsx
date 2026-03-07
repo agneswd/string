@@ -3,18 +3,22 @@ import { useState } from 'react'
 import { AppCallOverlays } from './components/app/AppCallOverlays'
 import { AppMainShell } from './components/app/AppMainShell'
 import { AppModals } from './components/app/AppModals'
+import { ClerkAuthOverlay } from './components/layout/ClerkAuthOverlay'
 import type { ProfileSettingsModalProps } from './components/modals/ProfileSettingsModal'
 import { S_appShell } from './constants/appStyles'
+import { useClerkSpacetimeAuth } from './hooks/useClerkSpacetimeAuth'
 import { avatarBytesToUrl } from './lib/avatarUtils'
 import { useAppOrchestrator } from './hooks/useAppOrchestrator'
 import { identityToString } from './hooks/useAppData'
 import { useLayoutMode } from './hooks/useLayoutMode'
 import { statusToLabel } from './lib/helpers'
+import { useMemo } from 'react'
 
-function App() {
+function AuthenticatedApp() {
   const app = useAppOrchestrator()
   const { layoutMode, setLayoutMode } = useLayoutMode()
   const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [settingsInitialSection, setSettingsInitialSection] = useState<'general' | 'account'>('general')
 
   const sidebarUser = app.me
     ? {
@@ -62,6 +66,41 @@ function App() {
     username: request.username,
   }))
 
+  const dmQuickEntries = useMemo(() => {
+    const seen = new Set<string>()
+    return app.dmListItems
+      .filter((item) => {
+        const channelId = String(item.id)
+        return app.activeCallChannelIds.has(channelId)
+          || (app.dmUnreadCountsByChannel.get(channelId) ?? item.unreadCount ?? 0) > 0
+      })
+      .filter((item) => {
+        const channelId = String(item.id)
+        if (seen.has(channelId)) {
+          return false
+        }
+        seen.add(channelId)
+        return true
+      })
+      .sort((left, right) => {
+        const leftCall = app.activeCallChannelIds.has(String(left.id)) ? 1 : 0
+        const rightCall = app.activeCallChannelIds.has(String(right.id)) ? 1 : 0
+        if (leftCall !== rightCall) {
+          return rightCall - leftCall
+        }
+
+        return (app.dmUnreadCountsByChannel.get(String(right.id)) ?? right.unreadCount ?? 0)
+          - (app.dmUnreadCountsByChannel.get(String(left.id)) ?? left.unreadCount ?? 0)
+      })
+      .map((item) => ({
+        channelId: String(item.id),
+        label: item.name,
+        avatarUrl: item.avatarUrl,
+        unreadCount: app.dmUnreadCountsByChannel.get(String(item.id)) ?? item.unreadCount,
+        hasActiveCall: app.activeCallChannelIds.has(String(item.id)),
+      }))
+  }, [app.activeCallChannelIds, app.dmListItems, app.dmUnreadCountsByChannel])
+
   const homeFriends = app.friends.map((friend) => ({
     id: friend.id,
     username: friend.username,
@@ -73,7 +112,7 @@ function App() {
 
   const handleAddServer = () => {
     const userName = app.me?.displayName ?? app.me?.username ?? 'My'
-    app.setNewGuildName(`${userName}'s server`)
+    app.setNewGuildName(`${userName}'s Loom`)
     app.setShowCreateGuildModal(true)
   }
 
@@ -89,6 +128,8 @@ function App() {
         audioStreams={app.audioStreams}
         isDeafened={app.currentVoiceState?.isDeafened ?? false}
         locallyMutedUsers={app.locallyMutedUsers}
+        voiceDefaultVolume={app.voiceDefaultVolume}
+        voiceUserVolumes={app.voiceUserVolumes}
         incomingCall={app.incomingCall}
         ignoredCallIds={app.ignoredCallIds}
         usersByIdentity={app.usersByIdentity}
@@ -98,11 +139,6 @@ function App() {
         onIgnoreCall={app.handleIgnoreCall}
         viewingScreenStream={app.viewingScreenStream}
         onCloseScreenShare={() => app.setViewingScreenShareKey(null)}
-        me={app.me}
-        initialLoadComplete={app.initialLoadComplete}
-        connectionStatus={app.state.connectionStatus}
-        onRegister={app.onRegister}
-        onLoginAsUser={app.onLoginAsUser}
         notifications={app.notifications}
         onDismissNotification={app.dismissNotification}
       />
@@ -112,6 +148,9 @@ function App() {
         showMemberList={app.showMemberList}
         serverColumn={{
           orderedGuilds: app.orderedGuilds,
+          dmQuickEntries,
+          selectedDmChannelId: app.selectedDmChannelId,
+          onSelectDmChannel: app.handleSelectDmChannel,
           selectedGuildId: app.selectedGuildId ?? null,
           onSelectGuild: app.handleSelectGuild,
           onHomeClick: app.handleHomeClick,
@@ -151,7 +190,9 @@ function App() {
           voiceChannelUsers: app.voiceChannelUsers,
           currentVoiceChannelId: app.currentVoiceState?.channelId,
           locallyMutedUsers: app.locallyMutedUsers,
+          voiceUserVolumes: app.voiceUserVolumes,
           onToggleLocalMuteUser: app.toggleLocalMuteUser,
+          onSetVoiceUserVolume: app.setVoiceUserVolume,
           localIdentity: app.identityString,
           getAvatarUrl: app.getAvatarUrlForUser,
         }}
@@ -246,8 +287,18 @@ function App() {
           deafenColor: app.deafenColor,
           onToggleMute: app.onToggleMute,
           onToggleDeafen: app.onToggleDeafen,
-          onOpenSettings: () => setShowSettingsModal(true),
+          onOpenSettings: () => {
+            setSettingsInitialSection('general')
+            setShowSettingsModal(true)
+          },
           onOpenProfile: () => app.setShowProfileModal(true),
+        }}
+        mobileProfile={{
+          currentUser: app.me as ProfileSettingsModalProps['currentUser'],
+          onUpdateProfile: app.actions.updateProfile,
+          onSetStatus: (statusTag) => {
+            void app.actions.setStatus({ status: { tag: statusTag } as never })
+          },
         }}
         memberColumn={{
           layoutMode,
@@ -296,14 +347,27 @@ function App() {
         onUpdateGuild={app.onUpdateGuild}
         showSettingsModal={showSettingsModal}
         onCloseSettings={() => setShowSettingsModal(false)}
+        settingsInitialSection={settingsInitialSection}
         uiSoundLevel={app.uiSoundLevel}
         onUiSoundLevelChange={app.setUiSoundLevel}
+        callSoundLevel={app.callSoundLevel}
+        onCallSoundLevelChange={app.setCallSoundLevel}
+        dmAlertSoundLevel={app.dmAlertSoundLevel}
+        onDmAlertSoundLevelChange={app.setDmAlertSoundLevel}
+        friendAlertSoundLevel={app.friendAlertSoundLevel}
+        onFriendAlertSoundLevelChange={app.setFriendAlertSoundLevel}
+        voiceDefaultVolume={app.voiceDefaultVolume}
+        onVoiceDefaultVolumeChange={app.setVoiceDefaultVolume}
         friendStatusNotificationsEnabled={app.friendStatusNotificationsEnabled}
         onFriendStatusNotificationsChange={app.setFriendStatusNotificationsEnabled}
         dmMessageNotificationsEnabled={app.dmMessageNotificationsEnabled}
         onDmMessageNotificationsChange={app.setDmMessageNotificationsEnabled}
         layoutMode={layoutMode}
         onLayoutModeChange={setLayoutMode}
+        settingsUsername={app.me?.username}
+        settingsDisplayName={app.me?.displayName}
+        settingsAvatarUrl={app.getAvatarUrlForUser(app.identityString)}
+        settingsProfileColor={app.me?.profileColor ?? null}
         guildPopup={guildPopup}
         onCloseGuildPopup={() => app.setGuildPopup(null)}
         contextMenuOverlay={{
@@ -321,6 +385,25 @@ function App() {
         }}
       />
     </div>
+  )
+}
+
+function App() {
+  const auth = useClerkSpacetimeAuth()
+  const shouldShowRestoringOverlay = auth.isRestoringSession && !auth.shouldShowAuthScreen
+  const shouldShowAuthOverlay = shouldShowRestoringOverlay || auth.shouldShowAuthScreen || (auth.isLoaded && auth.isSignedIn && !auth.isReady)
+
+  return (
+    <>
+      {shouldShowAuthOverlay
+        ? (
+            <ClerkAuthOverlay
+              isAuthenticating={shouldShowRestoringOverlay || (auth.isLoaded && auth.isSignedIn)}
+              message={auth.statusMessage ?? undefined}
+            />
+          )
+        : <AuthenticatedApp />}
+    </>
   )
 }
 

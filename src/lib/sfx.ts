@@ -10,6 +10,7 @@ import contactOnline from '../sfx/contact-going-online.mp3'
 import contactOffline from '../sfx/contact-going-offline.mp3'
 import messageReceived from '../sfx/message-received.mp3'
 import messageSent from '../sfx/message-sent.mp3'
+import { trackAudioElement, untrackAudioElement } from './connection'
 
 const SOUNDS = {
   'call-ring': callRing,
@@ -27,7 +28,29 @@ const SOUNDS = {
 
 export type SoundName = keyof typeof SOUNDS
 
+type SfxCategory = 'ui' | 'call' | 'dm' | 'friend'
+
+const SOUND_CATEGORY_BY_NAME: Record<SoundName, SfxCategory> = {
+  'call-ring': 'call',
+  'start-call': 'call',
+  'call-sound': 'call',
+  'call-declined': 'call',
+  'hangup': 'call',
+  'continue-call': 'call',
+  'contact-left': 'call',
+  'contact-online': 'friend',
+  'contact-offline': 'friend',
+  'message-received': 'dm',
+  'message-sent': 'ui',
+}
+
 let sfxVolume = 0.5
+let sfxLevels: Record<SfxCategory, number> = {
+  ui: 0.5,
+  call: 0.5,
+  dm: 0.5,
+  friend: 0.5,
+}
 
 function clampVolume(volume: number): number {
   if (!Number.isFinite(volume)) return sfxVolume
@@ -38,6 +61,17 @@ function clampVolume(volume: number): number {
 
 export function setSfxVolume(volume: number): void {
   sfxVolume = clampVolume(volume)
+  sfxLevels.ui = sfxVolume
+}
+
+export function setSfxLevels(levels: Partial<Record<SfxCategory, number>>): void {
+  sfxLevels = {
+    ...sfxLevels,
+    ...Object.fromEntries(
+      Object.entries(levels).map(([key, value]) => [key, clampVolume(value ?? sfxLevels[key as SfxCategory])]),
+    ) as Partial<Record<SfxCategory, number>>,
+  }
+  sfxVolume = sfxLevels.ui
 }
 
 export function getSfxVolume(): number {
@@ -48,7 +82,15 @@ export function getSfxVolume(): number {
 export function playSound(name: SoundName): void {
   try {
     const audio = new Audio(SOUNDS[name])
-    audio.volume = sfxVolume
+    trackAudioElement(audio)
+    audio.volume = sfxLevels[SOUND_CATEGORY_BY_NAME[name]] ?? sfxVolume
+    const cleanup = () => {
+      audio.removeEventListener('ended', cleanup)
+      audio.removeEventListener('error', cleanup)
+      untrackAudioElement(audio)
+    }
+    audio.addEventListener('ended', cleanup)
+    audio.addEventListener('error', cleanup)
     audio.play().catch(() => {/* user hasn't interacted yet */})
   } catch { /* ignore */ }
 }
@@ -66,7 +108,16 @@ export function playLoop(name: SoundName, intervalMs = 3000): () => void {
     if (stopped) return
     try {
       currentAudio = new Audio(SOUNDS[name])
-      currentAudio.volume = sfxVolume
+      trackAudioElement(currentAudio)
+      currentAudio.volume = sfxLevels[SOUND_CATEGORY_BY_NAME[name]] ?? sfxVolume
+      const audioRef = currentAudio
+      const cleanup = () => {
+        audioRef.removeEventListener('ended', cleanup)
+        audioRef.removeEventListener('error', cleanup)
+        untrackAudioElement(audioRef)
+      }
+      audioRef.addEventListener('ended', cleanup)
+      audioRef.addEventListener('error', cleanup)
       currentAudio.play().catch(() => {})
       timeoutId = window.setTimeout(play, intervalMs)
     } catch { /* ignore */ }
@@ -80,6 +131,7 @@ export function playLoop(name: SoundName, intervalMs = 3000): () => void {
     if (currentAudio) {
       currentAudio.pause()
       currentAudio.currentTime = 0
+      untrackAudioElement(currentAudio)
       currentAudio = null
     }
   }

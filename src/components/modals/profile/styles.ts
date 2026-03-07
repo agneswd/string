@@ -39,6 +39,7 @@ export const S_textarea: CSSProperties = {
 export const S_avatarContainer: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
+  flexWrap: 'wrap',
   gap: '16px',
 }
 

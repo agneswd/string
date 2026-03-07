@@ -92,8 +92,8 @@ export const MemberColumn = memo(function MemberColumn({
         style={{
           height: '100%',
           minHeight: 0,
-          background: isString ? 'var(--bg-sidebar-light)' : '#2b2d31',
-          borderLeft: isString ? '1px solid var(--border-subtle)' : '1px solid #1e1f22',
+          background: 'var(--bg-sidebar-light)',
+          borderLeft: '1px solid var(--border-subtle)',
           padding: isString ? '16px' : '20px 16px',
           boxSizing: 'border-box',
           display: 'flex',
@@ -108,7 +108,7 @@ export const MemberColumn = memo(function MemberColumn({
             fontWeight: 600,
             textTransform: 'uppercase',
             letterSpacing: isString ? '0.08em' : '0.04em',
-            color: isString ? 'var(--text-muted)' : '#949ba4',
+            color: 'var(--text-muted)',
           }}
         >
           Profile
@@ -116,9 +116,9 @@ export const MemberColumn = memo(function MemberColumn({
 
         <div
           style={{
-            border: isString ? '1px solid var(--border-subtle)' : '1px solid #1e1f22',
+            border: '1px solid var(--border-subtle)',
             borderRadius: isString ? 2 : 8,
-            background: isString ? 'var(--bg-panel)' : '#232428',
+            background: 'var(--bg-panel)',
             padding: isString ? '14px' : '16px',
             display: 'flex',
             flexDirection: 'column',
@@ -167,7 +167,7 @@ export const MemberColumn = memo(function MemberColumn({
                 width: 12,
                 height: 12,
                 borderRadius: '50%',
-                border: `2px solid ${isString ? 'var(--bg-panel)' : '#232428'}`,
+                border: '2px solid var(--bg-panel)',
                 background: statusColor,
                 boxSizing: 'border-box',
               }}
@@ -177,7 +177,7 @@ export const MemberColumn = memo(function MemberColumn({
           <div style={{ minWidth: 0, width: '100%' }}>
             <div
               style={{
-                color: isString ? 'var(--text-primary)' : '#f2f3f5',
+                color: 'var(--text-primary)',
                 fontSize: isString ? 16 : 18,
                 fontWeight: 600,
                 lineHeight: 1.25,
@@ -189,7 +189,7 @@ export const MemberColumn = memo(function MemberColumn({
             <div
               style={{
                 marginTop: 4,
-                color: isString ? 'var(--text-muted)' : '#b5bac1',
+                color: isString ? 'var(--text-muted)' : 'var(--text-secondary)',
                 fontFamily: isString ? 'var(--font-mono)' : 'inherit',
                 fontSize: isString ? 11 : 13,
                 lineHeight: 1.3,
@@ -218,13 +218,13 @@ export const MemberColumn = memo(function MemberColumn({
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: isString ? '0.08em' : '0.04em',
-                  color: isString ? 'var(--text-muted)' : '#949ba4',
+                  color: 'var(--text-muted)',
                   marginBottom: 4,
                 }}
               >
                 Status
               </div>
-              <div style={{ color: isString ? 'var(--text-primary)' : '#dbdee1', fontSize: isString ? 13 : 14 }}>
+              <div style={{ color: 'var(--text-primary)', fontSize: isString ? 13 : 14 }}>
                 {statusLabel}
               </div>
             </div>
@@ -237,13 +237,13 @@ export const MemberColumn = memo(function MemberColumn({
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: isString ? '0.08em' : '0.04em',
-                  color: isString ? 'var(--text-muted)' : '#949ba4',
+                  color: 'var(--text-muted)',
                   marginBottom: 4,
                 }}
               >
                 Bio
               </div>
-              <div style={{ color: isString ? 'var(--text-primary)' : '#dbdee1', fontSize: isString ? 13 : 14, lineHeight: 1.5 }}>
+              <div style={{ color: 'var(--text-primary)', fontSize: isString ? 13 : 14, lineHeight: 1.5 }}>
                 {dmProfile.bio || 'No bio set.'}
               </div>
             </div>

@@ -32,7 +32,7 @@ export interface ModalSectionProps {
   showProfileModal: boolean
   onCloseProfile: () => void
   currentUser: ProfileSettingsModalProps['currentUser']
-  onUpdateProfile: (params: { displayName?: string | null; bio?: string | null; avatarBytes?: Uint8Array | null; profileColor?: string | null }) => Promise<void>
+  onUpdateProfile: (params: { username?: string | null; displayName?: string | null; bio?: string | null; avatarBytes?: Uint8Array | null; profileColor?: string | null }) => Promise<void>
   onSetStatus: (tag: string) => void
   showGuildSettingsModal: boolean
   onCloseGuildSettings: () => void

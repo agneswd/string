@@ -1,10 +1,18 @@
 import { useMemo, memo } from 'react'
 import { toIdKey } from '../../lib/helpers'
+import { avatarBytesToUrl } from '../../lib/avatarUtils'
 import { ServerListPaneString, type GuildId } from '../guild/ServerListPane'
 import type { ServerColumnVariantProps } from './ServerColumn'
 
+export interface ServerColumnStringProps extends ServerColumnVariantProps {
+  compact?: boolean
+}
+
 export const ServerColumnString = memo(function ServerColumnString({
   orderedGuilds,
+  dmQuickEntries,
+  selectedDmChannelId,
+  onSelectDmChannel,
   selectedGuildId,
   onSelectGuild,
   onHomeClick,
@@ -17,15 +25,23 @@ export const ServerColumnString = memo(function ServerColumnString({
   onOpenGuildSettings,
   ownedGuildIds,
   onReorder,
-}: ServerColumnVariantProps) {
+  compact = false,
+}: ServerColumnStringProps) {
   const guilds = useMemo(
-    () => orderedGuilds.map((guild) => ({ id: toIdKey(guild.guildId), name: guild.name })),
+    () => orderedGuilds.map((guild) => ({
+      id: toIdKey(guild.guildId),
+      name: guild.name,
+      iconUrl: avatarBytesToUrl(guild.avatarBytes),
+    })),
     [orderedGuilds],
   )
 
   return (
     <ServerListPaneString
       guilds={guilds}
+      dmQuickEntries={dmQuickEntries}
+      selectedDmChannelId={selectedDmChannelId}
+      onSelectDmChannel={onSelectDmChannel}
       selectedGuildId={selectedGuildId ?? undefined}
       onSelectGuild={onSelectGuild as (id: GuildId) => void}
       onHomeClick={onHomeClick}
@@ -38,6 +54,7 @@ export const ServerColumnString = memo(function ServerColumnString({
       onOpenGuildSettings={onOpenGuildSettings as (id: GuildId) => void}
       ownedGuildIds={ownedGuildIds as Set<GuildId>}
       onReorder={onReorder}
+      compact={compact}
     />
   )
 })

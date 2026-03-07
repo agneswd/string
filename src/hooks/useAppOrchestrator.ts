@@ -10,7 +10,7 @@ import { useCallback, useMemo, useEffect, useLayoutEffect, useState } from 'reac
 import { useRtcOrchestrator } from '../lib/webrtc'
 import { toIdKey, isCategoryChannel, isVoiceChannel } from '../lib/helpers'
 import { avatarBytesToUrl } from '../lib/avatarUtils'
-import { setSfxVolume } from '../lib/sfx'
+import { setSfxLevels } from '../lib/sfx'
 import { identityToString, useAppData } from './useAppData'
 import { useActionFeedback } from './useActionFeedback'
 import { useGuildNavigation } from './useGuildNavigation'
@@ -29,8 +29,15 @@ import { useAppState } from './useAppState'
 import { useSendSignal } from './useSendSignal'
 import {
   readUiSoundLevel,
+  readPercentageSetting,
+  readNumberRecordSetting,
   readBooleanSetting,
   UI_SOUND_LEVEL_STORAGE_KEY,
+  CALL_SOUND_LEVEL_STORAGE_KEY,
+  DM_ALERT_SOUND_LEVEL_STORAGE_KEY,
+  FRIEND_ALERT_SOUND_LEVEL_STORAGE_KEY,
+  VOICE_DEFAULT_VOLUME_STORAGE_KEY,
+  VOICE_USER_VOLUMES_STORAGE_KEY,
   FRIEND_STATUS_NOTIFICATIONS_STORAGE_KEY,
   DM_MESSAGE_NOTIFICATIONS_STORAGE_KEY,
 } from '../lib/settingsStorage'
@@ -176,7 +183,7 @@ export function useAppOrchestrator() {
     ignoredCallIds, setIgnoredCallIds,
     addNotification, dismissNotification,
     toggleLocalMuteUser, handleToggleScreenShare,
-    viewingScreenStream, onRegister, onLoginAsUser,
+    viewingScreenStream,
     audioStreams, isMuted, isDeafened, muteColor, deafenColor,
   } = appState
 
@@ -184,6 +191,11 @@ export function useAppOrchestrator() {
   // Persisted settings state
   // ---------------------------------------------------------------------------
   const [uiSoundLevel, setUiSoundLevel] = useState<number>(() => readUiSoundLevel())
+  const [callSoundLevel, setCallSoundLevel] = useState<number>(() => readPercentageSetting(CALL_SOUND_LEVEL_STORAGE_KEY, 50))
+  const [dmAlertSoundLevel, setDmAlertSoundLevel] = useState<number>(() => readPercentageSetting(DM_ALERT_SOUND_LEVEL_STORAGE_KEY, 50))
+  const [friendAlertSoundLevel, setFriendAlertSoundLevel] = useState<number>(() => readPercentageSetting(FRIEND_ALERT_SOUND_LEVEL_STORAGE_KEY, 50))
+  const [voiceDefaultVolume, setVoiceDefaultVolume] = useState<number>(() => readPercentageSetting(VOICE_DEFAULT_VOLUME_STORAGE_KEY, 100))
+  const [voiceUserVolumes, setVoiceUserVolumes] = useState<Record<string, number>>(() => readNumberRecordSetting(VOICE_USER_VOLUMES_STORAGE_KEY))
   const [friendStatusNotificationsEnabled, setFriendStatusNotificationsEnabled] = useState<boolean>(
     () => readBooleanSetting(FRIEND_STATUS_NOTIFICATIONS_STORAGE_KEY, true),
   )
@@ -192,9 +204,34 @@ export function useAppOrchestrator() {
   )
 
   useEffect(() => {
-    setSfxVolume(uiSoundLevel / 100)
+    setSfxLevels({
+      ui: uiSoundLevel / 100,
+      call: callSoundLevel / 100,
+      dm: dmAlertSoundLevel / 100,
+      friend: friendAlertSoundLevel / 100,
+    })
     try { window.localStorage.setItem(UI_SOUND_LEVEL_STORAGE_KEY, String(uiSoundLevel)) } catch {}
-  }, [uiSoundLevel])
+  }, [callSoundLevel, dmAlertSoundLevel, friendAlertSoundLevel, uiSoundLevel])
+
+  useEffect(() => {
+    try { window.localStorage.setItem(CALL_SOUND_LEVEL_STORAGE_KEY, String(callSoundLevel)) } catch {}
+  }, [callSoundLevel])
+
+  useEffect(() => {
+    try { window.localStorage.setItem(DM_ALERT_SOUND_LEVEL_STORAGE_KEY, String(dmAlertSoundLevel)) } catch {}
+  }, [dmAlertSoundLevel])
+
+  useEffect(() => {
+    try { window.localStorage.setItem(FRIEND_ALERT_SOUND_LEVEL_STORAGE_KEY, String(friendAlertSoundLevel)) } catch {}
+  }, [friendAlertSoundLevel])
+
+  useEffect(() => {
+    try { window.localStorage.setItem(VOICE_DEFAULT_VOLUME_STORAGE_KEY, String(voiceDefaultVolume)) } catch {}
+  }, [voiceDefaultVolume])
+
+  useEffect(() => {
+    try { window.localStorage.setItem(VOICE_USER_VOLUMES_STORAGE_KEY, JSON.stringify(voiceUserVolumes)) } catch {}
+  }, [voiceUserVolumes])
 
   useEffect(() => {
     try { window.localStorage.setItem(FRIEND_STATUS_NOTIFICATIONS_STORAGE_KEY, String(friendStatusNotificationsEnabled)) } catch {}
@@ -203,6 +240,11 @@ export function useAppOrchestrator() {
   useEffect(() => {
     try { window.localStorage.setItem(DM_MESSAGE_NOTIFICATIONS_STORAGE_KEY, String(dmMessageNotificationsEnabled)) } catch {}
   }, [dmMessageNotificationsEnabled])
+
+  const setVoiceUserVolume = useCallback((identity: string, volume: number) => {
+    const nextVolume = Math.max(0, Math.min(100, Math.round(volume)))
+    setVoiceUserVolumes((current) => ({ ...current, [identity]: nextVolume }))
+  }, [])
 
   // ---------------------------------------------------------------------------
   // RTC Signaling
@@ -373,8 +415,14 @@ export function useAppOrchestrator() {
     state, actions, extendedState, extendedActions,
     identityString, usersByIdentity, me,
     getAvatarUrlForUser,
+    dmUnreadCountsByChannel: appData.dmUnreadCountsByChannel,
     // Settings
     uiSoundLevel, setUiSoundLevel,
+    callSoundLevel, setCallSoundLevel,
+    dmAlertSoundLevel, setDmAlertSoundLevel,
+    friendAlertSoundLevel, setFriendAlertSoundLevel,
+    voiceDefaultVolume, setVoiceDefaultVolume,
+    voiceUserVolumes, setVoiceUserVolume,
     friendStatusNotificationsEnabled, setFriendStatusNotificationsEnabled,
     dmMessageNotificationsEnabled, setDmMessageNotificationsEnabled,
     // Friends
@@ -408,7 +456,7 @@ export function useAppOrchestrator() {
     initialLoadComplete, notifications,
     ignoredCallIds, addNotification, dismissNotification,
     toggleLocalMuteUser, handleToggleScreenShare,
-    viewingScreenStream, onRegister, onLoginAsUser,
+    viewingScreenStream,
     audioStreams, isMuted, isDeafened, muteColor, deafenColor,
     // Guild messages
     memberListItems, onToggleReaction, getReactionsForMessage,

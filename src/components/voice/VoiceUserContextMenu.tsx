@@ -7,7 +7,9 @@ export interface VoiceUserContextMenuProps {
   userName: string
   isStreaming?: boolean
   isLocallyMuted: boolean
+  volume: number
   onViewScreenShare?: () => void
+  onVolumeChange: (volume: number) => void
   onToggleLocalMute: () => void
   onClose: () => void
 }
@@ -18,7 +20,9 @@ export const VoiceUserContextMenu: React.FC<VoiceUserContextMenuProps> = ({
   userName,
   isStreaming,
   isLocallyMuted,
+  volume,
   onViewScreenShare,
+  onVolumeChange,
   onToggleLocalMute,
   onClose,
 }) => {
@@ -113,6 +117,22 @@ export const VoiceUserContextMenu: React.FC<VoiceUserContextMenuProps> = ({
           </>
         )}
       </button>
+
+      <div style={{ padding: '8px 12px 4px', color: '#96989d', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+        Volume {volume}%
+      </div>
+      <div style={{ padding: '0 12px 8px' }}>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          step={1}
+          value={volume}
+          onChange={(event) => onVolumeChange(Number(event.target.value))}
+          aria-label={`${userName} volume`}
+          style={{ width: '100%', accentColor: 'var(--accent-primary)' }}
+        />
+      </div>
     </div>
   )
 }

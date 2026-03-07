@@ -82,9 +82,9 @@ function makeShell(layoutMode: 'string' | 'classic') {
 }
 
 describe('Shell + layout wiring — string mode', () => {
-  it('server rail renders as "Workspaces" navigation', () => {
+  it('server rail renders as "Looms" navigation', () => {
     render(makeShell('string'))
-    expect(screen.getByRole('navigation', { name: /workspaces/i })).toBeDefined()
+    expect(screen.getByRole('navigation', { name: /looms/i })).toBeDefined()
   })
 
   it('server rail shows guild names as text labels', () => {
@@ -103,7 +103,7 @@ describe('Shell + layout wiring — string mode', () => {
 
   it('sidebar footer UserPanel renders with rounded-rect avatar (string mode)', () => {
     const { container } = render(makeShell('string'))
-    const rectAvatar = container.querySelector<HTMLElement>('div[style*="border-radius: 8px"]')
+    const rectAvatar = container.querySelector<HTMLElement>('div[style*="border-radius: var(--radius-sm)"]')
     expect(rectAvatar).toBeTruthy()
   })
 
@@ -115,9 +115,9 @@ describe('Shell + layout wiring — string mode', () => {
 })
 
 describe('Shell + layout wiring — classic mode', () => {
-  it('server rail renders as "Servers" navigation in classic mode', () => {
+  it('server rail renders as "Looms" navigation in classic mode', () => {
     render(makeShell('classic'))
-    expect(screen.getByRole('navigation', { name: /servers/i })).toBeDefined()
+    expect(screen.getByRole('navigation', { name: /looms/i })).toBeDefined()
   })
 
   it('top nav renders classic bold channel title when a channel is selected', () => {
@@ -125,7 +125,7 @@ describe('Shell + layout wiring — classic mode', () => {
     const strong = document.querySelector('strong')
     // In classic mode the active channel title takes precedence in the <strong> tag.
     expect(strong).toBeTruthy()
-    expect(strong!.textContent).toBe('# general')
+    expect(strong!.textContent).toBe('general')
   })
 
   it('sidebar footer UserPanel renders with rounded-circle avatar (classic mode)', () => {

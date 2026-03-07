@@ -12,6 +12,8 @@ dist
 dist-ssr
 *.local
 
+.env
+
 
 spacetimedb/target
 
@@ -34,3 +36,11 @@ plans
 patches
 scripts
 theme.md
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+/tests_playwright

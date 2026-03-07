@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { MobileDrawer } from './mobile/MobileDrawer'
 
 type ClassValue = string | undefined | null | false
 
@@ -31,6 +32,11 @@ export interface WorkspaceShellProps {
   messageAreaClassName?: string
   inputAreaClassName?: string
   memberColumnClassName?: string
+  isMobile?: boolean
+  mobileServerColumnOpen?: boolean
+  mobileChannelColumnOpen?: boolean
+  mobileMemberColumnOpen?: boolean
+  onCloseMobilePanels?: () => void
 }
 
 export function WorkspaceShell({
@@ -50,6 +56,11 @@ export function WorkspaceShell({
   messageAreaClassName,
   inputAreaClassName,
   memberColumnClassName,
+  isMobile = false,
+  mobileServerColumnOpen = false,
+  mobileChannelColumnOpen = false,
+  mobileMemberColumnOpen = false,
+  onCloseMobilePanels,
 }: WorkspaceShellProps) {
   return (
     <div
@@ -67,80 +78,78 @@ export function WorkspaceShell({
       }}
     >
       {/* Server rail — fixed-width left column for String-mode navigation */}
-      <aside
-        className={cx('workspace-shell__servers', serverColumnClassName)}
-        style={{
-          width: '208px',
-          flexShrink: 0,
-          backgroundColor: 'var(--bg-deepest)',
-          borderRight: '1px solid var(--border-subtle)',
-          overflowY: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-          padding: 0,
-          /* hide scrollbar */
-          scrollbarWidth: 'none',
-        }}
-      >
-        {serverColumn}
-      </aside>
-
-      {/* Channel column wrapper with optional footer slot beneath the sidebar */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          width: '232px',
-          minWidth: '232px',
-          backgroundColor: 'var(--bg-sidebar-light)',
-          borderRight: '1px solid var(--border-subtle)',
-          flexShrink: 0,
-        }}
-      >
-        <aside
-          className={cx('workspace-shell__channels', channelColumnClassName)}
-          style={{
-            flex: 1,
-            minHeight: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
-        >
-          {channelColumn}
-        </aside>
-
-        {sidebarBottom && (
-          <div
+      {!isMobile && (
+        <>
+          <aside
+            className={cx('workspace-shell__servers', serverColumnClassName)}
             style={{
+              width: '208px',
               flexShrink: 0,
-              backgroundColor: 'var(--bg-sidebar-light)',
-              padding: '0.875rem',
+              backgroundColor: 'var(--bg-deepest)',
+              borderRight: '1px solid var(--border-subtle)',
+              overflowY: 'auto',
               display: 'flex',
               flexDirection: 'column',
-              gap: '0.5rem',
-              borderTop: '1px solid var(--border-subtle)',
+              padding: 0,
+              scrollbarWidth: 'none',
             }}
           >
-            {sidebarBottom}
-          </div>
-        )}
-      </div>
+            {serverColumn}
+          </aside>
 
-      {/* Main column — top nav, messages, and optional composer tray */}
-      <main
-        className={cx('workspace-shell__main', mainClassName)}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              width: '232px',
+              minWidth: '232px',
+              backgroundColor: 'var(--bg-sidebar-light)',
+              borderRight: '1px solid var(--border-subtle)',
+              flexShrink: 0,
+            }}
+          >
+            <aside
+              className={cx('workspace-shell__channels', channelColumnClassName)}
+              style={{
+                flex: 1,
+                minHeight: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+              }}
+            >
+              {channelColumn}
+            </aside>
+
+            {sidebarBottom && (
+              <div
+                style={{
+                  flexShrink: 0,
+                  backgroundColor: 'var(--bg-sidebar-light)',
+                  padding: '0.875rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                  borderTop: '1px solid var(--border-subtle)',
+                }}
+              >
+                {sidebarBottom}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Main region — shared top nav above content and optional member pane */}
+      <div
         style={{
           flex: 1,
           minWidth: 0,
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: 'var(--bg-panel)',
-          position: 'relative',
           overflow: 'hidden',
         }}
       >
-        {/* Top nav slot with the current 3.25rem shell header height */}
         <header
           className={cx('workspace-shell__top-nav', topNavClassName)}
           style={{
@@ -157,50 +166,111 @@ export function WorkspaceShell({
           {topNav}
         </header>
 
-        <section
-          className={cx('workspace-shell__messages', messageAreaClassName)}
-          style={{
-            flex: 1,
-            minHeight: 0,
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          {messageArea}
-        </section>
-
-        {inputArea && (
-          <section
-            className={cx('workspace-shell__input', inputAreaClassName)}
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
+          <main
+            className={cx('workspace-shell__main', mainClassName)}
             style={{
-              flexShrink: 0,
-              padding: '0.75rem',
+              flex: 1,
+              minWidth: 0,
+              display: 'flex',
+              flexDirection: 'column',
               backgroundColor: 'var(--bg-panel)',
-              borderTop: '1px solid var(--border-subtle)',
+              position: 'relative',
+              overflow: 'hidden',
             }}
           >
-            {inputArea}
-          </section>
-        )}
-      </main>
+            <section
+              className={cx('workspace-shell__messages', messageAreaClassName)}
+              style={{
+                flex: 1,
+                minHeight: 0,
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              {messageArea}
+            </section>
 
-      {/* Optional member column for presence or participant lists */}
-      {memberColumn && showMemberList && (
-        <aside
-          className={cx('workspace-shell__members', memberColumnClassName)}
-          style={{
-            width: '232px',
-            flexShrink: 0,
-            backgroundColor: 'var(--bg-sidebar-light)',
-            borderLeft: '1px solid var(--border-subtle)',
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          {memberColumn}
-        </aside>
+            {inputArea && (
+              <section
+                className={cx('workspace-shell__input', inputAreaClassName)}
+                style={{
+                  flexShrink: 0,
+                  padding: '0.75rem',
+                  backgroundColor: 'var(--bg-panel)',
+                  borderTop: '1px solid var(--border-subtle)',
+                }}
+              >
+                {inputArea}
+              </section>
+            )}
+          </main>
+
+          {memberColumn && showMemberList && !isMobile && (
+            <aside
+              className={cx('workspace-shell__members', memberColumnClassName)}
+              style={{
+                width: '232px',
+                flexShrink: 0,
+                backgroundColor: 'var(--bg-sidebar-light)',
+                borderLeft: '1px solid var(--border-subtle)',
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              {memberColumn}
+            </aside>
+          )}
+        </div>
+      </div>
+
+      {isMobile && onCloseMobilePanels && (
+        <>
+          <MobileDrawer
+            isOpen={mobileServerColumnOpen}
+            side="left"
+            width="320px"
+            ariaLabel="Looms"
+            onClose={onCloseMobilePanels}
+          >
+            <div style={{ height: '100%', backgroundColor: 'var(--bg-deepest)', borderRight: '1px solid var(--border-subtle)', overflowY: 'auto' }}>
+              {serverColumn}
+            </div>
+          </MobileDrawer>
+
+          <MobileDrawer
+            isOpen={mobileChannelColumnOpen}
+            side="left"
+            width="340px"
+            ariaLabel="Navigation"
+            onClose={onCloseMobilePanels}
+          >
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-sidebar-light)', borderRight: '1px solid var(--border-subtle)' }}>
+              <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+                {channelColumn}
+              </div>
+              {sidebarBottom && (
+                <div style={{ flexShrink: 0, borderTop: '1px solid var(--border-subtle)', padding: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {sidebarBottom}
+                </div>
+              )}
+            </div>
+          </MobileDrawer>
+
+          <MobileDrawer
+            isOpen={mobileMemberColumnOpen && Boolean(memberColumn) && showMemberList}
+            side="right"
+            width="340px"
+            ariaLabel="Members"
+            onClose={onCloseMobilePanels}
+          >
+            <div style={{ height: '100%', backgroundColor: 'var(--bg-sidebar-light)', borderLeft: '1px solid var(--border-subtle)', overflowY: 'auto' }}>
+              {memberColumn}
+            </div>
+          </MobileDrawer>
+        </>
       )}
     </div>
   )

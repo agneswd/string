@@ -12,15 +12,18 @@ export interface ModalProps {
 /* ── Static dialog style ── */
 const dialogStyle: CSSProperties = {
   position: 'fixed',
-  top: '50%',
   left: '50%',
+  top: '50%',
   transform: 'translate(-50%, -50%)',
   margin: 0,
   padding: 0,
   border: '1px solid var(--border-subtle)',
-  minWidth: '400px',
-  maxWidth: '90vw',
-  maxHeight: '85vh',
+  width: 'min(560px, calc(100dvw - 32px))',
+  minWidth: 0,
+  maxWidth: 'calc(100dvw - 32px)',
+  maxHeight: 'calc(100dvh - 24px)',
+  boxSizing: 'border-box',
+  overflow: 'hidden',
   backgroundColor: 'var(--bg-panel)',
   color: 'var(--text-normal)',
   borderRadius: '2px',
@@ -33,6 +36,58 @@ const backdropCss = `
     background: rgba(0, 0, 0, 0.5) !important;
     position: fixed !important;
     inset: 0 !important;
+  }
+
+  dialog.tw-modal {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  dialog.tw-modal .tw-modal__inner {
+    width: 100%;
+    min-width: 0;
+    max-height: calc(100dvh - 24px);
+  }
+
+  dialog.tw-modal .tw-modal__body {
+    flex: 1 1 auto;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  dialog.tw-modal .tw-modal__body > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  @media (max-width: 640px) {
+    dialog.tw-modal {
+      left: calc(8px + env(safe-area-inset-left, 0px)) !important;
+      right: auto !important;
+      top: 50% !important;
+      width: calc(100dvw - 16px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)) !important;
+      min-width: 0 !important;
+      max-width: calc(100dvw - 16px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)) !important;
+      transform: translateY(-50%) !important;
+      max-height: calc(100dvh - 16px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+      border-radius: 12px !important;
+    }
+
+    dialog.tw-modal .tw-modal__inner {
+      max-height: calc(100dvh - 16px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    }
+
+    dialog.tw-modal .tw-modal__body {
+      padding: 12px !important;
+    }
+
+    dialog.tw-modal header {
+      padding-inline: 12px !important;
+    }
   }
 `
 
@@ -72,7 +127,7 @@ export const Modal = React.memo(function Modal({ isOpen, onClose, title, childre
       className={`tw-modal ${className ?? ''}`}
       style={dialogStyle}
     >
-      <div className="flex flex-col max-h-[85vh]">
+      <div className="tw-modal__inner flex flex-col" style={{ maxHeight: 'calc(100dvh - 24px)', width: '100%', minWidth: 0 }}>
         {title && (
           <header className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)]">
             <h2 className="text-lg font-semibold text-[var(--text-header-primary)]">{title}</h2>
@@ -85,7 +140,7 @@ export const Modal = React.memo(function Modal({ isOpen, onClose, title, childre
             </button>
           </header>
         )}
-        <div className="p-4 overflow-y-auto">
+        <div className="tw-modal__body p-4">
           {children}
         </div>
       </div>

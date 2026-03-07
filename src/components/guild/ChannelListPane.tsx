@@ -44,9 +44,9 @@ if (typeof document !== 'undefined' && !document.getElementById('clp-hover-style
   style.id = 'clp-hover-styles'
   style.textContent = [
     /* Classic-mode hover (Discord-like) */
-    '.clp-classic-mode .clp-header:hover { background-color: rgba(79,84,92,0.24) !important; }',
-    '.clp-classic-mode .clp-add-btn:hover { color: #dbdee1 !important; }',
-    '.clp-classic-mode .clp-control-btn:hover { background-color: rgba(79,84,92,0.32) !important; }',
+    '.clp-classic-mode .clp-header:hover { background-color: var(--bg-hover) !important; }',
+    '.clp-classic-mode .clp-add-btn:hover { color: var(--text-interactive-hover) !important; }',
+    '.clp-classic-mode .clp-control-btn:hover { background-color: var(--bg-hover) !important; }',
     /* String-mode hover (editorial) */
     '.clp-string-mode .clp-header:hover { background-color: var(--bg-hover) !important; }',
     '.clp-string-mode .clp-add-btn:hover { color: var(--text-interactive-hover) !important; }',
@@ -76,7 +76,9 @@ export function ChannelListPane({
   voiceChannelUsers,
   currentVoiceChannelId,
   locallyMutedUsers,
+  voiceUserVolumes,
   onToggleLocalMuteUser,
+  onSetVoiceUserVolume,
   localIdentity,
   getAvatarUrl,
   className,
@@ -587,9 +589,11 @@ export function ChannelListPane({
           userName={contextMenu.userName}
           isStreaming={contextMenu.isStreaming}
           isLocallyMuted={locallyMutedUsers?.has(contextMenu.identity) ?? false}
+          volume={voiceUserVolumes?.[contextMenu.identity] ?? 100}
           onViewScreenShare={
             contextMenu.isStreaming ? () => onViewScreenShare?.(contextMenu.identity) : undefined
           }
+          onVolumeChange={(volume) => onSetVoiceUserVolume?.(contextMenu.identity, volume)}
           onToggleLocalMute={() => onToggleLocalMuteUser?.(contextMenu.identity)}
           onClose={() => setContextMenu(null)}
         />

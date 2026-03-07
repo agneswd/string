@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 
 import { toIdKey, isVoiceChannel, statusToLabel } from '../lib/helpers'
 import { identityToString } from './useAppData'
+import { writeNavigationState } from '../lib/navigationStateStorage'
 import type { ProfilePopupUser } from '../components/social/UserProfilePopup'
 import type { ActionFeedback } from './useActionFeedback'
 import type { Channel, Guild, User, VoiceState } from '../module_bindings/types'
@@ -96,16 +97,46 @@ export function useAppNavigation({
     homeViewActiveRef.current = false
     setSelectedGuildId(String(guildId))
     setSelectedDmChannelId(undefined)
-  }, [homeViewActiveRef, setSelectedGuildId, setSelectedDmChannelId])
+    setSelectedTextChannelId(undefined)
+    setSelectedVoiceChannelId(undefined)
+    writeNavigationState({
+      homeViewActive: false,
+      selectedGuildId: String(guildId),
+      selectedDmChannelId: undefined,
+      selectedTextChannelId: undefined,
+      selectedVoiceChannelId: undefined,
+    })
+  }, [homeViewActiveRef, setSelectedGuildId, setSelectedDmChannelId, setSelectedTextChannelId, setSelectedVoiceChannelId])
 
   const handleHomeClick = useCallback(() => {
     homeViewActiveRef.current = true
     setSelectedGuildId(undefined)
-  }, [homeViewActiveRef, setSelectedGuildId])
+    setSelectedDmChannelId(undefined)
+    setSelectedTextChannelId(undefined)
+    setSelectedVoiceChannelId(undefined)
+    writeNavigationState({
+      homeViewActive: true,
+      selectedGuildId: undefined,
+      selectedDmChannelId: undefined,
+      selectedTextChannelId: undefined,
+      selectedVoiceChannelId: undefined,
+    })
+  }, [homeViewActiveRef, setSelectedGuildId, setSelectedDmChannelId, setSelectedTextChannelId, setSelectedVoiceChannelId])
 
   const handleSelectDmChannel = useCallback((channelId: string | number) => {
     setSelectedDmChannelId(String(channelId))
-  }, [setSelectedDmChannelId])
+    setSelectedGuildId(undefined)
+    setSelectedTextChannelId(undefined)
+    setSelectedVoiceChannelId(undefined)
+    homeViewActiveRef.current = true
+    writeNavigationState({
+      homeViewActive: true,
+      selectedDmChannelId: String(channelId),
+      selectedGuildId: undefined,
+      selectedTextChannelId: undefined,
+      selectedVoiceChannelId: undefined,
+    })
+  }, [setSelectedDmChannelId, setSelectedGuildId, setSelectedTextChannelId, setSelectedVoiceChannelId, homeViewActiveRef])
 
   const handleInitiateDmCall = useCallback((dmChannelId: string | number) => {
     const id = String(dmChannelId)
@@ -123,13 +154,14 @@ export function useAppNavigation({
   const handleViewProfile = useCallback((user: { displayName: string; username: string; bio?: string; status?: string; avatarUrl?: string }, x: number, y: number) => {
     // Enrich with data from usersByIdentity if available
     const found = Array.from(usersByIdentity.values()).find(u => u.username === user.username || u.displayName === user.displayName)
+    const foundProfileColor = found && 'profileColor' in found ? found.profileColor : undefined
     const enriched: ProfilePopupUser = {
       displayName: found?.displayName ?? user.displayName,
       username: found?.username ?? user.username,
       bio: found?.bio ?? user.bio,
       status: found ? statusToLabel(found.status) : user.status,
       avatarUrl: user.avatarUrl ?? (found ? getAvatarUrlForUser(identityToString(found.identity)) : undefined),
-      profileColor: (found as any)?.profileColor ?? undefined,
+      profileColor: foundProfileColor ?? undefined,
     }
     const userId = found ? identityToString(found.identity) : ''
     setContextMenu({ x, y, userId, user: enriched })
@@ -139,10 +171,12 @@ export function useAppNavigation({
     const channel = channelsForGuild.find((c) => toIdKey(c.channelId) === String(channelId))
     if (channel && isVoiceChannel(channel)) {
       setSelectedVoiceChannelId(String(channelId))
+      writeNavigationState({ homeViewActive: false, selectedVoiceChannelId: String(channelId) })
       onJoinVoice(channel)
     } else {
       setSelectedTextChannelId(String(channelId))
       setSelectedDmChannelId(undefined)
+      writeNavigationState({ homeViewActive: false, selectedTextChannelId: String(channelId), selectedDmChannelId: undefined })
     }
   }, [channelsForGuild, setSelectedVoiceChannelId, onJoinVoice, setSelectedTextChannelId, setSelectedDmChannelId])
 

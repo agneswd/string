@@ -62,8 +62,8 @@ function resolveMemberStyles(mode: MemberLayoutMode): MemberStyleSheet {
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
-      background: isString ? 'var(--bg-sidebar-light)' : '#2b2d31',
-      borderLeft: isString ? '1px solid var(--border-subtle)' : '1px solid #1f2023',
+      background: 'var(--bg-sidebar-light)',
+      borderLeft: '1px solid var(--border-subtle)',
     },
     scroll: {
       flex: 1,
@@ -78,7 +78,7 @@ function resolveMemberStyles(mode: MemberLayoutMode): MemberStyleSheet {
       lineHeight: '16px',
       letterSpacing: isString ? '0.06em' : '0.02em',
       textTransform: 'uppercase' as const,
-      color: isString ? 'var(--text-muted)' : '#949ba4',
+      color: 'var(--text-muted)',
       userSelect: 'none' as const,
     },
     memberRow: {
@@ -119,11 +119,11 @@ function resolveMemberStyles(mode: MemberLayoutMode): MemberStyleSheet {
       textOverflow: 'ellipsis',
       whiteSpace: 'nowrap' as const,
     },
-    hoverBg: isString ? 'var(--bg-hover)' : 'rgba(79,84,92,0.32)',
-    emptyColor: isString ? 'var(--text-muted)' : '#949ba4',
-    statusDotBorderColor: isString ? 'var(--bg-sidebar-light)' : '#2b2d31',
-    onlineNameColor: isString ? 'var(--text-primary)' : '#f2f3f5',
-    offlineNameColor: isString ? 'var(--text-muted)' : '#949ba4',
+    hoverBg: 'var(--bg-hover)',
+    emptyColor: 'var(--text-muted)',
+    statusDotBorderColor: 'var(--bg-sidebar-light)',
+    onlineNameColor: 'var(--text-primary)',
+    offlineNameColor: 'var(--text-muted)',
   }
 }
 
@@ -235,7 +235,7 @@ const MemberRow = memo(function MemberRow({ member, showStatusDot, onViewProfile
       <span style={{ ...styles.name, display: 'inline-flex', alignItems: 'center', color: nameColor, gap: '4px' }}>
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</span>
         {member.isOwner && (
-          <Crown size={14} fill="#faa81a" color="#faa81a" style={{flexShrink:0}} role="img" aria-label="Server Owner" />
+          <Crown size={14} fill="#faa81a" color="#faa81a" style={{flexShrink:0}} role="img" aria-label="Loom Owner" />
         )}
       </span>
     </li>

@@ -57,7 +57,9 @@ export interface ChannelListPaneProps {
   voiceChannelUsers?: Map<string | number, VoiceChannelUser[]>
   currentVoiceChannelId?: string | number
   locallyMutedUsers?: Set<string>
+  voiceUserVolumes?: Record<string, number>
   onToggleLocalMuteUser?: (identity: string) => void
+  onSetVoiceUserVolume?: (identity: string, volume: number) => void
   localIdentity?: string
   getAvatarUrl?: (identity: string) => string | undefined
   className?: string

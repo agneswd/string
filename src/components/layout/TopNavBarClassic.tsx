@@ -16,13 +16,10 @@ export function TopNavBarClassic({
   onInitiateDmCall,
   channelName,
 }: TopNavBarVariantProps) {
-  const title = isHomeView
-    ? 'String'
-    : isDmMode
-      ? (dmName ?? 'Direct Messages')
-      : channelName
-        ? `# ${channelName}`
-        : (guildName ?? 'String')
+  const contextLabel = isDmMode ? (dmName ?? 'Direct Messages') : (guildName ?? 'Loom')
+  const channelLabel = isHomeView ? null : (channelName ?? (isDmMode ? dmName : null))
+  const showSingleContextLabel = !isHomeView && (channelLabel == null || channelLabel === contextLabel)
+  const badgeLabel = isHomeView ? 'home' : contextLabel
 
   return (
     <div className="flex w-full items-center justify-between gap-3 px-2">
@@ -36,25 +33,41 @@ export function TopNavBarClassic({
       >
         <span
           style={{
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: '0.08em',
+            display: 'inline-flex',
+            alignItems: 'center',
+            height: 22,
+            padding: '0 7px',
+            borderRadius: 2,
+            border: '1px solid var(--border-subtle)',
+            backgroundColor: 'transparent',
+            fontSize: 10,
+            fontWeight: 600,
+            letterSpacing: '0.1em',
             textTransform: 'uppercase',
-            color: 'var(--text-muted)',
-          }}
-        >
-          Shell
-        </span>
-        <strong
-          style={{
-            minWidth: 0,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
+            color: 'var(--accent-primary)',
             whiteSpace: 'nowrap',
+            userSelect: 'none',
           }}
         >
-          {title}
-        </strong>
+          {badgeLabel}
+        </span>
+
+        {!isHomeView && !showSingleContextLabel && (
+          <>
+            <span style={{ color: 'var(--border-subtle)', fontSize: 12, userSelect: 'none' }}>/</span>
+            <strong
+              style={{
+                minWidth: 0,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                color: 'var(--text-primary)',
+              }}
+            >
+              {channelLabel}
+            </strong>
+          </>
+        )}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto' }}>
         {isDmMode && selectedDmChannel && !currentVoiceState && !outgoingCall && (

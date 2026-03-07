@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, memo, type CSSProperties } from 'react'
-import { Plus, UserPlus, LogOut, Clipboard, Trash2, LineSquiggle, Info, Settings } from 'lucide-react'
+import { Plus, UserPlus, LogOut, Clipboard, Trash2, LineSquiggle, Info, Settings, Phone } from 'lucide-react'
 import {
   CTX_BG,
   CTX_SEPARATOR,
@@ -60,6 +60,9 @@ const addServerWrapStyle: CSSProperties = { paddingBottom: 4, width: '100%' }
 
 export const ServerListPaneClassic = memo(function ServerListPaneClassic({
   guilds,
+  dmQuickEntries = [],
+  selectedDmChannelId,
+  onSelectDmChannel,
   selectedGuildId,
   onSelectGuild,
   onHomeClick,
@@ -108,7 +111,7 @@ export const ServerListPaneClassic = memo(function ServerListPaneClassic({
     <nav
       className={className}
       style={rootStyle}
-      aria-label="Servers"
+      aria-label="Looms"
     >
       <div style={homeWrapStyle}>
         <ServerIcon
@@ -121,6 +124,47 @@ export const ServerListPaneClassic = memo(function ServerListPaneClassic({
           <LineSquiggle size={32} />
         </ServerIcon>
       </div>
+
+      {dmQuickEntries.length > 0 && (
+        <div style={{ ...homeWrapStyle, display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8, marginBottom: 8 }}>
+          {dmQuickEntries.map((entry) => (
+            <div key={entry.channelId}>
+              <ServerIcon
+                label={entry.label}
+                isSelected={selectedDmChannelId === entry.channelId}
+                hasUnread={Boolean(entry.unreadCount)}
+                unreadCount={entry.unreadCount}
+                iconUrl={entry.avatarUrl}
+                onClick={() => onSelectDmChannel?.(entry.channelId)}
+                statusBadge={entry.hasActiveCall ? (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: -1,
+                      right: -1,
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--status-online)',
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: `3px solid ${BG}`,
+                      boxSizing: 'border-box',
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <Phone width={9} height={9} />
+                  </span>
+                ) : undefined}
+              >
+                {getInitials(entry.label) || '#'}
+              </ServerIcon>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div style={{ ...separatorStyle, margin: '8px 0' }} />
 
@@ -206,7 +250,7 @@ export const ServerListPaneClassic = memo(function ServerListPaneClassic({
 
       <div style={addServerWrapStyle}>
         <ServerIcon
-          label="Add a Server"
+          label="Add a Loom"
           isSelected={false}
           bgHover={ADD_GREEN}
           onClick={onAddServer}
@@ -233,7 +277,7 @@ export const ServerListPaneClassic = memo(function ServerListPaneClassic({
           role="menu"
         >
           <ContextMenuItem
-            label="View Server Info"
+            label="View Loom Info"
             icon={<Info width={16} height={16} />}
             onClick={() => {
               onViewGuildInfo?.(contextMenu.guildId)
@@ -242,7 +286,7 @@ export const ServerListPaneClassic = memo(function ServerListPaneClassic({
           />
           {ownedGuildIds?.has(contextMenu.guildId) && (
             <ContextMenuItem
-              label="Server Settings"
+              label="Loom Settings"
               icon={<Settings width={16} height={16} />}
               onClick={() => {
                 onOpenGuildSettings?.(contextMenu.guildId)
@@ -261,7 +305,7 @@ export const ServerListPaneClassic = memo(function ServerListPaneClassic({
           />
           <div style={{ height: 1, backgroundColor: CTX_SEPARATOR, margin: '4px 0' }} />
           <ContextMenuItem
-            label="Leave Server"
+            label="Leave Loom"
             danger
             icon={<LogOut width={16} height={16} />}
             onClick={() => {
@@ -270,7 +314,7 @@ export const ServerListPaneClassic = memo(function ServerListPaneClassic({
             }}
           />
           <ContextMenuItem
-            label="Copy Server ID"
+            label="Copy Loom ID"
             icon={<Clipboard width={16} height={16} />}
             onClick={() => {
               navigator.clipboard.writeText(String(contextMenu.guildId))
@@ -281,7 +325,7 @@ export const ServerListPaneClassic = memo(function ServerListPaneClassic({
             <>
               <div style={{ height: 1, backgroundColor: CTX_SEPARATOR, margin: '4px 0' }} />
               <ContextMenuItem
-                label="Delete Server"
+                label="Delete Loom"
                 danger
                 icon={<Trash2 width={16} height={16} />}
                 onClick={() => {

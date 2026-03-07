@@ -114,6 +114,7 @@ pub fn register_user(
 #[spacetimedb::reducer]
 pub fn update_profile(
     ctx: &ReducerContext,
+    username: Option<String>,
     display_name: Option<String>,
     bio: Option<String>,
     avatar_bytes: Option<Vec<u8>>,
@@ -126,6 +127,20 @@ pub fn update_profile(
         .identity()
         .find(who)
         .ok_or("User not found — call register_user first")?;
+
+    if let Some(next_username) = username {
+        let next_username = next_username.trim().to_string();
+        if next_username.is_empty() || next_username.len() > 32 {
+            return Err("Username must be 1–32 characters".into());
+        }
+
+        if next_username != user.username {
+            if ctx.db.user().username().find(&next_username).is_some() {
+                return Err(format!("Username '{}' is already taken", next_username));
+            }
+            user.username = next_username;
+        }
+    }
 
     if let Some(name) = display_name {
         let name = name.trim().to_string();

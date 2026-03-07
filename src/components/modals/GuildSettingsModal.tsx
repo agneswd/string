@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 
 import { Modal } from './Modal'
+import { getInitials } from '../guild/ServerListPane.shared'
 import { avatarBytesToUrl } from '../../lib/avatarUtils'
 import { compressAvatarFile, MAX_AVATAR_BYTES } from './profile/avatarProcessing'
 import { S_formCol, S_labelCol, S_labelSpan, S_input, S_stringOutlineButton, S_stringOutlineButtonDisabled } from '../../constants/appStyles'
@@ -45,6 +46,7 @@ export const GuildSettingsModal = React.memo(function GuildSettingsModal({
   const [avatarError, setAvatarError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const currentGuildId = String(currentGuild?.guildId ?? '')
 
   useEffect(() => {
     if (!isOpen || !currentGuild) {
@@ -57,7 +59,7 @@ export const GuildSettingsModal = React.memo(function GuildSettingsModal({
     setAvatarRemoved(false)
     setAvatarError(null)
     setPreviewUrl(null)
-  }, [isOpen, currentGuild])
+  }, [isOpen, currentGuildId])
 
   useEffect(() => () => {
     if (previewUrl) {
@@ -127,23 +129,23 @@ export const GuildSettingsModal = React.memo(function GuildSettingsModal({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Server Settings">
-      <form onSubmit={handleSubmit} style={S_formCol}>
+    <Modal isOpen={isOpen} onClose={onClose} title="Loom Settings">
+      <form onSubmit={handleSubmit} style={{ ...S_formCol, width: '100%', minWidth: 0 }}>
         <label style={S_labelCol}>
-          <span style={S_labelSpan}>SERVER AVATAR</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={S_labelSpan}>LOOM AVATAR</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', width: '100%' }}>
             {avatarUrl ? (
               <img src={avatarUrl} alt="" style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover', border: '1px solid var(--border-subtle)' }} />
             ) : (
               <div style={{ width: 56, height: 56, borderRadius: 8, background: 'var(--bg-hover)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontWeight: 700 }}>
-                {name.trim().slice(0, 2).toUpperCase() || '#'}
+                {getInitials(name.trim()) || '#'}
               </div>
             )}
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button type="button" onClick={() => fileInputRef.current?.click()} style={S_stringOutlineButton} className="string-outline-button">
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', minWidth: 0, flex: '1 1 180px' }}>
+              <button type="button" onClick={() => fileInputRef.current?.click()} style={{ ...S_stringOutlineButton, flex: '1 1 140px' }} className="string-outline-button">
                 Upload Avatar
               </button>
-              <button type="button" onClick={handleAvatarReset} style={S_stringOutlineButton} className="string-outline-button">
+              <button type="button" onClick={handleAvatarReset} style={{ ...S_stringOutlineButton, flex: '1 1 140px' }} className="string-outline-button">
                 Remove Avatar
               </button>
             </div>
@@ -153,13 +155,13 @@ export const GuildSettingsModal = React.memo(function GuildSettingsModal({
         </label>
 
         <label style={S_labelCol}>
-          <span style={S_labelSpan}>SERVER NAME</span>
-          <input value={name} onChange={(event) => setName(event.target.value)} style={S_input} maxLength={100} />
+          <span style={S_labelSpan}>LOOM NAME</span>
+          <input value={name} onChange={(event) => setName(event.target.value)} style={{ ...S_input, width: '100%', boxSizing: 'border-box' }} maxLength={100} />
         </label>
 
         <label style={S_labelCol}>
-          <span style={S_labelSpan}>SERVER BIO</span>
-          <textarea value={bio} onChange={(event) => setBio(event.target.value)} style={S_textarea} rows={4} maxLength={240} />
+          <span style={S_labelSpan}>LOOM BIO</span>
+          <textarea value={bio} onChange={(event) => setBio(event.target.value)} style={{ ...S_textarea, width: '100%', boxSizing: 'border-box' }} rows={4} maxLength={240} />
         </label>
 
         <button type="submit" disabled={!name.trim() || saving} style={!name.trim() || saving ? S_stringOutlineButtonDisabled : S_stringOutlineButton} className="string-outline-button">

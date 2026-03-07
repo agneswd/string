@@ -1,6 +1,14 @@
+import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { ChatViewPane, type ChatMessageItem } from '../ChatViewPane'
+
+const scrollIntoViewMock = vi.fn()
+
+Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+  configurable: true,
+  value: scrollIntoViewMock,
+})
 
 const baseMessages: ChatMessageItem[] = [
   { id: '1', authorName: 'Alice', authorId: 'u1', content: 'Hello world', timestamp: '12:00' },
@@ -78,10 +86,67 @@ describe('ChatViewPane', () => {
     expect(onSend).not.toHaveBeenCalled()
   })
 
+  it('keeps the composer focused after sending with the send button', () => {
+    function FocusHarness() {
+      const [value, setValue] = React.useState('Hello!')
+      return (
+        <ChatViewPane
+          channelName="general"
+          messages={baseMessages}
+          composerValue={value}
+          onComposerChange={setValue}
+          onSend={() => setValue('')}
+        />
+      )
+    }
+
+    render(<FocusHarness />)
+    const input = screen.getByRole('textbox', { name: /message composer/i })
+    const sendButton = screen.getByRole('button', { name: /send/i })
+
+    input.focus()
+    fireEvent.mouseDown(sendButton)
+    fireEvent.click(sendButton)
+
+    expect(document.activeElement).toBe(input)
+  })
+
   it('renders the message list with aria-live polite', () => {
     renderPane()
     const list = screen.getByRole('list')
     expect(list.getAttribute('aria-live')).toBe('polite')
+  })
+
+  it('shows a jump-to-latest button when scrolled away from the bottom', () => {
+    renderPane()
+    const list = screen.getByRole('list')
+
+    Object.defineProperty(list, 'scrollHeight', { configurable: true, value: 640 })
+    Object.defineProperty(list, 'clientHeight', { configurable: true, value: 240 })
+    Object.defineProperty(list, 'scrollTop', { configurable: true, value: 120, writable: true })
+
+    fireEvent.scroll(list)
+
+    const jumpButton = screen.getByRole('button', { name: /jump to latest message/i }) as HTMLButtonElement
+    expect(jumpButton).toBeTruthy()
+    expect(jumpButton.style.zIndex).toBe('50')
+    expect(jumpButton.style.background).toBe('var(--bg-panel)')
+    expect(jumpButton.querySelector('svg')).toBeTruthy()
+  })
+
+  it('scrolls to the latest message when the jump button is pressed', () => {
+    scrollIntoViewMock.mockClear()
+    renderPane()
+    const list = screen.getByRole('list')
+
+    Object.defineProperty(list, 'scrollHeight', { configurable: true, value: 640 })
+    Object.defineProperty(list, 'clientHeight', { configurable: true, value: 240 })
+    Object.defineProperty(list, 'scrollTop', { configurable: true, value: 80, writable: true })
+
+    fireEvent.scroll(list)
+    fireEvent.click(screen.getByRole('button', { name: /jump to latest message/i }))
+
+    expect(scrollIntoViewMock).toHaveBeenCalledWith({ behavior: 'smooth' })
   })
 
   it('renders empty message list without errors', () => {

@@ -15,10 +15,10 @@ const baseProps = {
 }
 
 describe('TopNavBar — classic mode', () => {
-  it('shows bold guild name as context', () => {
+  it('shows the current context inside the classic badge', () => {
     render(<TopNavBar {...baseProps} layoutMode="classic" />)
-    const strong = document.querySelector('strong')
-    expect(strong?.textContent).toBe('Alpha Corp')
+    expect(screen.getByText('Alpha Corp')).toBeDefined()
+    expect(document.querySelector('strong')).toBeNull()
   })
 })
 

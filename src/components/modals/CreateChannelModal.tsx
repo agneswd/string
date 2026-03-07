@@ -27,14 +27,14 @@ export function CreateChannelModal({ isOpen, onClose, channelName, onChannelName
       <form onSubmit={async (e) => { e.preventDefault(); if (isSubmitting) return; setIsSubmitting(true); try { await onSubmit(); onClose(); } finally { setIsSubmitting(false); } }} style={S_formCol}>
         <label style={S_labelCol}>
           <span style={S_labelSpan}>CHANNEL TYPE</span>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button type="button" disabled={isEditing} onClick={() => onChannelTypeChange('Category')} style={{ flex: 1, padding: '10px', borderRadius: '4px', border: channelType === 'Category' ? '2px solid var(--accent-primary, #5865f2)' : '2px solid transparent', backgroundColor: 'var(--bg-input, #1e1f22)', color: 'var(--text-primary)', cursor: isEditing ? 'not-allowed' : 'pointer', opacity: isEditing ? 0.65 : 1 }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button type="button" disabled={isEditing} onClick={() => onChannelTypeChange('Category')} style={{ flex: '1 1 140px', padding: '10px', borderRadius: '4px', border: channelType === 'Category' ? '2px solid var(--accent-primary, #5865f2)' : '2px solid transparent', backgroundColor: 'var(--bg-input, #1e1f22)', color: 'var(--text-primary)', cursor: isEditing ? 'not-allowed' : 'pointer', opacity: isEditing ? 0.65 : 1 }}>
               Category
             </button>
-            <button type="button" disabled={isEditing} onClick={() => onChannelTypeChange('Text')} style={{ flex: 1, padding: '10px', borderRadius: '4px', border: channelType === 'Text' ? '2px solid var(--accent-primary, #5865f2)' : '2px solid transparent', backgroundColor: 'var(--bg-input, #1e1f22)', color: 'var(--text-primary)', cursor: isEditing ? 'not-allowed' : 'pointer', opacity: isEditing ? 0.65 : 1 }}>
+            <button type="button" disabled={isEditing} onClick={() => onChannelTypeChange('Text')} style={{ flex: '1 1 140px', padding: '10px', borderRadius: '4px', border: channelType === 'Text' ? '2px solid var(--accent-primary, #5865f2)' : '2px solid transparent', backgroundColor: 'var(--bg-input, #1e1f22)', color: 'var(--text-primary)', cursor: isEditing ? 'not-allowed' : 'pointer', opacity: isEditing ? 0.65 : 1 }}>
               # Text
             </button>
-            <button type="button" disabled={isEditing} onClick={() => onChannelTypeChange('Voice')} style={{ flex: 1, padding: '10px', borderRadius: '4px', border: channelType === 'Voice' ? '2px solid var(--accent-primary, #5865f2)' : '2px solid transparent', backgroundColor: 'var(--bg-input, #1e1f22)', color: 'var(--text-primary)', cursor: isEditing ? 'not-allowed' : 'pointer', opacity: isEditing ? 0.65 : 1 }}>
+            <button type="button" disabled={isEditing} onClick={() => onChannelTypeChange('Voice')} style={{ flex: '1 1 140px', padding: '10px', borderRadius: '4px', border: channelType === 'Voice' ? '2px solid var(--accent-primary, #5865f2)' : '2px solid transparent', backgroundColor: 'var(--bg-input, #1e1f22)', color: 'var(--text-primary)', cursor: isEditing ? 'not-allowed' : 'pointer', opacity: isEditing ? 0.65 : 1 }}>
               <Volume2 style={{ width: 16, height: 16, display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
               Voice
             </button>

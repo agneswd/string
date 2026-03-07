@@ -1,16 +1,33 @@
+import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { ClerkProvider } from '@clerk/react'
 import './index.css'
 import App from './App.tsx'
 import { stringStore } from './lib/stringStore'
 import { runAllCleanups, closeAllTrackedResources } from './lib/connection'
 
 type StringRuntimeFlags = typeof globalThis & {
-  __stringBootstrapped?: boolean
   __stringCleanupBound?: boolean
   __stringLifecycleCleanupDone?: boolean
+  CLERK_PUBLISHABLE_KEY?: string
 }
 
 const runtimeFlags = globalThis as StringRuntimeFlags
+
+const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY?.trim()
+const currentOrigin = window.location.origin
+const currentHostname = window.location.hostname
+const afterSignOutUrl = new URL(import.meta.env.BASE_URL, window.location.href).toString()
+const hasClerkPublishableKey = Boolean(
+  clerkPublishableKey && clerkPublishableKey !== 'YOUR_PUBLISHABLE_KEY',
+)
+const isLocalDevelopmentHost = currentHostname === 'localhost' || currentHostname === '127.0.0.1'
+const isLiveClerkKey = Boolean(clerkPublishableKey?.startsWith('pk_live_'))
+const hasIncompatibleLocalClerkKey = isLocalDevelopmentHost && isLiveClerkKey
+
+if (hasClerkPublishableKey && clerkPublishableKey) {
+  runtimeFlags.CLERK_PUBLISHABLE_KEY = clerkPublishableKey
+}
 
 /**
  * Kill all media tracks on <audio>/<video> elements to release mic/cam/screen.
@@ -77,8 +94,16 @@ const onUnload = (): void => {
   try { stopAllMediaElements() } catch { /* ignore */ }
 }
 
-const onPageHide = (): void => {
-  // Soft disconnect only — preserve store listeners for bfcache restore
+const onPageHide = (event: PageTransitionEvent): void => {
+  if (!event.persisted) {
+    // Normal refresh/navigation: fully tear everything down so the previous
+    // page instance can be collected instead of accumulating across reloads.
+    cleanupConnection()
+    return
+  }
+
+  // True bfcache path: disconnect live resources, but keep the store object so
+  // the page can reconnect on `pageshow` when restored from cache.
   runtimeFlags.__stringLifecycleCleanupDone = true
   stringStore.disconnect()
   runAllCleanups()
@@ -86,17 +111,17 @@ const onPageHide = (): void => {
   stopAllMediaElements()
 }
 
-const onPageShow = (): void => {
+const onPageShow = (event: PageTransitionEvent): void => {
+  if (!event.persisted) {
+    runtimeFlags.__stringLifecycleCleanupDone = false
+    return
+  }
+
   const shouldReconnect = runtimeFlags.__stringLifecycleCleanupDone === true
   runtimeFlags.__stringLifecycleCleanupDone = false
   if (shouldReconnect) {
     stringStore.connect()
   }
-}
-
-if (!runtimeFlags.__stringBootstrapped) {
-  runtimeFlags.__stringBootstrapped = true
-  stringStore.connect()
 }
 
 if (!runtimeFlags.__stringCleanupBound) {
@@ -131,11 +156,73 @@ if (import.meta.hot) {
 
     // Reset runtime flags so re-execution of this module re-registers everything
     runtimeFlags.__stringCleanupBound = false
-    runtimeFlags.__stringBootstrapped = false
     runtimeFlags.__stringLifecycleCleanupDone = false
   })
 }
 
 const root = createRoot(document.getElementById('root')!)
 ;(runtimeFlags as Record<string, unknown>).__stringReactRoot = root
-root.render(<App />)
+if (!hasClerkPublishableKey || hasIncompatibleLocalClerkKey) {
+  root.render(
+    <StrictMode>
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'grid',
+          placeItems: 'center',
+          padding: '24px',
+          background: '#0f0f10',
+          color: '#f2f3f5',
+          fontFamily: 'Inter, system-ui, sans-serif',
+        }}
+      >
+        <div
+          style={{
+            width: 'min(560px, 100%)',
+            padding: '24px',
+            borderRadius: '12px',
+            border: '1px solid #2a2a2a',
+            background: '#17181a',
+            lineHeight: 1.6,
+          }}
+        >
+          {hasIncompatibleLocalClerkKey ? (
+            <>
+              <h1 style={{ marginTop: 0, marginBottom: '12px', fontSize: '1.1rem' }}>Live Clerk keys do not work on localhost</h1>
+              <p style={{ margin: 0 }}>
+                Your current <strong>VITE_CLERK_PUBLISHABLE_KEY</strong> is a live key, and Clerk is rejecting requests from <strong>{currentHostname}</strong>. Use a development Clerk key for local work, or open the app through your allowed production domain instead.
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 style={{ marginTop: 0, marginBottom: '12px', fontSize: '1.1rem' }}>Clerk is not configured yet</h1>
+              <p style={{ margin: 0 }}>
+                Add <strong>VITE_CLERK_PUBLISHABLE_KEY</strong> to <strong>.env.local</strong>, then restart the Vite dev server.
+              </p>
+            </>
+          )}
+        </div>
+      </div>
+    </StrictMode>,
+  )
+} else {
+  root.render(
+    <StrictMode>
+      <ClerkProvider
+        publishableKey={clerkPublishableKey}
+        afterSignOutUrl={afterSignOutUrl}
+        signInUrl={afterSignOutUrl}
+        signUpUrl={afterSignOutUrl}
+        signInFallbackRedirectUrl={afterSignOutUrl}
+        signUpFallbackRedirectUrl={afterSignOutUrl}
+        allowedRedirectOrigins={[
+          currentOrigin,
+          /^https:\/\/[^/]+\.github\.io$/,
+          /^https:\/\/piggii\.agne\.uk$/,
+        ]}
+      >
+        <App />
+      </ClerkProvider>
+    </StrictMode>,
+  )
+}
