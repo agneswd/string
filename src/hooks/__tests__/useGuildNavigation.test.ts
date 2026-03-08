@@ -84,7 +84,7 @@ describe('useGuildNavigation', () => {
     window.localStorage.clear()
   })
 
-  it('does not reopen guild chat state when returning from a DM', () => {
+  it('auto-selects the first text channel when returning to a guild from a DM', () => {
     const { result } = renderHook(() => useNavigationHarness(createAppData()))
 
     act(() => {
@@ -106,11 +106,12 @@ describe('useGuildNavigation', () => {
 
     expect(result.current.selectedGuildId).toBe('1')
     expect(result.current.selectedDmChannelId).toBeUndefined()
-    expect(result.current.selectedTextChannelId).toBeUndefined()
+    // Auto-selects first text channel so the content pane isn't empty
+    expect(result.current.selectedTextChannelId).toBe('10')
     expect(result.current.selectedVoiceChannelId).toBeUndefined()
   })
 
-  it('does not auto-select a guild channel from restored guild selection alone', () => {
+  it('auto-selects the first text channel when restoring a guild without a saved channel', () => {
     window.localStorage.setItem('string.navigation.state', JSON.stringify({
       homeViewActive: false,
       selectedGuildId: '1',
@@ -123,7 +124,8 @@ describe('useGuildNavigation', () => {
     }))
 
     expect(result.current.selectedGuildId).toBe('1')
-    expect(result.current.selectedTextChannelId).toBeUndefined()
+    // Auto-selects the first text channel of the guild
+    expect(result.current.selectedTextChannelId).toBe('10')
     expect(result.current.selectedVoiceChannelId).toBeUndefined()
   })
 })

@@ -185,7 +185,9 @@ export function useGuildNavigation({
     }
   }, [memberGuilds, selectedGuildId, selectedDmChannelId])
 
-  // Clear invalid text channel selection, but do not auto-enter a channel.
+  // Auto-select the first text channel when the current selection is invalid.
+  // This covers guild switches where the old channel ID no longer belongs to
+  // the new guild, and ensures the content pane always has something to show.
   useEffect(() => {
     if (textChannels.length === 0) {
       if (selectedTextChannelId !== undefined) {
@@ -200,9 +202,8 @@ export function useGuildNavigation({
       textChannels.some((channel) => toIdKey(channel.channelId) === selectedTextChannelId)
 
     if (!hasSelectedTextChannel) {
-      if (selectedTextChannelId !== undefined) {
-        setSelectedTextChannelId(undefined)
-      }
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedTextChannelId(toIdKey(textChannels[0].channelId))
     }
   }, [selectedTextChannelId, textChannels])
 
