@@ -24,16 +24,10 @@ export function useMobileShellController({
 }: UseMobileShellControllerParams) {
   const [requestedState, setRequestedState] = useState(initialMobileShellState)
   const previousGuildIdRef = useRef<string | null | undefined>(selectedGuildId)
-  const [suppressAutoContent, setSuppressAutoContent] = useState(false)
 
   const resolvedState = useMemo(
-    () => resolveMobileShellState(requestedState, {
-      hasActiveContent,
-      hasMembersPane,
-      isHomeView,
-      suppressAutoContent,
-    }),
-    [hasActiveContent, hasMembersPane, isHomeView, requestedState, suppressAutoContent],
+    () => resolveMobileShellState(requestedState, { hasActiveContent, hasMembersPane, isHomeView }),
+    [hasActiveContent, hasMembersPane, isHomeView, requestedState],
   )
 
   useEffect(() => {
@@ -61,7 +55,6 @@ export function useMobileShellController({
     previousGuildIdRef.current = selectedGuildId
 
     if (selectedGuildId && selectedGuildId !== previousGuildId) {
-      setSuppressAutoContent(true)
       setRequestedState({
         pane: 'navigation',
         navigationSection: 'browse',
@@ -70,9 +63,6 @@ export function useMobileShellController({
   }, [isMobile, selectedGuildId])
 
   const setPane = useCallback((pane: MobilePane) => {
-    if (pane === 'content' || pane === 'members') {
-      setSuppressAutoContent(false)
-    }
     setRequestedState((current) => ({ ...current, pane }))
   }, [])
 
@@ -93,7 +83,6 @@ export function useMobileShellController({
   }, [])
 
   const openContent = useCallback(() => {
-    setSuppressAutoContent(false)
     setRequestedState((current) => ({ ...current, pane: 'content' }))
   }, [])
 
@@ -102,7 +91,6 @@ export function useMobileShellController({
       return
     }
 
-    setSuppressAutoContent(false)
     setRequestedState((current) => ({ ...current, pane: 'members' }))
   }, [hasMembersPane])
 
@@ -111,7 +99,6 @@ export function useMobileShellController({
       return
     }
 
-    setSuppressAutoContent(false)
     setRequestedState((current) => ({
       ...current,
       pane: resolvedState.pane === 'members' ? 'content' : 'members',

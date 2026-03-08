@@ -10,7 +10,6 @@ export interface MobileShellContext {
   hasActiveContent: boolean
   hasMembersPane: boolean
   isHomeView: boolean
-  suppressAutoContent?: boolean
 }
 
 export const initialMobileShellState: MobileShellState = {
@@ -20,7 +19,7 @@ export const initialMobileShellState: MobileShellState = {
 
 export function resolveMobileShellState(
   state: MobileShellState,
-  { hasActiveContent, hasMembersPane, isHomeView, suppressAutoContent }: MobileShellContext,
+  { hasActiveContent, hasMembersPane, isHomeView }: MobileShellContext,
 ): MobileShellState {
   let pane = state.pane
   let navigationSection = state.navigationSection
@@ -46,13 +45,6 @@ export function resolveMobileShellState(
   }
 
   if (pane === 'content' && !hasActiveContent && !isHomeView) {
-    pane = 'navigation'
-  }
-
-  // Prevent auto-selected content (e.g. channel auto-selection on guild switch)
-  // from forcing the user into the content pane. The user must explicitly open
-  // content after a guild transition.
-  if (pane === 'content' && suppressAutoContent) {
     pane = 'navigation'
   }
 

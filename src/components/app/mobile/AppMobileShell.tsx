@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft } from 'lucide-react'
 
 import { ChannelColumn } from '../../layout/ChannelColumn'
@@ -52,8 +52,35 @@ export function AppMobileShell({
   const TopNavBarComponent = layoutMode === 'string' ? TopNavBarString : TopNavBarClassic
   const SidebarBottomComponent = layoutMode === 'string' ? SidebarBottomString : SidebarBottomClassic
   const shouldShowMemberList = showMemberList && !topNav.isHomeView
-  const hasActiveMobileContent = Boolean(messageArea.selectedDmChannelId || messageArea.selectedTextChannel)
+  const activeSelectionKey = messageArea.selectedDmChannelId
+    ? `dm:${messageArea.selectedDmChannelId}`
+    : channelColumn.selectedTextChannelId
+      ? `channel:${channelColumn.selectedTextChannelId}`
+      : serverColumn.selectedGuildId
+        ? `guild:${serverColumn.selectedGuildId}`
+        : 'home'
+  const previousSelectionKeyRef = useRef(activeSelectionKey)
+  const [isSwitchingContentTarget, setIsSwitchingContentTarget] = useState(false)
+  const hasResolvedMobileContent = Boolean(messageArea.selectedDmChannelId || channelColumn.selectedTextChannelId)
+  const hasActiveMobileContent = hasResolvedMobileContent && !isSwitchingContentTarget
   const hasMobileMembersPane = shouldShowMemberList && hasActiveMobileContent
+
+  useEffect(() => {
+    if (isSwitchingContentTarget && activeSelectionKey !== previousSelectionKeyRef.current) {
+      setIsSwitchingContentTarget(false)
+    }
+
+    previousSelectionKeyRef.current = activeSelectionKey
+  }, [activeSelectionKey, isSwitchingContentTarget])
+
+  const beginContentTargetSwitch = (nextSelectionKey: string) => {
+    if (nextSelectionKey === activeSelectionKey) {
+      return
+    }
+
+    previousSelectionKeyRef.current = activeSelectionKey
+    setIsSwitchingContentTarget(true)
+  }
 
   const mobileShell = useMobileShellController({
     isMobile: true,
@@ -71,7 +98,13 @@ export function AppMobileShell({
 
   const serverColumnProps = {
     ...serverColumn,
+    onSelectDmChannel: (id: string) => {
+      beginContentTargetSwitch(`dm:${id}`)
+      serverColumn.onSelectDmChannel?.(id)
+      mobileShell.openContent()
+    },
     onSelectGuild: (id: string) => {
+      beginContentTargetSwitch(`guild:${id}`)
       serverColumn.onSelectGuild(id)
       mobileShell.showBrowse()
     },
@@ -88,6 +121,7 @@ export function AppMobileShell({
   const channelColumnProps = {
     ...channelColumn,
     onSelectDmChannel: (id: string | number) => {
+      beginContentTargetSwitch(`dm:${id}`)
       channelColumn.onSelectDmChannel(id)
       mobileShell.openContent()
     },
@@ -96,6 +130,7 @@ export function AppMobileShell({
       mobileShell.showFriends()
     },
     onSelectChannel: (id: string | number) => {
+      beginContentTargetSwitch(`channel:${id}`)
       channelColumn.onSelectChannel(id)
       const selectedChannel = channelColumn.channels.find((channel) => String(channel.id) === String(id))
       if (selectedChannel?.kind !== 'voice') {
@@ -113,11 +148,15 @@ export function AppMobileShell({
     <MessageArea
       {...messageArea}
       onStartDm={(friendId) => {
+        beginContentTargetSwitch(`dm:friend:${friendId}`)
         messageArea.onStartDm(friendId)
         mobileShell.openContent()
       }}
     />
   )
+  const contentBodyNode = isSwitchingContentTarget
+    ? <div style={{ flex: 1, minHeight: 0, backgroundColor: 'var(--bg-panel)' }} />
+    : messageAreaNode
   const sidebarBottomNode = <SidebarBottomComponent {...sidebarBottom} />
 
   const showMobileVoiceOverlay = Boolean(
@@ -296,7 +335,7 @@ export function AppMobileShell({
         navigationPane={mobileNavigationPane}
         navigationFooter={mobileFooter}
         contentHeader={mobileContentHeader}
-        contentBody={messageAreaNode}
+        contentBody={contentBodyNode}
         contentFooter={null}
         membersHeader={mobileMembersHeader}
         membersPane={mobileMembersPane}
