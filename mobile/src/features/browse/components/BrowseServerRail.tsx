@@ -162,12 +162,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.accentBlue,
   },
   avatarWrap: {
-    width: 42,
-    height: 42,
     padding: 2,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   avatarWrapActive: {
     borderColor: Colors.accentBlue,
