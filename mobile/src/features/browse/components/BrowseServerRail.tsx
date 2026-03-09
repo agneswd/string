@@ -34,10 +34,11 @@ export function BrowseServerRail({
     <View style={styles.root}>
       <View style={styles.topSlot}>
         <TouchableOpacity
-          style={styles.homeButtonPressable}
+          style={styles.itemPressable}
           onPress={onSelectHome}
           activeOpacity={0.8}
         >
+          <View style={[styles.selectionIndicator, isHomeSelected && styles.selectionIndicatorActive]} />
           <View style={[styles.homeButton, isHomeSelected && styles.homeButtonActive]}>
             <LineSquiggleIcon size={24} color={Colors.bgPrimary} />
           </View>
@@ -89,9 +90,6 @@ export function BrowseServerRail({
               <View style={[styles.avatarWrap, isSelected && styles.avatarWrapActive]}>
                 <Avatar name={item.name} uri={item.avatarUri} size={42} />
               </View>
-              <Text style={[styles.label, isSelected && styles.labelActive]} numberOfLines={2}>
-                {item.name}
-              </Text>
             </TouchableOpacity>
           )
         }}
@@ -120,21 +118,19 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 10,
   },
-  homeButtonPressable: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   homeButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 10,
+    width: 46,
+    height: 46,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.accentBlue,
-    backgroundColor: Colors.accentBlue,
+    borderColor: 'transparent',
+    backgroundColor: Colors.bgSecondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   homeButtonActive: {
+    borderColor: Colors.accentBlue,
+    backgroundColor: Colors.accentBlue,
     shadowColor: Colors.accentBlue,
     shadowOpacity: 0.25,
     shadowRadius: 10,
@@ -166,6 +162,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.accentBlue,
   },
   avatarWrap: {
+    width: 42,
+    height: 42,
     padding: 2,
     borderRadius: 12,
     borderWidth: 1,
@@ -193,17 +191,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 9,
     fontWeight: '700',
-  },
-  label: {
-    color: Colors.textMuted,
-    fontSize: 9,
-    fontWeight: '600',
-    textAlign: 'center',
-    lineHeight: 12,
-    minHeight: 24,
-  },
-  labelActive: {
-    color: Colors.textPrimary,
   },
   sectionDivider: {
     height: 1,

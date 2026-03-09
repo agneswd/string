@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { X } from 'lucide-react-native'
 import {
   Modal,
   Pressable,
@@ -45,14 +46,17 @@ export function CreateLoomModal({
       <View style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={styles.dialog}>
-          <Text style={styles.eyebrow}>Create Loom</Text>
-          <Text style={styles.title}>Start a new server</Text>
-          <Text style={styles.description}>
-            Pick a name for the new loom. The server rail updates after creation succeeds.
-          </Text>
+          <View style={styles.headerRow}>
+            <Text style={styles.title}>Create a Loom</Text>
+            <Pressable style={styles.closeButton} onPress={onClose} disabled={submitting}>
+              <X color={Colors.textPrimary} size={20} strokeWidth={2.1} />
+            </Pressable>
+          </View>
+
+          <View style={styles.headerDivider} />
 
           <View style={styles.fieldWrap}>
-            <Text style={styles.label}>Server Name</Text>
+            <Text style={styles.label}>Loom Name</Text>
             <TextInput
               style={styles.input}
               value={name}
@@ -72,22 +76,17 @@ export function CreateLoomModal({
 
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-          <View style={styles.actions}>
-            <Pressable style={styles.secondaryButton} onPress={onClose} disabled={submitting}>
-              <Text style={styles.secondaryLabel}>Cancel</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.primaryButton, (!name.trim() || submitting) && styles.buttonDisabled]}
-              onPress={() => {
-                if (name.trim()) {
-                  void onSubmit(name.trim())
-                }
-              }}
-              disabled={!name.trim() || submitting}
-            >
-              <Text style={styles.primaryLabel}>{submitting ? 'Creating…' : 'Create'}</Text>
-            </Pressable>
-          </View>
+          <Pressable
+            style={[styles.primaryButton, (!name.trim() || submitting) && styles.buttonDisabled]}
+            onPress={() => {
+              if (name.trim()) {
+                void onSubmit(name.trim())
+              }
+            }}
+            disabled={!name.trim() || submitting}
+          >
+            <Text style={styles.primaryLabel}>{submitting ? 'Creating Loom…' : 'Create Loom'}</Text>
+          </Pressable>
         </View>
       </View>
     </Modal>
@@ -100,53 +99,60 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.72)',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
   },
   dialog: {
     width: '100%',
-    maxWidth: 360,
+    maxWidth: 400,
     borderWidth: 1,
     borderColor: Colors.borderSubtle,
-    borderRadius: 14,
-    backgroundColor: Colors.bgSecondary,
-    padding: 16,
-    gap: 10,
+    borderRadius: 10,
+    backgroundColor: Colors.bgPrimary,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 12,
+    gap: 12,
   },
-  eyebrow: {
-    color: Colors.textMuted,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
   },
   title: {
     color: Colors.textPrimary,
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '700',
   },
-  description: {
-    color: Colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 18,
+  closeButton: {
+    width: 44,
+    height: 40,
+    borderRadius: 4,
+    backgroundColor: Colors.bgSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: Colors.borderSubtle,
   },
   fieldWrap: {
     gap: 6,
-    marginTop: 6,
   },
   label: {
     color: Colors.textMuted,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
   input: {
-    height: 42,
+    height: 36,
     borderWidth: 1,
     borderColor: Colors.borderSubtle,
-    borderRadius: 2,
+    borderRadius: 0,
     backgroundColor: Colors.bgInput,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     color: Colors.textPrimary,
     fontSize: 14,
   },
@@ -155,43 +161,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
   },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 10,
-    marginTop: 6,
-  },
-  secondaryButton: {
-    minWidth: 84,
-    height: 34,
+  primaryButton: {
+    width: '100%',
+    height: 32,
     borderWidth: 1,
     borderColor: Colors.borderSubtle,
-    borderRadius: 2,
+    borderRadius: 0,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 12,
-  },
-  primaryButton: {
-    minWidth: 96,
-    height: 34,
-    borderWidth: 1,
-    borderColor: Colors.textPrimary,
-    borderRadius: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
+    backgroundColor: Colors.bgPrimary,
   },
   buttonDisabled: {
     opacity: 0.45,
   },
-  secondaryLabel: {
-    color: Colors.textPrimary,
-    fontSize: 12,
-    fontWeight: '500',
-  },
   primaryLabel: {
     color: Colors.textPrimary,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
+    letterSpacing: 2,
+    textTransform: 'none',
   },
 })
