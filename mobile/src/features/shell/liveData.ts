@@ -112,13 +112,7 @@ export function mapSpacetimeDataToShell({ data, identity, session }: LiveShellDa
     id: toIdKey(channel.channelId),
     guildId: toIdKey(channel.guildId),
     name: channel.name,
-    type: 'Announcement' in (channel.channelType as Record<string, unknown>)
-      ? 'announcement'
-      : 'Category' in (channel.channelType as Record<string, unknown>)
-        ? 'category'
-        : 'Voice' in (channel.channelType as Record<string, unknown>)
-          ? 'voice'
-          : 'text',
+    type: toBrowseChannelType(channel.channelType),
     hasUnread: false,
     mentionCount: 0,
     topic: channel.topic ?? null,
@@ -194,4 +188,27 @@ export function mapSpacetimeDataToShell({ data, identity, session }: LiveShellDa
     friends,
     requests,
   }
+}
+
+function toBrowseChannelType(value: unknown): BrowseChannel['type'] {
+  if (!value || typeof value !== 'object') {
+    return 'text'
+  }
+
+  const enumLike = value as { tag?: string } & Record<string, unknown>
+  const tag = typeof enumLike.tag === 'string' ? enumLike.tag : null
+
+  if (tag === 'Announcement' || 'Announcement' in enumLike) {
+    return 'announcement'
+  }
+
+  if (tag === 'Category' || 'Category' in enumLike) {
+    return 'category'
+  }
+
+  if (tag === 'Voice' || 'Voice' in enumLike) {
+    return 'voice'
+  }
+
+  return 'text'
 }
