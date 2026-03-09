@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "App.tsx",
+    "index.ts",
+    "src/app/MobileApp.tsx",
+    "src/app/navigation/**/*.ts",
+    "src/app/navigation/**/*.tsx",
+    "src/app/providers/**/*.ts",
+    "src/app/providers/**/*.tsx",
+    "src/app/__tests__/app-shell.type-test.ts",
+    "src/features/home/**/*.ts",
+    "src/features/home/**/*.tsx",
+    "src/features/messages/**/*.ts",
+    "src/features/messages/**/*.tsx",
+    "src/features/calls/**/*.ts",
+    "src/features/calls/**/*.tsx",
+    "src/features/settings/**/*.ts",
+    "src/features/settings/**/*.tsx",
+    "src/shared/theme/**/*.ts",
+    "src/shared/theme/**/*.tsx",
+    "src/shared/ui/**/*.ts",
+    "src/shared/ui/**/*.tsx"
+  ]
+}

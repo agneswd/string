@@ -1,24 +1,26 @@
 import React, { useCallback, useState, useEffect, type CSSProperties, type ReactNode } from 'react'
 import { Mic, MicOff, Headphones, HeadphoneOff, PhoneOff, Monitor, Maximize } from 'lucide-react'
+import type { LayoutMode } from '../../constants/theme'
 import {
   T,
   callSurface,
   participantsGrid,
   controlsRow,
   controlBtn,
-  avatarCircle,
-  avatarImg,
-  avatarInitial,
 } from './call/callTheme'
+import { CallAvatar } from './call/CallAvatar'
 import { ParticipantCard } from './call/ParticipantCard'
 import { useResizable } from './call/useResizable'
 
 // ── Types ─── (re-export CallUser so consumers keep the same import path) ─────
 export type { CallUser } from './call/ParticipantCard'
+import type { CallUser } from './call/ParticipantCard'
 
 export interface DmCallOverlayProps {
-  localUser: { name: string; avatarUrl?: string }
-  remoteUser: { name: string; avatarUrl?: string }
+  layoutMode?: LayoutMode
+  localUser: CallUser
+  remoteUser: CallUser
+  hideScreenShare?: boolean
   onMute: () => void
   onDeafen: () => void
   onScreenShare: () => void
@@ -97,8 +99,10 @@ const callingLabel: CSSProperties = {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export const DmCallOverlay = React.memo(function DmCallOverlay({
+  layoutMode = 'classic',
   localUser,
   remoteUser,
+  hideScreenShare = false,
   onMute,
   onDeafen,
   onScreenShare,
@@ -138,24 +142,18 @@ export const DmCallOverlay = React.memo(function DmCallOverlay({
         aria-label="Calling..."
       >
         <div style={callingWrap}>
-          <div
+          <CallAvatar
+            name={remoteUser.name}
+            avatarUrl={remoteUser.avatarUrl}
+            profileColor={remoteUser.profileColor}
+            speaking={true}
+            layoutMode={layoutMode}
+            size={80}
             style={{
-              ...avatarCircle(false),
-              width: 80,
-              height: 80,
-              border: `2px solid ${T.statusGreen}`,
               opacity: pulseVis ? 1 : 0.45,
               transition: 'opacity 0.9s ease',
             }}
-          >
-            {remoteUser.avatarUrl ? (
-              <img src={remoteUser.avatarUrl} alt={remoteUser.name} style={avatarImg} />
-            ) : (
-              <span style={{ ...avatarInitial, fontSize: 32 }}>
-                {remoteUser.name.charAt(0).toUpperCase()}
-              </span>
-            )}
-          </div>
+          />
           <span style={callingLabel}>calling {remoteUser.name}…</span>
           <button
             type="button"
@@ -177,12 +175,13 @@ export const DmCallOverlay = React.memo(function DmCallOverlay({
   const callContent = (
     <>
       <div style={participantsGrid}>
-        <ParticipantCard user={localUser} speaking={isLocalSpeaking && !isMuted} />
+        <ParticipantCard user={localUser} speaking={isLocalSpeaking} layoutMode={layoutMode} />
         <ParticipantCard
           user={remoteUser}
           speaking={isRemoteSpeaking}
           screenStream={remoteScreenStream}
           onScreenShareClick={onViewScreenShareFullscreen}
+          layoutMode={layoutMode}
         />
       </div>
 
@@ -209,17 +208,19 @@ export const DmCallOverlay = React.memo(function DmCallOverlay({
         >
           {isDeafened ? <HeadphoneOff size={16} /> : <Headphones size={16} />}
         </button>
-        <button
-          type="button"
-          style={controlBtn(isScreenSharing)}
-          onClick={onScreenShare}
-          onMouseEnter={onBtnEnter}
-          onMouseLeave={onBtnLeave}
-          title={isScreenSharing ? 'Stop sharing' : 'Share screen'}
-          aria-label={isScreenSharing ? 'Stop sharing' : 'Share screen'}
-        >
-          <Monitor size={16} />
-        </button>
+        {!hideScreenShare && (
+          <button
+            type="button"
+            style={controlBtn(isScreenSharing)}
+            onClick={onScreenShare}
+            onMouseEnter={onBtnEnter}
+            onMouseLeave={onBtnLeave}
+            title={isScreenSharing ? 'Stop sharing' : 'Share screen'}
+            aria-label={isScreenSharing ? 'Stop sharing' : 'Share screen'}
+          >
+            <Monitor size={16} />
+          </button>
+        )}
         <button
           type="button"
           style={controlBtn(false, true)}

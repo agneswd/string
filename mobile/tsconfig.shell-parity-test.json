@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/features/shell/**/*.ts",
+    "src/features/shell/**/*.tsx",
+    "src/shared/theme/**/*.ts",
+    "src/shared/theme/**/*.tsx",
+    "src/shared/ui/**/*.ts",
+    "src/shared/ui/**/*.tsx"
+  ]
+}

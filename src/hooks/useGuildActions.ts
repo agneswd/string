@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react'
 
 import { getConn } from '../lib/connection'
+import { avatarBytesToUrl } from '../lib/avatarUtils'
 import { toChannelType, toIdKey, isCategoryChannel } from '../lib/helpers'
 import type { ChannelTypeTag } from '../lib/helpers'
 import type { Channel, Guild, GuildInvite, User } from '../module_bindings/types'
@@ -35,6 +36,8 @@ export interface GuildInviteItem {
   id: string
   guildId: string
   inviterName: string
+  avatarUrl?: string
+  profileColor?: string
 }
 
 export interface GuildActions {
@@ -285,11 +288,16 @@ export function useGuildActions({
     if (!identityString) return []
     return guildInvites
       .filter((inv) => identityToString(inv.inviteeIdentity) === identityString)
-      .map((inv) => ({
-        id: String(inv.inviteId),
-        guildId: String(inv.guildId),
-        inviterName: usersByIdentity.get(identityToString(inv.inviterIdentity))?.username ?? 'Unknown',
-      }))
+      .map((inv) => {
+        const inviter = usersByIdentity.get(identityToString(inv.inviterIdentity))
+        return {
+          id: String(inv.inviteId),
+          guildId: String(inv.guildId),
+          inviterName: inviter?.displayName ?? inviter?.username ?? 'Unknown',
+          avatarUrl: avatarBytesToUrl(inviter?.avatarBytes),
+          profileColor: inviter?.profileColor ?? undefined,
+        }
+      })
   }, [guildInvites, identityString, usersByIdentity])
 
   const onAcceptGuildInvite = useCallback((inviteId: string) => {

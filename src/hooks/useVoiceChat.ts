@@ -130,6 +130,7 @@ export function useVoiceChat({
   // -------------------------------------------------------------------------
   const audioContextRef = useRef<AudioContext | null>(null)
   const prevVoiceCountRef = useRef(0)
+  const emptyCallTimeoutRef = useRef<number | null>(null)
 
   // -------------------------------------------------------------------------
   // Sound helpers (Web Audio API)
@@ -422,6 +423,10 @@ export function useVoiceChat({
       prevVoiceCountRef.current = 0
       return
     }
+    if (toIdKey(currentVoiceState.guildId) === '0') {
+      prevVoiceCountRef.current = 0
+      return
+    }
     const currentChannelId = currentVoiceState.channelId
     const usersInChannel = (state.voiceStates || []).filter(
       (vs) => vs.channelId === currentChannelId,
@@ -460,7 +465,7 @@ export function useVoiceChat({
           isStreaming: false,
         })
       }
-    }, 'Joined voice')
+    })
     setPreMuted(false)
     setPreDeafened(false)
   }, [selectedVoiceChannel, setActionError, preMuted, preDeafened, playJoinSound, runAction, actions, startAudio])
@@ -471,8 +476,42 @@ export function useVoiceChat({
       await stopScreenShare()
       await stopAudio()
       await actions.leaveVoice()
-    }, 'Left voice')
+    })
   }, [playLeaveSound, runAction, stopScreenShare, stopAudio, actions])
+
+  // Auto-leave empty calls after 1 minute to avoid keeping unused voice sessions alive.
+  useEffect(() => {
+    const clearEmptyCallTimeout = () => {
+      if (emptyCallTimeoutRef.current !== null) {
+        clearTimeout(emptyCallTimeoutRef.current)
+        emptyCallTimeoutRef.current = null
+      }
+    }
+
+    if (!currentVoiceState || !identityString) {
+      clearEmptyCallTimeout()
+      return
+    }
+
+    const currentChannelId = toIdKey(currentVoiceState.channelId)
+    const currentGuildId = toIdKey(currentVoiceState.guildId)
+    const participantCount = (state.voiceStates || []).filter(
+      (voiceState) => toIdKey(voiceState.channelId) === currentChannelId && toIdKey(voiceState.guildId) === currentGuildId,
+    ).length
+
+    if (participantCount <= 1) {
+      if (emptyCallTimeoutRef.current === null) {
+        emptyCallTimeoutRef.current = window.setTimeout(() => {
+          emptyCallTimeoutRef.current = null
+          onLeaveVoice()
+        }, AUTO_LEAVE_EMPTY_CALL_MS)
+      }
+      return clearEmptyCallTimeout
+    }
+
+    clearEmptyCallTimeout()
+    return clearEmptyCallTimeout
+  }, [currentVoiceState, identityString, state.voiceStates, onLeaveVoice])
 
   const onToggleMute = useCallback((): void => {
     if (!currentVoiceState) {

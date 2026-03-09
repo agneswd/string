@@ -85,6 +85,20 @@ const navBtnStyle = (active: boolean, hovered: boolean): React.CSSProperties => 
   transition: 'background .12s, color .12s',
 })
 
+const badgeStyle: React.CSSProperties = {
+  marginLeft: 'auto',
+  minWidth: 16,
+  height: 16,
+  padding: '0 4px',
+  borderRadius: 4,
+  background: CLASSIC_DM_COLORS.textDanger,
+  color: '#fff',
+  fontSize: 10,
+  fontWeight: 700,
+  lineHeight: '16px',
+  textAlign: 'center',
+}
+
 const sectionLabelStyle: React.CSSProperties = {
   padding: '18px 18px 4px',
   fontSize: 12,
@@ -157,6 +171,25 @@ const statusDotStyle = (status: string): React.CSSProperties => ({
   boxSizing: 'content-box',
 })
 
+const avatarBadgeStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: -4,
+  right: -4,
+  minWidth: 16,
+  height: 16,
+  borderRadius: 8,
+  padding: '0 4px',
+  background: 'var(--text-danger)',
+  color: '#fff',
+  fontSize: 10,
+  fontWeight: 700,
+  lineHeight: '16px',
+  textAlign: 'center',
+  border: `2px solid ${CLASSIC_DM_COLORS.background}`,
+  boxSizing: 'content-box',
+  pointerEvents: 'none',
+}
+
 const nameContainerStyle: React.CSSProperties = {
   flex: 1,
   minWidth: 0,
@@ -198,21 +231,6 @@ const closeStyle = (visible: boolean): React.CSSProperties => ({
   padding: 0,
 })
 
-const badgeStyle: React.CSSProperties = {
-  flexShrink: 0,
-  minWidth: 16,
-  height: 16,
-  borderRadius: 8,
-  padding: '0 5px',
-  background: CLASSIC_DM_COLORS.textDanger,
-  color: 'var(--bg-deepest)',
-  fontSize: 11,
-  fontWeight: 700,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-}
-
 const navBtnPadStyle: React.CSSProperties = { padding: '8px 0 0' }
 
 /* ── Component ── */
@@ -225,6 +243,7 @@ export const DmListPaneClassic = memo(function DmListPaneClassic({
   onStartVoiceCall,
   onCreateChannel,
   onShowFriends,
+  friendsBadgeCount = 0,
   createButtonLabel,
   className,
   activeCallChannelIds,
@@ -276,6 +295,7 @@ export const DmListPaneClassic = memo(function DmListPaneClassic({
         >
           <Users style={{ width: 24, height: 24 }} aria-hidden="true" />
           <span>Friends</span>
+          {friendsBadgeCount > 0 && <span style={badgeStyle}>{friendsBadgeCount > 99 ? '99+' : friendsBadgeCount}</span>}
         </button>
       </div>
 
@@ -352,6 +372,11 @@ export const DmListPaneClassic = memo(function DmListPaneClassic({
                     )}
                   </div>
                   <div style={statusDotStyle(status)} aria-label={status} />
+                  {!!channel.unreadCount && (
+                    <span style={avatarBadgeStyle} aria-label={`${channel.unreadCount} unread`}>
+                      {channel.unreadCount > 99 ? '99+' : channel.unreadCount}
+                    </span>
+                  )}
                 </div>
 
                 {/* Name + preview */}
@@ -368,10 +393,6 @@ export const DmListPaneClassic = memo(function DmListPaneClassic({
                 </div>
 
                 {/* Unread badge */}
-                {!!channel.unreadCount && (
-                  <span style={badgeStyle}>{channel.unreadCount}</span>
-                )}
-
                 {/* Voice call button */}
                 {onStartVoiceCall && (isHovered || isActive) && (
                   <span

@@ -72,6 +72,26 @@ const makeStatusDotStyle = (status: string): React.CSSProperties => ({
   boxSizing: 'border-box',
 })
 
+const avatarUnreadBadgeStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: -4,
+  right: -4,
+  minWidth: 16,
+  height: 16,
+  borderRadius: 2,
+  padding: '0 4px',
+  background: 'var(--text-danger)',
+  color: '#fff',
+  fontSize: 10,
+  fontWeight: 700,
+  fontFamily: 'var(--font-mono)',
+  lineHeight: '16px',
+  textAlign: 'center',
+  border: '2px solid var(--bg-sidebar-light)',
+  boxSizing: 'content-box',
+  pointerEvents: 'none',
+}
+
 const nameColStyle: React.CSSProperties = {
   flex: 1,
   minWidth: 0,
@@ -205,6 +225,11 @@ export const DmItem = memo(function DmItem({
             )}
           </div>
           <div style={makeStatusDotStyle(status)} aria-label={status} />
+          {!!channel.unreadCount && (
+            <span style={avatarUnreadBadgeStyle} aria-label={`${channel.unreadCount} unread`}>
+              {channel.unreadCount > 99 ? '99+' : channel.unreadCount}
+            </span>
+          )}
         </div>
 
         {/* Name + last message preview */}
@@ -224,12 +249,6 @@ export const DmItem = memo(function DmItem({
         </div>
 
         {/* Unread badge — square corners, mono numerals */}
-        {!!channel.unreadCount && (
-          <span style={badgeStyle} aria-label={`${channel.unreadCount} unread`}>
-            {channel.unreadCount}
-          </span>
-        )}
-
         {/* Voice call action */}
         {showVoiceCallBtn && showActions && (
           <span

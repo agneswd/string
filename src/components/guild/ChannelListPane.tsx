@@ -244,7 +244,16 @@ export function ChannelListPane({
       return (
         <li
           key={cid}
-          style={{ listStyle: 'none', opacity: draggedId === cid ? 0.45 : 1, borderTop: dragOverId === cid && dropPosition === 'above' ? '2px solid var(--accent-primary)' : '2px solid transparent', borderBottom: dragOverId === cid && dropPosition === 'below' ? '2px solid var(--accent-primary)' : '2px solid transparent' }}
+          style={{
+            listStyle: 'none',
+            width: '100%',
+            minWidth: 0,
+            boxSizing: 'border-box',
+            overflow: 'hidden',
+            opacity: draggedId === cid ? 0.45 : 1,
+            borderTop: dragOverId === cid && dropPosition === 'above' ? '2px solid var(--accent-primary)' : '2px solid transparent',
+            borderBottom: dragOverId === cid && dropPosition === 'below' ? '2px solid var(--accent-primary)' : '2px solid transparent',
+          }}
           draggable
           onDragStart={(e) => {
             e.dataTransfer.setData('text/plain', cid)

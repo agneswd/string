@@ -149,6 +149,134 @@ describe('ChatViewPane', () => {
     expect(scrollIntoViewMock).toHaveBeenCalledWith({ behavior: 'smooth' })
   })
 
+  it('keeps the composer focused when pressing the jump-to-latest button', () => {
+    scrollIntoViewMock.mockClear()
+    renderPane({ composerValue: 'Hello!' })
+    const list = screen.getByRole('list')
+    const input = screen.getByRole('textbox', { name: /message composer/i })
+
+    Object.defineProperty(list, 'scrollHeight', { configurable: true, value: 640 })
+    Object.defineProperty(list, 'clientHeight', { configurable: true, value: 240 })
+    Object.defineProperty(list, 'scrollTop', { configurable: true, value: 80, writable: true })
+
+    fireEvent.scroll(list)
+
+    input.focus()
+    const jumpButton = screen.getByRole('button', { name: /jump to latest message/i })
+    fireEvent.mouseDown(jumpButton)
+    fireEvent.click(jumpButton)
+
+    expect(document.activeElement).toBe(input)
+  })
+
+  it('shows an unread banner instead of auto-scrolling when new incoming messages arrive away from the bottom', () => {
+    scrollIntoViewMock.mockClear()
+    const { rerender } = render(
+      <ChatViewPane
+        channelName="general"
+        messages={baseMessages}
+        composerValue=""
+        onComposerChange={vi.fn()}
+        onSend={vi.fn()}
+        currentUserId="u1"
+      />,
+    )
+
+    const list = screen.getByRole('list')
+    Object.defineProperty(list, 'scrollHeight', { configurable: true, value: 640 })
+    Object.defineProperty(list, 'clientHeight', { configurable: true, value: 240 })
+    Object.defineProperty(list, 'scrollTop', { configurable: true, value: 80, writable: true })
+
+    fireEvent.scroll(list)
+    scrollIntoViewMock.mockClear()
+
+    rerender(
+      <ChatViewPane
+        channelName="general"
+        messages={[
+          ...baseMessages,
+          { id: '3', authorName: 'Bob', authorId: 'u2', content: 'Newest message', timestamp: '12:02' },
+        ]}
+        composerValue=""
+        onComposerChange={vi.fn()}
+        onSend={vi.fn()}
+        currentUserId="u1"
+      />,
+    )
+
+    expect(scrollIntoViewMock).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: /1 unread message/i })).toBeTruthy()
+  })
+
+  it('clears the unread banner after scrolling back to the bottom', () => {
+    const { rerender } = render(
+      <ChatViewPane
+        channelName="general"
+        messages={baseMessages}
+        composerValue=""
+        onComposerChange={vi.fn()}
+        onSend={vi.fn()}
+        currentUserId="u1"
+      />,
+    )
+
+    const list = screen.getByRole('list')
+    Object.defineProperty(list, 'scrollHeight', { configurable: true, value: 640 })
+    Object.defineProperty(list, 'clientHeight', { configurable: true, value: 240 })
+    Object.defineProperty(list, 'scrollTop', { configurable: true, value: 80, writable: true })
+
+    fireEvent.scroll(list)
+
+    rerender(
+      <ChatViewPane
+        channelName="general"
+        messages={[
+          ...baseMessages,
+          { id: '3', authorName: 'Bob', authorId: 'u2', content: 'Newest message', timestamp: '12:02' },
+        ]}
+        composerValue=""
+        onComposerChange={vi.fn()}
+        onSend={vi.fn()}
+        currentUserId="u1"
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: /1 unread message/i })).toBeTruthy()
+
+    Object.defineProperty(list, 'scrollTop', { configurable: true, value: 400, writable: true })
+    fireEvent.scroll(list)
+
+    expect(screen.queryByRole('button', { name: /1 unread message/i })).toBeNull()
+  })
+
+  it('clears local unread state when opening a different chat', () => {
+    const { rerender } = render(
+      <ChatViewPane
+        channelName="general"
+        messages={baseMessages}
+        composerValue=""
+        onComposerChange={vi.fn()}
+        onSend={vi.fn()}
+        currentUserId="u1"
+      />,
+    )
+
+    rerender(
+      <ChatViewPane
+        channelName="other-chat"
+        conversationKey="dm:other-chat"
+        isDm={true}
+        messages={baseMessages}
+        composerValue=""
+        onComposerChange={vi.fn()}
+        onSend={vi.fn()}
+        currentUserId="u1"
+      />,
+    )
+
+    expect(screen.queryByRole('button', { name: /unread message/i })).toBeNull()
+  })
+
   it('renders empty message list without errors', () => {
     renderPane({ messages: [] })
     // Should render without throwing
@@ -171,6 +299,15 @@ describe('ChatViewPane', () => {
   it('renders call active banner when callActive is true', () => {
     renderPane({ callActive: true })
     expect(screen.getByText(/voice call in progress/i)).toBeTruthy()
+  })
+
+  it('renders a typing indicator above the composer', () => {
+    renderPane({
+      typingUsers: [{ id: 'u2', label: 'nayskok' }],
+    })
+
+    expect(screen.getByLabelText(/typing indicator/i)).toBeTruthy()
+    expect(screen.getByText(/nayskok is typing/i)).toBeTruthy()
   })
 
   it('grouped messages share the same author (no duplicate author render after grouping)', () => {

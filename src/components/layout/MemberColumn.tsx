@@ -4,6 +4,7 @@ import { avatarBytesToUrl, getAvatarColor, getInitial } from '../../lib/avatarUt
 
 export interface MemberColumnProps {
   isDmMode: boolean
+  selectedDmMemberId?: string
   guildName?: string
   friends: Array<{
     id: string
@@ -22,6 +23,7 @@ export interface MemberColumnProps {
 
 export const MemberColumn = memo(function MemberColumn({
   isDmMode,
+  selectedDmMemberId,
   guildName,
   friends,
   memberListItems,
@@ -36,11 +38,15 @@ export const MemberColumn = memo(function MemberColumn({
     : guildName
       ? `${guildName} members`
       : 'Members'
+  const dmFriends = useMemo(
+    () => (isDmMode && selectedDmMemberId ? friends.filter((friend) => friend.id === selectedDmMemberId) : friends),
+    [friends, isDmMode, selectedDmMemberId],
+  )
 
   const members: MemberListItem[] = useMemo(
     () =>
       isDmMode
-        ? friends.map((friend) => ({
+        ? dmFriends.map((friend) => ({
             id: friend.id,
             username: friend.username,
             displayName: friend.displayName,
@@ -49,15 +55,15 @@ export const MemberColumn = memo(function MemberColumn({
             profileColor: (usersByIdentity.get(friend.id) as any)?.profileColor ?? undefined,
           }))
         : memberListItems,
-    [isDmMode, friends, memberListItems, getAvatarUrl, usersByIdentity],
+    [dmFriends, getAvatarUrl, isDmMode, memberListItems, usersByIdentity],
   )
 
   const dmProfile = useMemo(() => {
-    if (!isDmMode || friends.length === 0) {
+    if (!isDmMode || dmFriends.length === 0) {
       return null
     }
 
-    const friend = friends[0]
+    const friend = dmFriends[0]
     const fullUser = usersByIdentity.get(friend.id) as {
       profileColor?: string
       bio?: string | null
@@ -73,7 +79,7 @@ export const MemberColumn = memo(function MemberColumn({
       profileColor: fullUser?.profileColor ?? undefined,
       avatarUrl: getAvatarUrl(friend.id) ?? avatarBytesToUrl(fullUser?.avatarBytes),
     }
-  }, [isDmMode, friends, usersByIdentity, getAvatarUrl])
+  }, [dmFriends, getAvatarUrl, isDmMode, usersByIdentity])
 
   if (dmProfile) {
     const isString = layoutMode === 'string'

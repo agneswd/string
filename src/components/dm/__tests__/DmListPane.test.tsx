@@ -62,6 +62,11 @@ describe('DmListPane', () => {
     expect(onShowFriends).toHaveBeenCalled()
   })
 
+  it('shows a friends badge count when pending requests or invites exist', () => {
+    renderPane({ friendsBadgeCount: 3, layoutMode: 'string' })
+    expect(screen.getByText('3')).toBeTruthy()
+  })
+
   it('renders the string friends button without an icon', () => {
     renderPane({ layoutMode: 'string' })
     const button = screen.getByRole('button', { name: /friends/i })
@@ -145,5 +150,15 @@ describe('DmListPane', () => {
     expect(statusDot).toBeTruthy()
     expect(statusDot!.style.right).toBe('-3px')
     expect(statusDot!.style.bottom).toBe('-3px')
+  })
+
+  it('uses square unread badges in string mode', () => {
+    const channelsWithUnread: DmListItem[] = [
+      { id: 'u1', name: 'Dave', status: 'online', unreadCount: 3 },
+    ]
+    const { container } = renderPane({ channels: channelsWithUnread, layoutMode: 'string' })
+    const badge = container.querySelector('[aria-label="3 unread"]') as HTMLElement | null
+    expect(badge).toBeTruthy()
+    expect(badge!.style.borderRadius).toBe('2px')
   })
 })

@@ -48,6 +48,19 @@ export function AppMobileShell({
   mobileProfile,
   memberColumn,
 }: AppMobileShellProps) {
+  const dismissKeyboard = () => {
+    const activeElement = document.activeElement
+    if (!(activeElement instanceof HTMLElement)) {
+      return
+    }
+
+    const tagName = activeElement.tagName.toLowerCase()
+    const isEditable = tagName === 'input' || tagName === 'textarea' || activeElement.isContentEditable
+    if (isEditable) {
+      activeElement.blur()
+    }
+  }
+
   const ServerColumnComponent = layoutMode === 'string' ? ServerColumnString : ServerColumnClassic
   const TopNavBarComponent = layoutMode === 'string' ? TopNavBarString : TopNavBarClassic
   const SidebarBottomComponent = layoutMode === 'string' ? SidebarBottomString : SidebarBottomClassic
@@ -99,21 +112,36 @@ export function AppMobileShell({
   const serverColumnProps = {
     ...serverColumn,
     onSelectDmChannel: (id: string) => {
+      if (String(id) === String(serverColumn.selectedDmChannelId ?? '')) {
+        return
+      }
+
       beginContentTargetSwitch(`dm:${id}`)
       serverColumn.onSelectDmChannel?.(id)
       mobileShell.openContent()
     },
     onSelectGuild: (id: string) => {
+      if (!serverColumn.isDmMode && String(id) === String(serverColumn.selectedGuildId ?? '')) {
+        return
+      }
+
       beginContentTargetSwitch(`guild:${id}`)
       serverColumn.onSelectGuild(id)
+      dismissKeyboard()
       mobileShell.showBrowse()
     },
     onHomeClick: () => {
+      if (topNav.isHomeView) {
+        return
+      }
+
       serverColumn.onHomeClick()
+      dismissKeyboard()
       mobileShell.showBrowse()
     },
     onAddServer: () => {
       serverColumn.onAddServer()
+      dismissKeyboard()
       mobileShell.showBrowse()
     },
   }
@@ -127,6 +155,7 @@ export function AppMobileShell({
     },
     onShowFriends: () => {
       channelColumn.onShowFriends()
+      dismissKeyboard()
       mobileShell.showFriends()
     },
     onSelectChannel: (id: string | number) => {
@@ -147,6 +176,7 @@ export function AppMobileShell({
   const messageAreaNode = (
     <MessageArea
       {...messageArea}
+      isMobile
       onStartDm={(friendId) => {
         beginContentTargetSwitch(`dm:friend:${friendId}`)
         messageArea.onStartDm(friendId)
@@ -161,7 +191,7 @@ export function AppMobileShell({
 
   const showMobileVoiceOverlay = Boolean(
     sidebarBottom.showVoicePanel
-    && sidebarBottom.currentVoiceState
+    && (sidebarBottom.currentVoiceState || sidebarBottom.outgoingCall)
     && (mobileShell.activePane === 'navigation' || (mobileShell.activePane === 'content' && topNav.isHomeView)),
   )
 
@@ -170,7 +200,7 @@ export function AppMobileShell({
 
   const mobileNavigationPane = useMemo(
     () => (
-      <div style={{ display: 'flex', height: '100%', minHeight: 0, width: '100%', overflow: 'hidden', paddingBottom: showMobileVoiceOverlay ? '72px' : 0, boxSizing: 'border-box' }}>
+      <div style={{ display: 'flex', height: '100%', minHeight: 0, width: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
         {mobileShell.navigationSection === 'browse' ? (
           <>
             <aside
@@ -248,7 +278,10 @@ export function AppMobileShell({
         type="button"
         aria-label="Back to navigation"
         title="Back"
-        onClick={mobileShell.showBrowse}
+        onClick={() => {
+          dismissKeyboard()
+          mobileShell.showBrowse()
+        }}
         style={{
           minWidth: 32,
           height: 32,
@@ -315,13 +348,40 @@ export function AppMobileShell({
   ) : null
 
   const mobileFooter = (
-    <div style={{ display: 'flex', flexDirection: 'column', padding: '0.75rem', backgroundColor: 'var(--bg-panel)', borderTop: '1px solid var(--border-subtle)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', position: 'relative', padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-panel)', borderTop: '1px solid var(--border-subtle)' }}>
+      {showMobileVoiceOverlay && (
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            bottom: 'calc(100% - 12px)',
+            pointerEvents: 'none',
+            zIndex: 2,
+          }}
+        >
+          <div style={{ pointerEvents: 'auto', maxWidth: 320 }}>
+            <VoicePanel
+              connected={true}
+              compact={true}
+              streaming={sidebarBottom.currentVoiceState?.isStreaming ?? false}
+              statusLabel={sidebarBottom.outgoingCall && !sidebarBottom.currentVoiceState ? `Calling ${sidebarBottom.outgoingCallLabel ?? 'user'}…` : undefined}
+              onLeave={sidebarBottom.onLeave}
+              remoteSharersCount={sidebarBottom.remoteSharersCount}
+            />
+          </div>
+        </div>
+      )}
       <MobileBottomNav
         activeTab={mobileShell.activePane === 'navigation' ? mobileShell.navigationSection : null}
-        onBrowse={mobileShell.showBrowse}
+        onBrowse={() => {
+          dismissKeyboard()
+          mobileShell.showBrowse()
+        }}
         onFriends={() => {
           serverColumn.onHomeClick()
           channelColumn.onShowFriends()
+          dismissKeyboard()
           mobileShell.showFriends()
         }}
         onYou={mobileShell.showYou}
@@ -340,35 +400,15 @@ export function AppMobileShell({
         membersHeader={mobileMembersHeader}
         membersPane={mobileMembersPane}
         activePane={mobileShell.activePane}
-        onActivePaneChange={mobileShell.setPane}
+        onActivePaneChange={(pane) => {
+          if (pane === 'navigation') {
+            dismissKeyboard()
+          }
+          mobileShell.setPane(pane)
+        }}
         canNavigateToContent={mobileShell.canNavigateToContent}
         canNavigateToMembers={mobileShell.canNavigateToMembers}
       />
-
-      {showMobileVoiceOverlay && (
-        <div
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            bottom: '72px',
-            padding: '0 0.75rem 0.5rem',
-            pointerEvents: 'none',
-            zIndex: 5,
-          }}
-        >
-          <div style={{ pointerEvents: 'auto' }}>
-            <VoicePanel
-              connected={true}
-              streaming={sidebarBottom.currentVoiceState?.isStreaming ?? false}
-              onLeave={sidebarBottom.onLeave}
-              remoteSharersCount={sidebarBottom.remoteSharersCount}
-              onStartSharing={sidebarBottom.onStartSharing}
-              onStopSharing={sidebarBottom.onStopSharing}
-            />
-          </div>
-        </div>
-      )}
 
       <div style={{ display: 'none' }}>{sidebarBottomNode}</div>
     </main>

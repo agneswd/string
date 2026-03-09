@@ -50,34 +50,43 @@ export const participantCard: CSSProperties = {
 }
 
 // ── Avatar ────────────────────────────────────────────────────────────────────
-export const avatarCircle = (speaking: boolean): CSSProperties => ({
-  width: 64,
-  height: 64,
-  borderRadius: '50%',
+export const avatarFrame = ({
+  speaking,
+  isString,
+  size,
+}: {
+  speaking: boolean
+  isString: boolean
+  size: number
+}): CSSProperties => ({
+  width: size,
+  height: size,
+  borderRadius: isString ? 3 : '50%',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   background: T.bg,
   overflow: 'hidden',
   flexShrink: 0,
-  // speaking indicator: thin coloured ring only – no glow, no shadow
-  border: speaking ? `2px solid ${T.statusGreen}` : `2px solid transparent`,
-  transition: 'border-color 0.15s',
+  // speaking indicator: use the same outline pattern as the working server voice UI
+  outline: speaking ? `2px solid ${T.statusGreen}` : '2px solid transparent',
+  outlineOffset: isString ? 1 : 0,
+  transition: 'outline-color 0.15s',
 })
 
-export const avatarImg: CSSProperties = {
+export const avatarImage = (isString: boolean): CSSProperties => ({
   width: '100%',
   height: '100%',
-  borderRadius: '50%',
+  borderRadius: isString ? 3 : '50%',
   objectFit: 'cover',
-}
+})
 
-export const avatarInitial: CSSProperties = {
-  fontSize: 24,
+export const avatarInitial = (size: number): CSSProperties => ({
+  fontSize: Math.max(24, Math.round(size * 0.38)),
   fontWeight: 500,
-  color: T.textPrimary,
+  color: '#ffffff',
   userSelect: 'none',
-}
+})
 
 // ── Name labels ───────────────────────────────────────────────────────────────
 export const nameBadge: CSSProperties = {

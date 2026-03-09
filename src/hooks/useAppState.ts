@@ -61,7 +61,7 @@ export function useAppState(params: AppStateParams) {
   // ---------------------------------------------------------------------------
   const addNotification = useCallback((notif: Omit<NotificationItem, 'id'>) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-    setNotifications(prev => [...prev.slice(-4), { ...notif, id }])
+    setNotifications([{ ...notif, id }])
   }, [])
 
   const dismissNotification = useCallback((id: string) => {

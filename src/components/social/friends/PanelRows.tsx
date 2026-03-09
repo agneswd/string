@@ -137,6 +137,7 @@ interface IncomingRowProps extends RowSharedProps {
 export function IncomingRow({ req, styles: s, layoutMode, hoveredRow, hoveredBtn, setHoveredRow, setHoveredBtn, onAccept, onDecline }: IncomingRowProps) {
   const key = `in-${req.id}`
   const hovered = hoveredRow === key
+  const label = req.displayName || req.username
   return (
     <div
       style={{
@@ -147,9 +148,9 @@ export function IncomingRow({ req, styles: s, layoutMode, hoveredRow, hoveredBtn
       onMouseEnter={() => setHoveredRow(key)}
       onMouseLeave={() => setHoveredRow(null)}
     >
-      <Avatar username={req.username} size={32} layoutMode={layoutMode} />
+      <Avatar username={req.username} displayName={req.displayName} avatarUrl={req.avatarUrl} profileColor={req.profileColor} size={32} layoutMode={layoutMode} />
       <div style={s.rowInfo}>
-        <span style={s.rowName}>{req.username}</span>
+        <span style={s.rowName}>{label}</span>
         <span style={s.rowSub}>{layoutMode === 'string' ? 'incoming request' : 'Incoming Friend Request'}</span>
       </div>
       <div style={s.rowActions}>
@@ -157,7 +158,7 @@ export function IncomingRow({ req, styles: s, layoutMode, hoveredRow, hoveredBtn
           type="button"
           style={s.iconBtn(hoveredBtn === `acc-${key}`, false)}
           title="Accept"
-          aria-label={`Accept request from ${req.username}`}
+          aria-label={`Accept request from ${label}`}
           onClick={() => onAccept(req.id)}
           onMouseEnter={() => setHoveredBtn(`acc-${key}`)}
           onMouseLeave={() => setHoveredBtn(null)}
@@ -168,7 +169,7 @@ export function IncomingRow({ req, styles: s, layoutMode, hoveredRow, hoveredBtn
           type="button"
           style={s.iconBtn(hoveredBtn === `dec-${key}`, true)}
           title="Decline"
-          aria-label={`Decline request from ${req.username}`}
+          aria-label={`Decline request from ${label}`}
           onClick={() => onDecline(req.id)}
           onMouseEnter={() => setHoveredBtn(`dec-${key}`)}
           onMouseLeave={() => setHoveredBtn(null)}
@@ -190,6 +191,7 @@ interface OutgoingRowProps extends RowSharedProps {
 export function OutgoingRow({ req, styles: s, layoutMode, hoveredRow, hoveredBtn, setHoveredRow, setHoveredBtn, onCancel }: OutgoingRowProps) {
   const key = `out-${req.id}`
   const hovered = hoveredRow === key
+  const label = req.displayName || req.username
   return (
     <div
       style={{
@@ -200,9 +202,9 @@ export function OutgoingRow({ req, styles: s, layoutMode, hoveredRow, hoveredBtn
       onMouseEnter={() => setHoveredRow(key)}
       onMouseLeave={() => setHoveredRow(null)}
     >
-      <Avatar username={req.username} size={32} layoutMode={layoutMode} />
+      <Avatar username={req.username} displayName={req.displayName} avatarUrl={req.avatarUrl} profileColor={req.profileColor} size={32} layoutMode={layoutMode} />
       <div style={s.rowInfo}>
-        <span style={s.rowName}>{req.username}</span>
+        <span style={s.rowName}>{label}</span>
         <span style={s.rowSub}>{layoutMode === 'string' ? 'outgoing request' : 'Outgoing Friend Request'}</span>
       </div>
       <div style={s.rowActions}>
@@ -210,7 +212,7 @@ export function OutgoingRow({ req, styles: s, layoutMode, hoveredRow, hoveredBtn
           type="button"
           style={s.iconBtn(hoveredBtn === `can-${key}`, true)}
           title="Cancel"
-          aria-label={`Cancel request to ${req.username}`}
+          aria-label={`Cancel request to ${label}`}
           onClick={() => onCancel(req.id)}
           onMouseEnter={() => setHoveredBtn(`can-${key}`)}
           onMouseLeave={() => setHoveredBtn(null)}
@@ -243,7 +245,7 @@ export function GuildInviteRow({ invite, styles: s, layoutMode, hoveredRow, hove
       onMouseEnter={() => setHoveredRow(key)}
       onMouseLeave={() => setHoveredRow(null)}
     >
-      <Avatar username={invite.inviterName} size={32} layoutMode={layoutMode} />
+      <Avatar username={invite.inviterName} displayName={invite.inviterName} avatarUrl={invite.avatarUrl} profileColor={invite.profileColor} size={32} layoutMode={layoutMode} />
       <div style={s.rowInfo}>
         <span style={s.rowName}>{layoutMode === 'string' ? `from ${invite.inviterName}` : `Server invite from ${invite.inviterName}`}</span>
         <span style={s.rowSub}>{layoutMode === 'string' ? 'server invitation' : 'Server Invitation'}</span>

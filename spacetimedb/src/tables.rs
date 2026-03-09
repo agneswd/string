@@ -141,6 +141,29 @@ pub struct Message {
     pub reply_to: Option<u64>, // message_id being replied to
 }
 
+/// Ephemeral typing state for a guild text channel.
+#[spacetimedb::table(
+    accessor = channel_typing,
+    index(
+        name = "channel_typing_by_channel_id",
+        accessor = channel_typing_by_channel_id,
+        btree(columns = [channel_id])
+    ),
+    index(
+        name = "channel_typing_by_identity",
+        accessor = channel_typing_by_identity,
+        btree(columns = [identity])
+    )
+)]
+#[derive(Clone)]
+pub struct ChannelTyping {
+    #[primary_key]
+    pub typing_key: String,
+    pub channel_id: u64,
+    pub identity: Identity,
+    pub expires_at: Timestamp,
+}
+
 /// A reaction applied to a guild text message.
 #[spacetimedb::table(
     accessor = reaction,
@@ -279,6 +302,29 @@ pub struct DmMessage {
     pub edited_at: Option<Timestamp>,
     pub is_deleted: bool,
     pub reply_to: Option<u64>,
+}
+
+/// Ephemeral typing state for a DM channel.
+#[spacetimedb::table(
+    accessor = dm_typing,
+    index(
+        name = "dm_typing_by_dm_channel_id",
+        accessor = dm_typing_by_dm_channel_id,
+        btree(columns = [dm_channel_id])
+    ),
+    index(
+        name = "dm_typing_by_identity",
+        accessor = dm_typing_by_identity,
+        btree(columns = [identity])
+    )
+)]
+#[derive(Clone)]
+pub struct DmTyping {
+    #[primary_key]
+    pub typing_key: String,
+    pub dm_channel_id: u64,
+    pub identity: Identity,
+    pub expires_at: Timestamp,
 }
 
 /// Pending friend request from one identity to another.

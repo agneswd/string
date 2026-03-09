@@ -6,8 +6,9 @@ pub use types::{ChannelLayoutItem, ChannelType, MemberRole, RtcSignalType, UserS
 
 pub mod tables;
 pub use tables::{
-    Channel, DmCallEvent, DmCallRequest, Guild, GuildInvite, GuildMember, Message,
-    PresenceOfflineJob, PresenceState, RtcSignal, User, UserPresence, VoiceState,
+    Channel, ChannelTyping, DmCallEvent, DmCallRequest, DmTyping, Guild, GuildInvite,
+    GuildMember, Message, PresenceOfflineJob, PresenceState, RtcSignal, User,
+    UserPresence, VoiceState,
 };
 pub mod helpers;
 pub mod reducers;

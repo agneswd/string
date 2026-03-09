@@ -6,11 +6,17 @@ export type FriendUserId = string | number
 export interface IncomingFriendRequestItem {
   id: FriendRequestItemId
   username: string
+  displayName?: string
+  avatarUrl?: string
+  profileColor?: string
 }
 
 export interface OutgoingFriendRequestItem {
   id: FriendRequestItemId
   username: string
+  displayName?: string
+  avatarUrl?: string
+  profileColor?: string
 }
 
 export interface FriendListItem {
@@ -26,6 +32,8 @@ export interface GuildInviteItem {
   id: string
   guildId: string
   inviterName: string
+  avatarUrl?: string
+  profileColor?: string
 }
 
 export interface FriendRequestPanelProps {

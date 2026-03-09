@@ -1,19 +1,19 @@
 import React, { useRef, useEffect } from 'react'
+import type { LayoutMode } from '../../../constants/theme'
 import {
-  avatarCircle,
-  avatarImg,
-  avatarInitial,
   nameBadge,
   nameOverScreenShare,
   participantCard,
   screenVideo,
 } from './callTheme'
+import { CallAvatar } from './CallAvatar'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface CallUser {
   name: string
   avatarUrl?: string
+  profileColor?: string
   isMuted?: boolean
   isDeafened?: boolean
 }
@@ -37,11 +37,13 @@ export const ParticipantCard = React.memo(function ParticipantCard({
   speaking,
   screenStream,
   onScreenShareClick,
+  layoutMode = 'classic',
 }: {
   user: CallUser
   speaking: boolean
   screenStream?: MediaStream | null
   onScreenShareClick?: () => void
+  layoutMode?: LayoutMode
 }) {
   return (
     <div style={participantCard}>
@@ -60,13 +62,13 @@ export const ParticipantCard = React.memo(function ParticipantCard({
         </div>
       ) : (
         <>
-          <div style={avatarCircle(speaking)}>
-            {user.avatarUrl ? (
-              <img src={user.avatarUrl} alt={user.name} style={avatarImg} />
-            ) : (
-              <span style={avatarInitial}>{user.name.charAt(0).toUpperCase()}</span>
-            )}
-          </div>
+          <CallAvatar
+            name={user.name}
+            avatarUrl={user.avatarUrl}
+            profileColor={user.profileColor}
+            speaking={speaking}
+            layoutMode={layoutMode}
+          />
           <span style={nameBadge}>{user.name}</span>
         </>
       )}

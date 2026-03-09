@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 
 import { useStringActions, useStringStore } from '../lib/useStringStore'
-import type { StringState } from '../lib/stringStore'
+import type { ChannelTypingRow, DmTypingRow, StringState } from '../lib/stringStore'
 import { toIdKey } from '../lib/helpers'
 import type { User, DmCallEvent, DmCallRequest, DmChannel, DmMessage, DmParticipant, DmReaction, GuildInvite, GuildMember, Reaction } from '../module_bindings/types'
 
@@ -33,6 +33,8 @@ type AppExtendedState = {
   dmChannels?: DmChannel[]
   dmParticipants?: DmParticipant[]
   dmMessages?: DmMessage[]
+  channelTyping?: ChannelTypingRow[]
+  dmTyping?: DmTypingRow[]
   reactions?: Reaction[]
   myFriends?: unknown[]
   friends?: unknown[]
@@ -76,6 +78,8 @@ export interface AppData {
   dmChannels: DmChannel[]
   dmParticipants: DmParticipant[]
   dmMessages: DmMessage[]
+  channelTyping: ChannelTypingRow[]
+  dmTyping: DmTypingRow[]
   guildMembersByGuildId: Map<string, GuildMember[]>
   dmUnreadCountsByChannel: Map<string, number>
   dmMessageCountsByChannel: Map<string, number>
@@ -100,6 +104,8 @@ export function useAppData(): AppData {
   const dmChannels = useMemo(() => extendedState.dmChannels ?? [], [extendedState.dmChannels])
   const dmParticipants = useMemo(() => extendedState.dmParticipants ?? [], [extendedState.dmParticipants])
   const dmMessages = useMemo(() => extendedState.dmMessages ?? [], [extendedState.dmMessages])
+  const channelTyping = useMemo(() => extendedState.channelTyping ?? [], [extendedState.channelTyping])
+  const dmTyping = useMemo(() => extendedState.dmTyping ?? [], [extendedState.dmTyping])
 
   const guildMembersByGuildId = useMemo(() => {
     const grouped = new Map<string, GuildMember[]>()
@@ -161,6 +167,8 @@ export function useAppData(): AppData {
     dmChannels,
     dmParticipants,
     dmMessages,
+    channelTyping,
+    dmTyping,
     guildMembersByGuildId,
     dmUnreadCountsByChannel,
     dmMessageCountsByChannel,
@@ -170,7 +178,7 @@ export function useAppData(): AppData {
     guildInvites,
     dmCallRequests,
     dmCallEvents,
-  }), [state, actions, extendedState, extendedActions, identityString, usersByIdentity, me, dmChannels, dmParticipants, dmMessages, guildMembersByGuildId, dmUnreadCountsByChannel, dmMessageCountsByChannel, dmLastMessageByChannel, dmReactions, reactions, guildInvites, dmCallRequests, dmCallEvents])
+  }), [state, actions, extendedState, extendedActions, identityString, usersByIdentity, me, dmChannels, dmParticipants, dmMessages, channelTyping, dmTyping, guildMembersByGuildId, dmUnreadCountsByChannel, dmMessageCountsByChannel, dmLastMessageByChannel, dmReactions, reactions, guildInvites, dmCallRequests, dmCallEvents])
 }
 
 export { identityToString }

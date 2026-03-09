@@ -48,7 +48,7 @@ export interface CallHandlingResult {
   outgoingCallId: string | null
   isInDmVoice: boolean
   dmVoiceChannelId: string | null
-  dmCallRemoteUser: { name: string; avatarUrl: string | undefined } | null
+  dmCallRemoteUser: { name: string; avatarUrl: string | undefined; profileColor: string | undefined } | null
   dmCallActive: boolean
   dmPartnerIdentity: string | null
   dmPartnerAvatarUrl: string | undefined
@@ -145,6 +145,7 @@ export function useCallHandling({
     return {
       name: otherUser?.displayName ?? otherUser?.username ?? otherId.slice(0, 12),
       avatarUrl: getAvatarUrlForUser(otherId),
+      profileColor: otherUser?.profileColor ?? getAvatarColor(otherUser?.displayName ?? otherUser?.username ?? otherId),
     }
   }, [isInDmVoice, dmVoiceChannelId, identityString, voiceStates, usersByIdentity, getAvatarUrlForUser])
 
@@ -178,7 +179,7 @@ export function useCallHandling({
   const dmPartnerProfileColor = useMemo(() => {
     if (!dmPartnerIdentity) return undefined
     const user = usersByIdentity.get(dmPartnerIdentity)
-    return getAvatarColor(user?.username ?? user?.displayName ?? dmPartnerIdentity)
+    return user?.profileColor ?? getAvatarColor(user?.displayName ?? user?.username ?? dmPartnerIdentity)
   }, [dmPartnerIdentity, usersByIdentity])
 
   // -------------------------------------------------------------------------

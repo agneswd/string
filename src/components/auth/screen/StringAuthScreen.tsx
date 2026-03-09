@@ -46,7 +46,7 @@ export function StringAuthScreen({ message }: StringAuthScreenProps) {
   const description = useMemo(
     () => (mode === 'sign-in'
       ? 'Use your email, password, or a linked provider to enter String.'
-      : 'Create an account and let Clerk handle verification with the current supported flow.'),
+      : 'Use your email, password, or a linked provider to register for String.'),
     [mode],
   )
 

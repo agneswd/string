@@ -9,6 +9,7 @@ const baseProps = {
   currentVoiceState: false,
   outgoingCall: false,
   dmCallActive: false,
+  onCancelOutgoingCall: vi.fn(),
   showMemberList: false,
   onToggleMemberList: vi.fn(),
   onInitiateDmCall: vi.fn(),

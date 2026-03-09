@@ -4,7 +4,23 @@ interface DmNavButtonProps {
   label: string
   icon?: React.ReactNode
   active?: boolean
+  badgeCount?: number
   onClick?: () => void
+}
+
+const badgeStyle: React.CSSProperties = {
+  marginLeft: 'auto',
+  minWidth: 16,
+  height: 16,
+  padding: '0 4px',
+  borderRadius: 2,
+  background: 'var(--text-danger)',
+  color: '#fff',
+  fontSize: 10,
+  fontWeight: 700,
+  lineHeight: '16px',
+  textAlign: 'center',
+  fontFamily: 'var(--font-mono)',
 }
 
 const makeStyle = (active: boolean, hovered: boolean): React.CSSProperties => ({
@@ -37,6 +53,7 @@ export const DmNavButton = memo(function DmNavButton({
   label,
   icon,
   active = false,
+  badgeCount = 0,
   onClick,
 }: DmNavButtonProps) {
   const [hovered, setHovered] = useState(false)
@@ -53,6 +70,7 @@ export const DmNavButton = memo(function DmNavButton({
     >
       {icon}
       <span>{label}</span>
+      {badgeCount > 0 && <span style={badgeStyle}>{badgeCount > 99 ? '99+' : badgeCount}</span>}
     </button>
   )
 })

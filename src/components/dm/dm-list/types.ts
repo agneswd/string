@@ -21,6 +21,7 @@ export interface DmListPaneProps {
   onStartVoiceCall?: (channelId: DmChannelId) => void
   onCreateChannel?: () => void
   onShowFriends?: () => void
+  friendsBadgeCount?: number
   createButtonLabel?: string
   className?: string
   /** Channel IDs that have an active voice call */

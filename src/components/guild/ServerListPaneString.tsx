@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useMemo, memo, type MouseEvent, type 
 import { UserPlus, LogOut, Clipboard, Trash2, LineSquiggle, Info, Settings, Phone } from 'lucide-react'
 import {
   ContextMenuItem,
+  compactOverlayBadgeStyle,
   getInitials,
   type GuildId,
   type ServerListPaneVariantProps,
@@ -101,6 +102,11 @@ function StringRow({
             {children ?? initials ?? '#'}
           </span>
         )}
+        {compact && !!unreadCount && unreadCount > 0 && (
+          <span style={compactOverlayBadgeStyle}>
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
         {statusBadge}
       </div>
 
@@ -123,14 +129,14 @@ function StringRow({
         </span>
       )}
 
-      {!!unreadCount && unreadCount > 0 && (
+      {!compact && !!unreadCount && unreadCount > 0 && (
         <span
           style={{
             minWidth: 16,
             height: 14,
             padding: '0 3px',
             borderRadius: 2,
-            backgroundColor: 'var(--status-dnd)',
+            backgroundColor: 'var(--text-danger)',
             color: '#fff',
             fontFamily: 'var(--font-mono)',
             fontSize: 10,

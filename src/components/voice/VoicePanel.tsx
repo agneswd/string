@@ -14,6 +14,8 @@ export interface VoiceUser {
 export interface VoicePanelProps {
   connected: boolean
   streaming: boolean
+  compact?: boolean
+  statusLabel?: string
   channelName?: string
   connectedUsers?: VoiceUser[]
   remoteSharersCount?: number
@@ -192,6 +194,8 @@ const shareButtonInactive: CSSProperties = { ...shareButtonBase, backgroundColor
 export const VoicePanel = React.memo(function VoicePanel({
   connected,
   streaming,
+  compact = false,
+  statusLabel,
   channelName,
   connectedUsers = [],
   onLeave,
@@ -215,13 +219,32 @@ export const VoicePanel = React.memo(function VoicePanel({
     return null
   }
 
+  const rootStyle = compact
+    ? {
+        ...styles.root,
+        background: 'rgba(10, 10, 10, 0.82)',
+        borderTop: 'none',
+        border: '1px solid var(--border-subtle, #2a2a2a)',
+        borderRadius: 10,
+        boxShadow: '0 10px 24px rgba(0,0,0,0.28)',
+        backdropFilter: 'blur(10px)',
+      } satisfies CSSProperties
+    : styles.root
+
+  const statusBarStyle = compact
+    ? {
+        ...styles.statusBar,
+        padding: '7px 9px',
+      } satisfies CSSProperties
+    : styles.statusBar
+
   return (
-    <section className={rootClassName} style={styles.root} aria-label="Voice controls">
+    <section className={rootClassName} style={rootStyle} aria-label="Voice controls">
       {/* ── Compact status bar ── */}
-      <div style={styles.statusBar}>
+      <div style={statusBarStyle}>
         <span style={styles.dot} />
         <div style={styles.statusInfo as CSSProperties}>
-          <span style={styles.statusText}>Voice Connected</span>
+          <span style={styles.statusText}>{statusLabel ?? 'Voice Connected'}</span>
           {channelName && (
             <span style={styles.channelName as CSSProperties} title={channelName}>
               <SpeakerIcon /> {channelName}
@@ -253,7 +276,7 @@ export const VoicePanel = React.memo(function VoicePanel({
       </div>
 
       {/* ── Connected users ── */}
-      {connectedUsers.length > 0 && (
+      {!compact && connectedUsers.length > 0 && (
         <ul style={styles.userList}>
           {connectedUsers.map((user) => (
             <VoiceUserRow key={user.id} user={user} />

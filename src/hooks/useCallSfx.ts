@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 
 import type { DmCallRequest, VoiceState } from '../module_bindings/types'
-import type { NotificationItem } from '../components/ui/NotificationToast'
 import { toIdKey } from '../lib/helpers'
 import { identityToString } from './useAppData'
 import { playSound, playLoop } from '../lib/sfx'
@@ -18,7 +17,6 @@ interface UseCallSfxParams {
   dmVoiceChannelId: string | null
   voiceStates: VoiceState[]
   identityString: string
-  addNotification: (notif: Omit<NotificationItem, 'id'>) => void
   onLeaveVoice: () => void
 }
 
@@ -34,9 +32,29 @@ export function useCallSfx({
   dmVoiceChannelId,
   voiceStates,
   identityString,
-  addNotification,
   onLeaveVoice,
 }: UseCallSfxParams) {
+  const localOutgoingCancelRef = useRef(false)
+
+  const playContinueCallSound = useCallback(() => {
+    playSound('continue-call')
+  }, [])
+
+  const playHangupSound = useCallback(() => {
+    playSound('hangup')
+  }, [])
+
+  const playCallDeclinedSound = useCallback(() => {
+    playSound('call-declined')
+  }, [])
+
+  const markOutgoingCallCanceledLocally = useCallback(() => {
+    localOutgoingCancelRef.current = true
+    window.setTimeout(() => {
+      localOutgoingCancelRef.current = false
+    }, 5000)
+  }, [])
+
   // Outgoing call tone — play start-call once, then loop call-ring
   useEffect(() => {
     if (!outgoingCallId) return
@@ -56,7 +74,11 @@ export function useCallSfx({
   const prevOutgoingCall = useRef<typeof outgoingCall>(null)
   useEffect(() => {
     if (prevOutgoingCall.current && !outgoingCall && !isInDmVoice) {
-      playSound('call-declined')
+      if (localOutgoingCancelRef.current) {
+        localOutgoingCancelRef.current = false
+      } else {
+        playSound('call-declined')
+      }
     }
     prevOutgoingCall.current = outgoingCall
   }, [outgoingCall, isInDmVoice])
@@ -72,12 +94,12 @@ export function useCallSfx({
   const prevInDmVoice = useRef(false)
   useEffect(() => {
     if (isInDmVoice && !prevInDmVoice.current) {
-      playSound('continue-call')
+      playContinueCallSound()
     }
     prevInDmVoice.current = isInDmVoice
-  }, [isInDmVoice])
+  }, [isInDmVoice, playContinueCallSound])
 
-  // SFX + notification: Other user left DM call
+  // SFX: DM call participant changes after the local user is already in voice
   const prevDmCallPeerCount = useRef<number>(0)
   useEffect(() => {
     if (!isInDmVoice || !dmVoiceChannelId) {
@@ -89,18 +111,19 @@ export function useCallSfx({
         && toIdKey(vs.channelId) === dmVoiceChannelId
         && identityToString(vs.identity) !== identityString
     ).length
-    if (prevDmCallPeerCount.current > 0 && peerCount === 0) {
+    if (prevDmCallPeerCount.current === 0 && peerCount > 0) {
+      playContinueCallSound()
+    } else if (prevDmCallPeerCount.current > 0 && peerCount === 0) {
       playSound('contact-left')
-      addNotification({ message: 'The other person left the call', type: 'info' })
     }
     prevDmCallPeerCount.current = peerCount
-  }, [isInDmVoice, dmVoiceChannelId, voiceStates, identityString, addNotification])
+  }, [isInDmVoice, dmVoiceChannelId, voiceStates, identityString, playContinueCallSound])
 
   // SFX: Hangup when leaving call
   const handleHangUpWithSfx = useCallback(() => {
-    playSound('hangup')
+    playHangupSound()
     onLeaveVoice()
-  }, [onLeaveVoice])
+  }, [onLeaveVoice, playHangupSound])
 
-  return { handleHangUpWithSfx }
+  return { handleHangUpWithSfx, playHangupSound, playCallDeclinedSound, markOutgoingCallCanceledLocally }
 }

@@ -199,6 +199,25 @@ const badgeStyle: CSSProperties = {
   pointerEvents: 'none',
 }
 
+export const compactOverlayBadgeStyle: CSSProperties = {
+  position: 'absolute',
+  top: -4,
+  right: -4,
+  minWidth: 16,
+  height: 16,
+  padding: '0 4px',
+  borderRadius: 8,
+  backgroundColor: BADGE_RED,
+  color: TEXT_WHITE,
+  fontSize: 10,
+  fontWeight: 700,
+  lineHeight: '16px',
+  textAlign: 'center',
+  border: `2px solid ${BG}`,
+  boxSizing: 'content-box',
+  pointerEvents: 'none',
+}
+
 export function ServerIcon({
   label,
   isSelected,

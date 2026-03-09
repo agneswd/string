@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import type { Identity } from 'spacetimedb/sdk'
 
 import type { AppData } from './useAppData'
+import { avatarBytesToUrl } from '../lib/avatarUtils'
 import {
   toIdKey,
   identityToString,
@@ -25,6 +26,9 @@ export interface FriendRequestEntry {
   id: string
   rawRequestId: unknown
   username: string
+  displayName?: string
+  avatarUrl?: string
+  profileColor?: string
 }
 
 export interface FriendsData {
@@ -152,6 +156,9 @@ export function useFriends(
             id: toIdKey(requestId),
             rawRequestId: requestId,
             username,
+            displayName: senderUser?.displayName ?? username,
+            avatarUrl: avatarBytesToUrl(senderUser?.avatarBytes),
+            profileColor: senderUser?.profileColor ?? undefined,
           }
         })
         .filter(
@@ -197,6 +204,9 @@ export function useFriends(
             id: toIdKey(requestId),
             rawRequestId: requestId,
             username,
+            displayName: recipientUser?.displayName ?? username,
+            avatarUrl: avatarBytesToUrl(recipientUser?.avatarBytes),
+            profileColor: recipientUser?.profileColor ?? undefined,
           }
         })
         .filter(

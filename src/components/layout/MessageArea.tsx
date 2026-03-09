@@ -2,11 +2,13 @@ import React from 'react'
 import type { LayoutMode } from '../../constants/theme'
 import { ChatViewPane, type ChatMessageItem } from '../chat/ChatViewPane'
 import { type ReactionBarItem } from '../chat/ReactionBar'
+import type { TypingIndicatorUser } from '../chat/TypingIndicator'
 import { DmCallOverlay, type CallUser } from '../voice/DmCallOverlay'
 import { FriendRequestPanel, type FriendRequestItemId, type FriendUserId, type IncomingFriendRequestItem, type OutgoingFriendRequestItem, type FriendListItem, type GuildInviteItem } from '../social/FriendRequestPanel'
 
 export interface MessageAreaProps {
   layoutMode?: LayoutMode
+  isMobile?: boolean
   // View state
   isInDmVoice: boolean
   isDmMode: boolean
@@ -68,11 +70,12 @@ export interface MessageAreaProps {
   guildInvites?: GuildInviteItem[]
   onAcceptGuildInvite?: (inviteId: string) => void
   onDeclineGuildInvite?: (inviteId: string) => void
+  typingUsers?: TypingIndicatorUser[]
 }
 
 export function MessageArea(props: MessageAreaProps) {
   const {
-    layoutMode = 'classic',
+    layoutMode = 'classic', isMobile = false,
     isInDmVoice, isDmMode, isHomeView, selectedDmChannelId, dmVoiceChannelId,
     localUser, remoteUser, onMute, onDeafen, onScreenShare, onHangUp,
     isMuted, isDeafened, isScreenSharing, isLocalSpeaking, isRemoteSpeaking,
@@ -90,6 +93,7 @@ export function MessageArea(props: MessageAreaProps) {
     outgoingRequests, onCancelOutgoingRequest,
     friends, onStartDm, onRemoveFriend,
     guildInvites, onAcceptGuildInvite, onDeclineGuildInvite,
+    typingUsers,
   } = props
 
   // DM voice call view with embedded chat
@@ -99,6 +103,7 @@ export function MessageArea(props: MessageAreaProps) {
         layoutMode={layoutMode}
         localUser={localUser}
         remoteUser={remoteUser}
+        hideScreenShare={isMobile}
         onMute={onMute}
         onDeafen={onDeafen}
         onScreenShare={onScreenShare}
@@ -117,6 +122,7 @@ export function MessageArea(props: MessageAreaProps) {
           <ChatViewPane
             layoutMode={layoutMode}
             channelName={activeChannelName}
+            conversationKey={selectedDmChannelId ? `dm:${selectedDmChannelId}` : `dm-name:${activeChannelName ?? ''}`}
             showHeader={false}
             messages={dmMessages}
             composerValue={composerValue}
@@ -133,6 +139,7 @@ export function MessageArea(props: MessageAreaProps) {
             isDm={true}
             avatarUrl={dmPartnerAvatarUrl}
             profileColor={dmPartnerProfileColor}
+            typingUsers={typingUsers}
           />
         }
       />
@@ -168,6 +175,7 @@ export function MessageArea(props: MessageAreaProps) {
     <ChatViewPane
       layoutMode={layoutMode}
       channelName={activeChannelName}
+      conversationKey={isDmMode ? `dm:${selectedDmChannelId ?? ''}` : `channel:${selectedTextChannel?.name ?? activeChannelName ?? ''}`}
       showHeader={false}
       messages={activeMessages}
       composerValue={composerValue}
@@ -192,6 +200,7 @@ export function MessageArea(props: MessageAreaProps) {
       isDm={isDmMode}
       avatarUrl={isDmMode ? dmPartnerAvatarUrl : undefined}
       profileColor={isDmMode ? dmPartnerProfileColor : undefined}
+      typingUsers={typingUsers}
     />
   )
 }

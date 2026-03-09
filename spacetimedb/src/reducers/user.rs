@@ -2,8 +2,8 @@ use crate::{
     cancel_offline_jobs_for, status_after_login_identity_transfer,
     tables::{
         dm_call_request as _, dm_channel as _, dm_message as _, dm_participant as _,
-        dm_participant__view as _, friend as _, friend__view as _, friend_request as _,
-        guild as _, guild_member as _, guild_member__view as _, message as _,
+        dm_participant__view as _, friend as _, friend__view as _, friend_request as _, friend_request__view as _,
+        guild as _, guild_invite__view as _, guild_member as _, guild_member__view as _, message as _,
         presence_state as _, reaction as _, rtc_signal as _, user as _, user__view as _,
         user_presence as _, user_presence__view as _, voice_state as _, DmCallRequest,
         DmChannel, DmMessage, DmParticipant, Friend, FriendRequest, Guild, GuildMember,
@@ -57,6 +57,31 @@ fn visible_identity_set(ctx: &ViewContext, who: spacetimedb::Identity) -> BTreeS
         {
             identities.insert(participant.identity);
         }
+    }
+
+    for request in ctx
+        .db
+        .friend_request()
+        .friend_request_by_sender_identity()
+        .filter(&who)
+    {
+        identities.insert(request.sender_identity);
+        identities.insert(request.recipient_identity);
+    }
+
+    for request in ctx
+        .db
+        .friend_request()
+        .friend_request_by_recipient_identity()
+        .filter(&who)
+    {
+        identities.insert(request.sender_identity);
+        identities.insert(request.recipient_identity);
+    }
+
+    for invite in ctx.db.guild_invite().invitee_identity().filter(&who) {
+        identities.insert(invite.inviter_identity);
+        identities.insert(invite.invitee_identity);
     }
 
     identities

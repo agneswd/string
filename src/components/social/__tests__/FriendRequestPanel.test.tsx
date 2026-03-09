@@ -3,17 +3,31 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { FriendRequestPanel } from '../FriendRequestPanel'
 import type { FriendListItem, IncomingFriendRequestItem, OutgoingFriendRequestItem } from '../FriendRequestPanel'
 
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation(() => ({
+    matches: false,
+    media: '(max-width: 640px)',
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+})
+
 const friends: FriendListItem[] = [
   { id: 'f1', username: 'alice', displayName: 'Alice', status: 'online' },
   { id: 'f2', username: 'bob', displayName: 'Bob', status: 'offline' },
 ]
 
 const incoming: IncomingFriendRequestItem[] = [
-  { id: 'r1', username: 'carol' },
+  { id: 'r1', username: 'carol', displayName: 'Carol Display', avatarUrl: 'https://example.com/carol.png', profileColor: '#123456' },
 ]
 
 const outgoing: OutgoingFriendRequestItem[] = [
-  { id: 'o1', username: 'dave' },
+  { id: 'o1', username: 'dave', displayName: 'Dave Display', profileColor: '#654321' },
 ]
 
 function renderPanel(overrides: Partial<React.ComponentProps<typeof FriendRequestPanel>> = {}) {
@@ -81,8 +95,8 @@ describe('FriendRequestPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: /pending/i }))
     expect(screen.getByText(/incoming — 1/i)).toBeTruthy()
     expect(screen.getByText(/outgoing — 1/i)).toBeTruthy()
-    expect(screen.getByText('carol')).toBeTruthy()
-    expect(screen.getByText('dave')).toBeTruthy()
+    expect(screen.getByText('Carol Display')).toBeTruthy()
+    expect(screen.getByText('Dave Display')).toBeTruthy()
   })
 
   it('switches to Add Friend tab and shows form', () => {
@@ -162,5 +176,12 @@ describe('FriendRequestPanel', () => {
     const avatar = container.querySelector('div[aria-hidden="true"]') as HTMLElement | null
     expect(avatar).toBeTruthy()
     expect(avatar!.style.backgroundColor).toBe('rgb(18, 52, 86)')
+  })
+
+  it('renders the sender avatar image for incoming friend requests when available', () => {
+    const { container } = renderPanel()
+    fireEvent.click(screen.getByRole('button', { name: /pending/i }))
+    const img = container.querySelector('img[src="https://example.com/carol.png"]')
+    expect(img).toBeTruthy()
   })
 })

@@ -14,6 +14,9 @@ const sharedElements = {
     background: 'transparent',
     padding: 0,
   },
+  header: {
+    display: 'none',
+  },
   headerTitle: {
     display: 'none',
   },

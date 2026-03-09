@@ -1,9 +1,12 @@
 use crate::tables::{
     dm_channel as _, dm_channel__view as _, dm_message as _, dm_message__view as _,
-    dm_participant as _, dm_participant__view as _, friend as _, DmChannel, DmMessage,
-    DmParticipant,
+    dm_participant as _, dm_participant__view as _, dm_typing as _, dm_typing__view as _,
+    friend as _, DmChannel, DmMessage, DmParticipant, DmTyping,
 };
 use spacetimedb::{Identity, ReducerContext, Table, ViewContext};
+use std::time::Duration;
+
+const DM_TYPING_EXPIRY_MS: u64 = 3_500;
 
 pub(super) fn dedup_participants_including_caller<T>(caller: T, participants: Vec<T>) -> Vec<T>
 where
@@ -42,6 +45,10 @@ fn require_dm_participant(
 ) -> Result<DmParticipant, String> {
     find_dm_participant(ctx, dm_channel_id, identity)
         .ok_or_else(|| "You are not a participant in this DM channel".to_string())
+}
+
+fn dm_typing_key(dm_channel_id: u64, identity: &Identity) -> String {
+    format!("dm:{}:{}", dm_channel_id, identity.to_hex().to_string())
 }
 
 fn validate_dm_read_cursor_advance(
@@ -177,6 +184,10 @@ pub fn leave_dm_channel(ctx: &ReducerContext, dm_channel_id: u64) -> Result<(), 
 
     let caller = ctx.sender();
     let participant = require_dm_participant(ctx, dm_channel_id, &caller)?;
+    let typing_key = dm_typing_key(dm_channel_id, &caller);
+    if ctx.db.dm_typing().typing_key().find(typing_key.clone()).is_some() {
+        ctx.db.dm_typing().typing_key().delete(typing_key);
+    }
     ctx.db
         .dm_participant()
         .dm_participant_id()
@@ -236,6 +247,45 @@ pub fn send_dm_message(
         is_deleted: false,
         reply_to,
     });
+
+    let typing_key = dm_typing_key(dm_channel_id, &caller);
+    if ctx.db.dm_typing().typing_key().find(typing_key.clone()).is_some() {
+        ctx.db.dm_typing().typing_key().delete(typing_key);
+    }
+
+    Ok(())
+}
+
+#[spacetimedb::reducer]
+pub fn set_dm_typing(
+    ctx: &ReducerContext,
+    dm_channel_id: u64,
+    is_typing: bool,
+) -> Result<(), String> {
+    let caller = ctx.sender();
+    require_dm_participant(ctx, dm_channel_id, &caller)?;
+
+    let typing_key = dm_typing_key(dm_channel_id, &caller);
+
+    if !is_typing {
+        if ctx.db.dm_typing().typing_key().find(typing_key.clone()).is_some() {
+            ctx.db.dm_typing().typing_key().delete(typing_key);
+        }
+        return Ok(());
+    }
+
+    let expires_at = ctx.timestamp + Duration::from_millis(DM_TYPING_EXPIRY_MS);
+    if let Some(mut row) = ctx.db.dm_typing().typing_key().find(typing_key.clone()) {
+        row.expires_at = expires_at;
+        ctx.db.dm_typing().typing_key().update(row);
+    } else {
+        ctx.db.dm_typing().insert(DmTyping {
+            typing_key,
+            dm_channel_id,
+            identity: caller,
+            expires_at,
+        });
+    }
 
     Ok(())
 }
@@ -345,6 +395,23 @@ pub fn my_dm_messages(ctx: &ViewContext) -> Vec<DmMessage> {
     }
 
     messages
+}
+
+#[spacetimedb::view(accessor = my_dm_typing, public)]
+pub fn my_dm_typing(ctx: &ViewContext) -> Vec<DmTyping> {
+    let who = ctx.sender();
+    let mut rows = Vec::new();
+
+    for dm_channel_id in my_dm_channel_ids(ctx, &who) {
+        rows.extend(
+            ctx.db
+                .dm_typing()
+                .dm_typing_by_dm_channel_id()
+                .filter(dm_channel_id),
+        );
+    }
+
+    rows
 }
 
 #[cfg(test)]

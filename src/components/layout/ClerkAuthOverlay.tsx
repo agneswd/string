@@ -26,7 +26,15 @@ export function ClerkAuthOverlay({ isAuthenticating = false, message }: ClerkAut
   }
 
   return (
-    <div style={{ ...S_authOverlay, backgroundColor: 'rgba(7, 8, 10, 0.38)', backdropFilter: 'blur(10px)' }}>
+    <div
+      style={{
+        ...S_authOverlay,
+        alignItems: 'center',
+        padding: '24px',
+        backgroundColor: 'rgba(7, 8, 10, 0.38)',
+        backdropFilter: 'blur(10px)',
+      }}
+    >
       <style>{'@keyframes string-auth-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }'}</style>
       <div style={S_authCardCompact}>
         <div style={S_authLoadingStack}>

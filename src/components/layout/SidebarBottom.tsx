@@ -10,6 +10,8 @@ export interface SidebarBottomProps {
     isDeafened?: boolean
     isStreaming?: boolean
   } | null
+  outgoingCall?: boolean
+  outgoingCallLabel?: string
   onLeave: () => void
   remoteSharersCount: number
   onStartSharing: () => void

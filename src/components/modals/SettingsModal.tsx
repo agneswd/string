@@ -48,10 +48,10 @@ const S_row: CSSProperties = {
 const S_slider = (value: number): CSSProperties => ({
   width: '100%',
   accentColor: 'var(--accent-primary)',
-  appearance: 'none',
   height: '6px',
   borderRadius: 'var(--radius-sm)',
-  background: `linear-gradient(90deg, var(--accent-primary) 0%, var(--accent-primary) ${value}%, var(--bg-input) ${value}%, var(--bg-input) 100%)`,
+  backgroundColor: 'var(--bg-input)',
+  cursor: 'pointer',
 })
 
 const S_switchTrack = (checked: boolean): CSSProperties => ({
@@ -326,7 +326,7 @@ export function SettingsModal({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Settings">
+    <Modal isOpen={isOpen} onClose={onClose} title="Settings" className="settings-modal__dialog">
       <div style={S_shell}>
         <nav style={S_nav} aria-label="Settings categories">
           {(['general', 'sound', 'account'] as SettingsSection[]).map((section) => (

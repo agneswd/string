@@ -12,15 +12,15 @@ export const S_authOverlay: CSSProperties = {
   inset: 0,
   zIndex: 60,
   display: 'flex',
-  alignItems: 'center',
+  alignItems: 'flex-start',
   justifyContent: 'center',
-  padding: '24px',
+  padding: '56px 24px 24px',
   backgroundColor: 'rgba(0, 0, 0, 0.78)',
 }
 
 export const S_authCard: CSSProperties = {
   width: 'min(520px, 100%)',
-  maxHeight: 'calc(100vh - 48px)',
+  maxHeight: 'calc(100vh - 56px)',
   display: 'flex',
   flexDirection: 'column',
   overflow: 'hidden',

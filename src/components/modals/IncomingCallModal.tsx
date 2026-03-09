@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useCallback, type CSSProperties } from 'react'
 import { Phone, PhoneOff } from 'lucide-react'
-import { trackAudioContext, untrackAudioContext } from '../../lib/connection'
 
 export interface IncomingCallModalProps {
   callerName: string
@@ -118,54 +117,6 @@ export const IncomingCallModal = React.memo(function IncomingCallModal({
   // Auto-focus the container so keyboard shortcuts work immediately
   useEffect(() => {
     containerRef.current?.focus()
-  }, [])
-
-  // Ringtone: two-tone arpeggio via Web Audio API
-  useEffect(() => {
-    let ctx: AudioContext | null = null
-    let intervalId: number | undefined
-
-    const playRing = () => {
-      try {
-        if (!ctx) {
-          ctx = new AudioContext()
-          trackAudioContext(ctx)
-        }
-        const now = ctx.currentTime
-
-        // Two-tone ring pattern: 440Hz then 520Hz
-        const playTone = (freq: number, start: number, dur: number) => {
-          const osc = ctx!.createOscillator()
-          const gain = ctx!.createGain()
-          osc.type = 'sine'
-          osc.frequency.value = freq
-          gain.gain.setValueAtTime(0.12, start)
-          gain.gain.exponentialRampToValueAtTime(0.001, start + dur)
-          osc.connect(gain)
-          gain.connect(ctx!.destination)
-          osc.start(start)
-          osc.stop(start + dur)
-        }
-
-        playTone(440, now, 0.3)
-        playTone(520, now + 0.35, 0.3)
-        playTone(440, now + 0.7, 0.3)
-      } catch { /* ignore */ }
-    }
-
-    // Play immediately then repeat
-    playRing()
-    intervalId = window.setInterval(playRing, 3000)
-
-    return () => {
-      if (intervalId !== undefined) clearInterval(intervalId)
-      try {
-        if (ctx) {
-          ctx.close()
-          untrackAudioContext(ctx)
-        }
-      } catch { /* */ }
-    }
   }, [])
 
   const handleKeyDown = useCallback(

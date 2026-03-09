@@ -8,6 +8,7 @@ describe('MemberColumn', () => {
     render(
       <MemberColumn
         isDmMode={true}
+        selectedDmMemberId="u2"
         friends={[{ id: 'u2', username: 'kyuh', displayName: 'Kyuh', status: 'online' }]}
         memberListItems={[]}
         getAvatarUrl={() => undefined}
@@ -22,6 +23,32 @@ describe('MemberColumn', () => {
     expect(screen.getByText('@kyuh')).toBeTruthy()
     expect(screen.getByText('Listening to the void')).toBeTruthy()
     expect(screen.queryByRole('complementary', { name: /members/i })).toBeNull()
+  })
+
+  it('uses the selected DM partner instead of the first friend in the overall list', () => {
+    render(
+      <MemberColumn
+        isDmMode={true}
+        selectedDmMemberId="u3"
+        friends={[
+          { id: 'u2', username: 'kyuh', displayName: 'Kyuh', status: 'online' },
+          { id: 'u3', username: 'agnes', displayName: 'Agnes', status: 'idle' },
+        ]}
+        memberListItems={[]}
+        getAvatarUrl={() => undefined}
+        usersByIdentity={new Map([
+          ['u2', { bio: 'First friend bio', profileColor: '#123456' }],
+          ['u3', { bio: 'Current DM bio', profileColor: '#654321' }],
+        ])}
+        onViewProfile={vi.fn()}
+        layoutMode="string"
+      />,
+    )
+
+    expect(screen.getByText('Agnes')).toBeTruthy()
+    expect(screen.getByText('@agnes')).toBeTruthy()
+    expect(screen.getByText('Current DM bio')).toBeTruthy()
+    expect(screen.queryByText('Kyuh')).toBeNull()
   })
 
   it('keeps the guild member list for non-DM mode', () => {

@@ -96,6 +96,7 @@ export const DmListPaneString = memo(function DmListPaneString({
   onStartVoiceCall,
   onCreateChannel,
   onShowFriends,
+  friendsBadgeCount = 0,
   createButtonLabel,
   className,
   activeCallChannelIds,
@@ -135,6 +136,7 @@ export const DmListPaneString = memo(function DmListPaneString({
       <div style={navSectionStyle}>
         <DmNavButton
           label="Friends"
+          badgeCount={friendsBadgeCount}
           onClick={() => onShowFriends?.()}
         />
       </div>

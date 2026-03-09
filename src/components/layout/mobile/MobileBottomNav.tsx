@@ -11,11 +11,11 @@ export interface MobileBottomNavProps {
 }
 
 const S_root: CSSProperties = {
-  minHeight: '72px',
+  minHeight: '60px',
   display: 'grid',
   gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
   backgroundColor: 'var(--bg-panel)',
-  padding: '6px 8px calc(12px + env(safe-area-inset-bottom, 0px))',
+  padding: '4px 8px calc(8px + env(safe-area-inset-bottom, 0px))',
   boxSizing: 'border-box',
   flexShrink: 0,
   position: 'sticky',
@@ -48,11 +48,12 @@ function NavButton({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 4,
-        fontSize: 11,
+        gap: 2,
+        fontSize: 10,
         fontWeight: active ? 600 : 500,
         cursor: 'pointer',
         borderRadius: 10,
+        minHeight: 44,
       }}
     >
       {children}
@@ -70,13 +71,13 @@ export function MobileBottomNav({
   return (
     <nav aria-label="Mobile navigation" style={S_root}>
       <NavButton label="Browse" active={activeTab === 'browse'} onClick={onBrowse}>
-        <LayoutGrid size={18} />
+        <LayoutGrid size={16} />
       </NavButton>
       <NavButton label="Friends" active={activeTab === 'friends'} onClick={onFriends}>
-        <MessagesSquare size={18} />
+        <MessagesSquare size={16} />
       </NavButton>
       <NavButton label="You" active={activeTab === 'you'} onClick={onYou}>
-        <UserRound size={18} />
+        <UserRound size={16} />
       </NavButton>
     </nav>
   )

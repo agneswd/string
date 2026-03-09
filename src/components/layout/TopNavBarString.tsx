@@ -11,6 +11,7 @@ export function TopNavBarString({
   outgoingCall,
   dmCallActive,
   selectedDmChannelId,
+  onCancelOutgoingCall,
   showMemberList,
   onToggleMemberList,
   onInitiateDmCall,
@@ -87,6 +88,31 @@ export function TopNavBarString({
 
       {/* Actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+        {isDmMode && outgoingCall && !currentVoiceState && (
+          <button
+            type="button"
+            onClick={onCancelOutgoingCall}
+            title="Calling"
+            style={{
+              background: 'var(--bg-success-subtle)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 2,
+              padding: '3px 6px',
+              color: 'var(--status-online)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              fontSize: 11,
+              fontWeight: 500,
+              fontFamily: 'var(--font-mono)',
+              whiteSpace: 'nowrap',
+              cursor: 'pointer',
+            }}
+          >
+            <Phone style={{ width: 14, height: 14 }} />
+            Calling…
+          </button>
+        )}
         {isDmMode && selectedDmChannel && !currentVoiceState && !outgoingCall && (
           <button
             onClick={() => onInitiateDmCall(selectedDmChannelId!)}

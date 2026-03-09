@@ -27,6 +27,7 @@ import { useMessageActions } from './useMessageActions'
 import { useAppNavigation } from './useAppNavigation'
 import { useAppState } from './useAppState'
 import { useSendSignal } from './useSendSignal'
+import { useTypingIndicators } from './useTypingIndicators'
 import {
   readUiSoundLevel,
   readPercentageSetting,
@@ -187,6 +188,19 @@ export function useAppOrchestrator() {
     audioStreams, isMuted, isDeafened, muteColor, deafenColor,
   } = appState
 
+  const { typingUsers, handleComposerChange } = useTypingIndicators({
+    composerValue,
+    setComposerValue,
+    selectedTextChannel: selectedTextChannel ?? null,
+    selectedDmChannel: selectedDmChannel ?? null,
+    identityString,
+    usersByIdentity,
+    getAvatarUrlForUser,
+    channelTyping: appData.channelTyping,
+    dmTyping: appData.dmTyping,
+    actions,
+  })
+
   // ---------------------------------------------------------------------------
   // Persisted settings state
   // ---------------------------------------------------------------------------
@@ -320,7 +334,7 @@ export function useAppOrchestrator() {
     dmPartnerIdentity, dmPartnerAvatarUrl, dmPartnerProfileColor,
     dmRemoteSpeaking, dmRemoteScreenStream, dmRemoteScreenShareKey,
     activeCallChannelIds,
-    handleAcceptCall, handleDeclineCall, handleCancelOutgoingCall, handleIgnoreCall,
+    handleAcceptCall, handleDeclineCall: baseHandleDeclineCall, handleCancelOutgoingCall: baseHandleCancelOutgoingCall, handleIgnoreCall,
     callBannerProps, handleNavigateToCall,
   } = useCallHandling({
     identityString, voiceStates: state.voiceStates,
@@ -337,12 +351,23 @@ export function useAppOrchestrator() {
   // ---------------------------------------------------------------------------
   // Call SFX
   // ---------------------------------------------------------------------------
-  const { handleHangUpWithSfx } = useCallSfx({
+  const { handleHangUpWithSfx, playHangupSound, playCallDeclinedSound, markOutgoingCallCanceledLocally } = useCallSfx({
     outgoingCallId, outgoingCall, incomingCallId,
     isInDmVoice, dmVoiceChannelId,
     voiceStates: state.voiceStates, identityString,
-    addNotification, onLeaveVoice,
+    onLeaveVoice,
   })
+
+  const handleDeclineCall = useCallback(() => {
+    playCallDeclinedSound()
+    baseHandleDeclineCall()
+  }, [playCallDeclinedSound, baseHandleDeclineCall])
+
+  const handleCancelOutgoingCall = useCallback(() => {
+    markOutgoingCallCanceledLocally()
+    playHangupSound()
+    baseHandleCancelOutgoingCall()
+  }, [markOutgoingCallCanceledLocally, playHangupSound, baseHandleCancelOutgoingCall])
 
   // ---------------------------------------------------------------------------
   // Message Actions
@@ -447,6 +472,8 @@ export function useAppOrchestrator() {
     selectedTextChannel, channelItems, textChannels, voiceChannels,
     // App state
     composerValue, setComposerValue,
+    handleComposerChange,
+    typingUsers,
     locallyMutedUsers, showMemberList, setShowMemberList,
     showGuildSettingsModal, setShowGuildSettingsModal,
     showProfileModal, setShowProfileModal,
@@ -484,6 +511,7 @@ export function useAppOrchestrator() {
     incomingCallId, outgoingCallId,
     isInDmVoice, dmVoiceChannelId,
     dmCallRemoteUser, dmCallActive,
+    dmPartnerIdentity,
     dmPartnerAvatarUrl, dmPartnerProfileColor,
     dmRemoteSpeaking, dmRemoteScreenStream, dmRemoteScreenShareKey,
     activeCallChannelIds,

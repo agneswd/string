@@ -5,6 +5,8 @@ import type { SidebarBottomVariantProps } from './SidebarBottom'
 export function SidebarBottomClassic({
   showVoicePanel = true,
   currentVoiceState,
+  outgoingCall = false,
+  outgoingCallLabel,
   onLeave,
   remoteSharersCount,
   onStartSharing,
@@ -21,15 +23,16 @@ export function SidebarBottomClassic({
 }: SidebarBottomVariantProps) {
   return (
     <>
-      {showVoicePanel && currentVoiceState && (
+      {showVoicePanel && (currentVoiceState || outgoingCall) && (
         <div className="flex min-h-0 flex-col gap-3 p-2">
           <VoicePanel
             connected={true}
-            streaming={currentVoiceState.isStreaming ?? false}
+            streaming={currentVoiceState?.isStreaming ?? false}
+            statusLabel={outgoingCall && !currentVoiceState ? `Calling ${outgoingCallLabel ?? 'user'}…` : undefined}
             onLeave={onLeave}
             remoteSharersCount={remoteSharersCount}
-            onStartSharing={onStartSharing}
-            onStopSharing={onStopSharing}
+            onStartSharing={currentVoiceState ? onStartSharing : undefined}
+            onStopSharing={currentVoiceState ? onStopSharing : undefined}
           />
         </div>
       )}

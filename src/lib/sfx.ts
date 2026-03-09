@@ -104,6 +104,26 @@ export function playLoop(name: SoundName, intervalMs = 3000): () => void {
   let currentAudio: HTMLAudioElement | null = null
   let timeoutId: number | undefined
 
+  const clearScheduledReplay = () => {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId)
+      timeoutId = undefined
+    }
+  }
+
+  const cleanupAudio = (audioRef: HTMLAudioElement) => {
+    untrackAudioElement(audioRef)
+    if (currentAudio === audioRef) {
+      currentAudio = null
+    }
+  }
+
+  const scheduleReplay = (delayMs: number) => {
+    if (stopped) return
+    clearScheduledReplay()
+    timeoutId = window.setTimeout(play, Math.max(0, delayMs))
+  }
+
   const play = () => {
     if (stopped) return
     try {
@@ -111,15 +131,18 @@ export function playLoop(name: SoundName, intervalMs = 3000): () => void {
       trackAudioElement(currentAudio)
       currentAudio.volume = sfxLevels[SOUND_CATEGORY_BY_NAME[name]] ?? sfxVolume
       const audioRef = currentAudio
-      const cleanup = () => {
-        audioRef.removeEventListener('ended', cleanup)
-        audioRef.removeEventListener('error', cleanup)
-        untrackAudioElement(audioRef)
+      const startedAt = Date.now()
+      const finishPlayback = () => {
+        audioRef.removeEventListener('ended', finishPlayback)
+        audioRef.removeEventListener('error', finishPlayback)
+        cleanupAudio(audioRef)
+        scheduleReplay(intervalMs - (Date.now() - startedAt))
       }
-      audioRef.addEventListener('ended', cleanup)
-      audioRef.addEventListener('error', cleanup)
-      currentAudio.play().catch(() => {})
-      timeoutId = window.setTimeout(play, intervalMs)
+      audioRef.addEventListener('ended', finishPlayback)
+      audioRef.addEventListener('error', finishPlayback)
+      currentAudio.play().catch(() => {
+        finishPlayback()
+      })
     } catch { /* ignore */ }
   }
 
@@ -127,11 +150,12 @@ export function playLoop(name: SoundName, intervalMs = 3000): () => void {
 
   return () => {
     stopped = true
-    if (timeoutId !== undefined) clearTimeout(timeoutId)
+    clearScheduledReplay()
     if (currentAudio) {
+      const audioRef = currentAudio
       currentAudio.pause()
       currentAudio.currentTime = 0
-      untrackAudioElement(currentAudio)
+      cleanupAudio(audioRef)
       currentAudio = null
     }
   }

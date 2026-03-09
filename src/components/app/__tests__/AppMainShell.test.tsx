@@ -572,4 +572,5 @@ describe('AppMainShell mobile member gating', () => {
     // Should stay on navigation despite hasActiveContent becoming true
     expect(screen.getByTestId('active-pane').textContent).toBe('navigation')
   })
+
 })

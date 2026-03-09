@@ -8,9 +8,10 @@
  * file under 500 LOC.
  */
 
-import React, { type FormEvent, useEffect, useRef, useMemo, useCallback, useState, type CSSProperties } from 'react'
+import React, { type FormEvent, useEffect, useRef, useMemo, useCallback, useState, useLayoutEffect, type CSSProperties } from 'react'
 import { ChevronDown, Phone } from 'lucide-react'
 import { type ReactionBarItem } from './ReactionBar'
+import { TypingIndicator, type TypingIndicatorUser } from './TypingIndicator'
 import { ChatMessageRow } from './view/ChatMessageRow'
 import type { LayoutMode } from '../../constants/theme'
 
@@ -19,6 +20,7 @@ export type { ChatMessageItem } from './types'
 
 export interface ChatViewPaneProps {
   channelName?: string
+  conversationKey?: string
   showHeader?: boolean
   messages: import('./types').ChatMessageItem[]
   composerValue: string
@@ -38,7 +40,10 @@ export interface ChatViewPaneProps {
   avatarUrl?: string
   profileColor?: string
   layoutMode?: LayoutMode
+  typingUsers?: TypingIndicatorUser[]
 }
+
+const NEW_MESSAGE_SCROLL_THRESHOLD_PX = 48
 
 // ── Static styles (shared across modes) ─────────────────────────────────────
 
@@ -84,7 +89,7 @@ const S: Record<string, CSSProperties> = {
     minHeight: 0,
   },
   composerWrap: {
-    padding: '12px 16px 24px 16px',
+    padding: '6px 16px 24px 16px',
     flexShrink: 0,
     boxSizing: 'border-box',
     position: 'relative',
@@ -126,6 +131,7 @@ const S: Record<string, CSSProperties> = {
 
 export const ChatViewPane = React.memo(function ChatViewPane({
   channelName,
+  conversationKey,
   showHeader = true,
   messages,
   composerValue,
@@ -145,11 +151,24 @@ export const ChatViewPane = React.memo(function ChatViewPane({
   avatarUrl,
   profileColor,
   layoutMode = 'string',
+  typingUsers = [],
 }: ChatViewPaneProps) {
   const listRef = useRef<HTMLUListElement>(null)
   const bottomRef = useRef<HTMLLIElement>(null)
   const composerInputRef = useRef<HTMLInputElement>(null)
+  const lastOpenedConversationKeyRef = useRef<string | null>(null)
   const [showJumpToLatest, setShowJumpToLatest] = useState(false)
+  const [unseenMessageCount, setUnseenMessageCount] = useState(0)
+
+  const isNearBottom = useCallback(() => {
+    const list = listRef.current
+    if (!list) {
+      return true
+    }
+
+    const distanceFromBottom = list.scrollHeight - list.scrollTop - list.clientHeight
+    return distanceFromBottom <= NEW_MESSAGE_SCROLL_THRESHOLD_PX
+  }, [])
 
   const updateJumpButtonVisibility = useCallback(() => {
     const list = listRef.current
@@ -159,20 +178,41 @@ export const ChatViewPane = React.memo(function ChatViewPane({
     }
 
     const distanceFromBottom = list.scrollHeight - list.scrollTop - list.clientHeight
-    setShowJumpToLatest(distanceFromBottom > 48)
+    const nearBottom = distanceFromBottom <= NEW_MESSAGE_SCROLL_THRESHOLD_PX
+    setShowJumpToLatest(!nearBottom)
+    if (nearBottom) {
+      setUnseenMessageCount(0)
+    }
   }, [])
 
   // Auto-scroll to bottom when new messages arrive
   const prevLastMsgId = useRef<string | number | undefined>(undefined)
+  const prevMessageCountRef = useRef(messages.length)
   useEffect(() => {
     const msgs = messages
     const lastId = msgs?.[msgs.length - 1]?.id
     if (lastId !== prevLastMsgId.current && prevLastMsgId.current !== undefined) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+      const nearBottom = isNearBottom()
+      const previousCount = prevMessageCountRef.current
+      const newMessages = msgs.slice(previousCount)
+      const hasIncomingMessages = newMessages.some(
+        (message) => currentUserId === undefined || String(message.authorId) !== String(currentUserId),
+      )
+
+      if (nearBottom || !hasIncomingMessages) {
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+        setUnseenMessageCount(0)
+      } else {
+        const incomingCount = newMessages.filter(
+          (message) => currentUserId === undefined || String(message.authorId) !== String(currentUserId),
+        ).length
+        setUnseenMessageCount((current) => current + Math.max(1, incomingCount))
+      }
     }
     prevLastMsgId.current = lastId
+    prevMessageCountRef.current = msgs.length
     updateJumpButtonVisibility()
-  }, [messages, updateJumpButtonVisibility])
+  }, [currentUserId, isNearBottom, messages, updateJumpButtonVisibility])
 
   useEffect(() => {
     const list = listRef.current
@@ -188,9 +228,59 @@ export const ChatViewPane = React.memo(function ChatViewPane({
     }
   }, [updateJumpButtonVisibility])
 
+  useEffect(() => {
+    if (!showJumpToLatest) {
+      setUnseenMessageCount(0)
+    }
+  }, [showJumpToLatest])
+
+  const resolvedConversationKey = conversationKey ?? `${isDm ? 'dm' : 'channel'}:${channelName ?? ''}`
+
+  useLayoutEffect(() => {
+    if (lastOpenedConversationKeyRef.current === resolvedConversationKey) {
+      return
+    }
+
+    lastOpenedConversationKeyRef.current = resolvedConversationKey
+    setShowJumpToLatest(false)
+    setUnseenMessageCount(0)
+    prevMessageCountRef.current = messages.length
+    prevLastMsgId.current = messages[messages.length - 1]?.id
+
+    const list = listRef.current
+    if (list) {
+      list.scrollTop = list.scrollHeight
+    } else {
+      bottomRef.current?.scrollIntoView({ behavior: 'auto' })
+    }
+  }, [resolvedConversationKey, messages])
+
+  useEffect(() => {
+    if (lastOpenedConversationKeyRef.current !== resolvedConversationKey) {
+      return
+    }
+
+    const syncToBottom = () => {
+      const list = listRef.current
+      if (list) {
+        list.scrollTop = list.scrollHeight
+      } else {
+        bottomRef.current?.scrollIntoView({ behavior: 'auto' })
+      }
+
+      setShowJumpToLatest(false)
+      setUnseenMessageCount(0)
+    }
+
+    syncToBottom()
+    const frameId = requestAnimationFrame(syncToBottom)
+    return () => cancelAnimationFrame(frameId)
+  }, [resolvedConversationKey])
+
   const handleJumpToLatest = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
     setShowJumpToLatest(false)
+    setUnseenMessageCount(0)
   }, [])
 
   const handleSubmit = useCallback(
@@ -245,6 +335,26 @@ export const ChatViewPane = React.memo(function ChatViewPane({
       transition: 'opacity 0.15s',
     }),
     [composerValue, isString],
+  )
+
+  const unreadBannerStyle = useMemo<CSSProperties>(
+    () => ({
+      position: 'absolute',
+      top: (showHeader ? 56 : 8) + (callActive ? 42 : 0),
+      left: 16,
+      right: 16,
+      zIndex: 4,
+      minHeight: 32,
+      border: '1px solid var(--border-subtle)',
+      borderRadius: 3,
+      background: 'var(--bg-input)',
+      color: 'var(--text-primary)',
+      fontSize: 12,
+      fontWeight: 600,
+      cursor: 'pointer',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
+    }),
+    [callActive, showHeader],
   )
 
   // Pre-compute message rows
@@ -351,6 +461,18 @@ export const ChatViewPane = React.memo(function ChatViewPane({
         </div>
       )}
 
+      {unseenMessageCount > 0 && (
+        <button
+          type="button"
+          onClick={handleJumpToLatest}
+          onMouseDown={(event) => event.preventDefault()}
+          onPointerDown={(event) => event.preventDefault()}
+          style={unreadBannerStyle}
+        >
+          {unseenMessageCount} unread message{unseenMessageCount === 1 ? '' : 's'}
+        </button>
+      )}
+
       <ul ref={listRef} style={S.messageList} aria-live="polite">
         <li style={{ flex: 1 }} role="presentation" aria-hidden="true" />
         {messageRows}
@@ -363,11 +485,15 @@ export const ChatViewPane = React.memo(function ChatViewPane({
           aria-label="Jump to latest message"
           title="Jump to latest"
           onClick={handleJumpToLatest}
+          onMouseDown={(event) => event.preventDefault()}
+          onPointerDown={(event) => event.preventDefault()}
           style={S.jumpToLatestButton}
         >
           <ChevronDown size={24} strokeWidth={2.5} aria-hidden="true" style={{ display: 'block' }} />
         </button>
       )}
+
+      {typingUsers.length > 0 && <TypingIndicator users={typingUsers} />}
 
       <form style={S.composerWrap} onSubmit={handleSubmit}>
         <div className="chat-composer-box" style={composerBoxStyle}>

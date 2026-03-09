@@ -59,11 +59,17 @@ function AuthenticatedApp() {
   const incomingRequests = app.incomingFriendRequests.map((request) => ({
     id: request.id,
     username: request.username,
+    displayName: request.displayName,
+    avatarUrl: request.avatarUrl,
+    profileColor: request.profileColor,
   }))
 
   const outgoingRequests = app.outgoingFriendRequests.map((request) => ({
     id: request.id,
     username: request.username,
+    displayName: request.displayName,
+    avatarUrl: request.avatarUrl,
+    profileColor: request.profileColor,
   }))
 
   const dmQuickEntries = useMemo(() => {
@@ -176,6 +182,7 @@ function AuthenticatedApp() {
           onSelectDmChannel: app.handleSelectDmChannel,
           onLeaveDmChannel: app.onLeaveDmChannel,
           onShowFriends: () => app.setSelectedDmChannelId(undefined),
+          friendsBadgeCount: app.incomingFriendRequests.length + app.myGuildInvites.length,
           activeCallChannelIds: app.activeCallChannelIds,
           guildName: app.selectedGuild?.name,
           channels: app.channelItems,
@@ -206,6 +213,7 @@ function AuthenticatedApp() {
           outgoingCall: Boolean(app.outgoingCall),
           dmCallActive: Boolean(app.dmCallActive),
           selectedDmChannelId: app.selectedDmChannelId,
+          onCancelOutgoingCall: app.handleCancelOutgoingCall,
           showMemberList: app.showMemberList,
           onToggleMemberList: () => app.setShowMemberList((current) => !current),
           onInitiateDmCall: app.handleInitiateDmCall,
@@ -221,6 +229,7 @@ function AuthenticatedApp() {
           localUser: {
             name: app.me?.displayName ?? app.me?.username ?? '?',
             avatarUrl: app.getAvatarUrlForUser(app.identityString),
+            profileColor: app.me?.profileColor ?? undefined,
             isMuted: app.currentVoiceState?.isMuted ?? false,
             isDeafened: app.currentVoiceState?.isDeafened ?? false,
           },
@@ -243,7 +252,7 @@ function AuthenticatedApp() {
           messages: app.activeMessages,
           dmMessages: app.dmMessagesForSelectedChannel,
           composerValue: app.composerValue,
-          onComposerChange: app.setComposerValue,
+          onComposerChange: app.handleComposerChange,
           onSend: app.handleSendMessageWithSfx,
           getDmReactionsForMessage: app.getDmReactionsForMessage,
           getReactionsForMessage: app.getReactionsForMessage,
@@ -272,11 +281,14 @@ function AuthenticatedApp() {
           guildInvites: app.myGuildInvites,
           onAcceptGuildInvite: app.onAcceptGuildInvite,
           onDeclineGuildInvite: app.onDeclineGuildInvite,
+          typingUsers: app.typingUsers,
         }}
         sidebarBottom={{
           showVoicePanel: true,
           currentVoiceState: app.currentVoiceState,
-          onLeave: app.handleHangUpWithSfx,
+          outgoingCall: Boolean(app.outgoingCall),
+          outgoingCallLabel: app.callBannerProps.calleeName,
+          onLeave: app.outgoingCall ? app.handleCancelOutgoingCall : app.handleHangUpWithSfx,
           remoteSharersCount: app.remoteSharersCount,
           onStartSharing: app.onStartSharing,
           onStopSharing: app.onStopSharing,
@@ -303,6 +315,7 @@ function AuthenticatedApp() {
         memberColumn={{
           layoutMode,
           isDmMode: app.isDmMode,
+          selectedDmMemberId: app.dmPartnerIdentity ?? undefined,
           guildName: app.selectedGuild?.name,
           friends: app.friends,
           memberListItems: app.memberListItems,

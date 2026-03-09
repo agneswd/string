@@ -1,9 +1,19 @@
 use crate::{
     helpers::require_role,
-    tables::{channel, channel__view, guild_member__view, message, message__view, Message},
+    tables::{
+        channel, channel__view, channel_typing as _, channel_typing__view as _, guild_member__view,
+        message, message__view, ChannelTyping, Message,
+    },
     types::MemberRole,
 };
 use spacetimedb::{ReducerContext, Table, ViewContext};
+use std::time::Duration;
+
+const TYPING_EXPIRY_MS: u64 = 3_500;
+
+fn channel_typing_key(channel_id: u64, identity: &spacetimedb::Identity) -> String {
+    format!("channel:{}:{}", channel_id, identity.to_hex().to_string())
+}
 
 fn require_channel_member(ctx: &ReducerContext, channel_id: u64) -> Result<u64, String> {
     let channel = ctx
@@ -59,6 +69,45 @@ pub fn send_message(
         is_deleted: false,
         reply_to,
     });
+
+    let typing_key = channel_typing_key(channel_id, &ctx.sender());
+    if ctx.db.channel_typing().typing_key().find(typing_key.clone()).is_some() {
+        ctx.db.channel_typing().typing_key().delete(typing_key);
+    }
+
+    Ok(())
+}
+
+#[spacetimedb::reducer]
+pub fn set_channel_typing(
+    ctx: &ReducerContext,
+    channel_id: u64,
+    is_typing: bool,
+) -> Result<(), String> {
+    require_channel_member(ctx, channel_id)?;
+
+    let caller = ctx.sender();
+    let typing_key = channel_typing_key(channel_id, &caller);
+
+    if !is_typing {
+        if ctx.db.channel_typing().typing_key().find(typing_key.clone()).is_some() {
+            ctx.db.channel_typing().typing_key().delete(typing_key);
+        }
+        return Ok(());
+    }
+
+    let expires_at = ctx.timestamp + Duration::from_millis(TYPING_EXPIRY_MS);
+    if let Some(mut row) = ctx.db.channel_typing().typing_key().find(typing_key.clone()) {
+        row.expires_at = expires_at;
+        ctx.db.channel_typing().typing_key().update(row);
+    } else {
+        ctx.db.channel_typing().insert(ChannelTyping {
+            typing_key,
+            channel_id,
+            identity: caller,
+            expires_at,
+        });
+    }
 
     Ok(())
 }
@@ -147,4 +196,30 @@ pub fn my_messages(ctx: &ViewContext) -> Vec<Message> {
     }
 
     messages
+}
+
+#[spacetimedb::view(accessor = my_channel_typing, public)]
+pub fn my_channel_typing(ctx: &ViewContext) -> Vec<ChannelTyping> {
+    let who = ctx.sender();
+    let guild_ids: std::collections::BTreeSet<u64> = ctx
+        .db
+        .guild_member()
+        .identity()
+        .filter(&who)
+        .map(|member| member.guild_id)
+        .collect();
+
+    let mut rows = Vec::new();
+    for guild_id in guild_ids {
+        for channel in ctx.db.channel().guild_id().filter(guild_id) {
+            rows.extend(
+                ctx.db
+                    .channel_typing()
+                    .channel_typing_by_channel_id()
+                    .filter(channel.channel_id),
+            );
+        }
+    }
+
+    rows
 }

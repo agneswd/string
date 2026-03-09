@@ -14,6 +14,7 @@ export interface ChannelColumnProps {
   onSelectDmChannel: (id: DmChannelId) => void
   onLeaveDmChannel: (id: DmChannelId) => void
   onShowFriends: () => void
+  friendsBadgeCount?: number
   activeCallChannelIds: Set<string>
   // Channel List
   guildName?: string
@@ -52,6 +53,7 @@ export function ChannelColumn(props: ChannelColumnProps) {
           onCreateChannel={undefined}
           createButtonLabel="New DM"
           onShowFriends={props.onShowFriends}
+          friendsBadgeCount={props.friendsBadgeCount}
           activeCallChannelIds={props.activeCallChannelIds}
           layoutMode={props.layoutMode ?? 'classic'}
         />

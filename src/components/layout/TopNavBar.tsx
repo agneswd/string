@@ -12,6 +12,7 @@ export interface TopNavBarProps {
   outgoingCall: boolean
   dmCallActive: boolean
   selectedDmChannelId?: string
+  onCancelOutgoingCall?: () => void
   showMemberList: boolean
   onToggleMemberList: () => void
   onInitiateDmCall: (channelId: string) => void

@@ -54,6 +54,20 @@ import type {
 } from '../module_bindings/types/reducers'
 import { clearToken, disconnectConnection, getConn, getMyIdentity, initConnection } from './connection'
 
+export type ChannelTypingRow = {
+  typingKey: string
+  channelId: unknown
+  identity: Identity
+  expiresAt: unknown
+}
+
+export type DmTypingRow = {
+  typingKey: string
+  dmChannelId: unknown
+  identity: Identity
+  expiresAt: unknown
+}
+
 type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error'
 
 type TableLike = {
@@ -123,7 +137,9 @@ const TABLE_KEYS = [
   'my_dm_channels',
   'my_dm_participants',
   'my_dm_messages',
+  'my_dm_typing',
   'my_dm_call_events',
+  'my_channel_typing',
   'my_rtc_signals',
   'my_voice_states',
   'dm_call_request',
@@ -145,7 +161,9 @@ const CORE_SUBSCRIPTION_QUERIES = [
   'SELECT * FROM my_dm_channels',
   'SELECT * FROM my_dm_participants',
   'SELECT * FROM my_dm_messages',
+  'SELECT * FROM my_dm_typing',
   'SELECT * FROM my_dm_call_events',
+  'SELECT * FROM my_channel_typing',
   'SELECT * FROM my_rtc_signals',
   'SELECT * FROM my_voice_states',
   'SELECT * FROM dm_call_request',
@@ -165,6 +183,8 @@ export type StringState = {
   dmChannels: DmChannel[]
   dmParticipants: DmParticipant[]
   dmMessages: DmMessage[]
+  channelTyping: ChannelTypingRow[]
+  dmTyping: DmTypingRow[]
   reactions: Reaction[]
   dmReactions: DmReaction[]
   guildInvites: GuildInvite[]
@@ -202,6 +222,8 @@ class StringStore {
     dmChannels: [],
     dmParticipants: [],
     dmMessages: [],
+    channelTyping: [],
+    dmTyping: [],
     reactions: [],
     dmReactions: [],
     guildInvites: [],
@@ -306,6 +328,8 @@ class StringStore {
           dmChannels: [],
           dmParticipants: [],
           dmMessages: [],
+          channelTyping: [],
+          dmTyping: [],
           reactions: [],
           dmReactions: [],
           guildInvites: [],
@@ -416,6 +440,14 @@ class StringStore {
 
   sendDmMessage(params: SendDmMessageParams): Promise<void> {
     return this.callPreferredReducer('sendDmMessage', params)
+  }
+
+  setChannelTyping(params: { channelId: unknown; isTyping: boolean }): Promise<void> {
+    return this.callReducer('setChannelTyping', params)
+  }
+
+  setDmTyping(params: { dmChannelId: unknown; isTyping: boolean }): Promise<void> {
+    return this.callReducer('setDmTyping', params)
   }
 
   editDmMessage(params: EditDmMessageParams): Promise<void> {
@@ -870,6 +902,8 @@ class StringStore {
     if (syncAll || mutated.has('my_dm_channels')) next.dmChannels = this.readRows<DmChannel>(db, 'my_dm_channels')
     const shouldSyncDmParticipants = syncAll || mutated.has('my_dm_participants')
     if (shouldSyncDmParticipants) next.dmParticipants = this.readRows<DmParticipant>(db, 'my_dm_participants')
+    if (syncAll || mutated.has('my_channel_typing')) next.channelTyping = this.readRows<ChannelTypingRow>(db, 'my_channel_typing')
+    if (syncAll || mutated.has('my_dm_typing')) next.dmTyping = this.readRows<DmTypingRow>(db, 'my_dm_typing')
 
     const shouldSyncDmMessages = syncAll || mutated.has('my_dm_messages')
     const shouldSyncDmReactions = syncAll || mutated.has('dm_reaction')

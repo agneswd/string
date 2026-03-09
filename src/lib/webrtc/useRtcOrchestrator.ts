@@ -65,8 +65,29 @@ export type UseRtcOrchestratorOptions = {
 const NOOP_SEND_SIGNAL: SendRtcSignalFn = () => {};
 
 const SIGNAL_KIND_FALLBACK: SignalKind = 'audio';
+const SPEAKING_FREQUENCY_THRESHOLD = 8;
+const SPEAKING_RMS_THRESHOLD = 4;
 
 const keyFor = (peerId: string, kind: SignalKind): string => `${peerId}:${kind}`;
+
+const getAnalyserSpeakingState = (
+  analyser: AnalyserNode,
+  frequencyData: Uint8Array,
+  timeDomainData: Uint8Array,
+): boolean => {
+  analyser.getByteFrequencyData(frequencyData);
+  const averageFrequency = frequencyData.reduce((sum, value) => sum + value, 0) / frequencyData.length;
+
+  analyser.getByteTimeDomainData(timeDomainData);
+  let rmsAccumulator = 0;
+  for (const value of timeDomainData) {
+    const centered = (value - 128) / 128;
+    rmsAccumulator += centered * centered;
+  }
+  const rms = Math.sqrt(rmsAccumulator / timeDomainData.length) * 100;
+
+  return averageFrequency > SPEAKING_FREQUENCY_THRESHOLD || rms > SPEAKING_RMS_THRESHOLD;
+};
 
 const toIdentityKey = (value: unknown): string => {
   if (!value) {
@@ -401,11 +422,10 @@ export function createRtcOrchestrator(options: UseRtcOrchestratorOptions = {}): 
         analyser.fftSize = 512;
         analyser.smoothingTimeConstant = 0.4;
         source.connect(analyser);
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const frequencyData = new Uint8Array(analyser.frequencyBinCount);
+        const timeDomainData = new Uint8Array(analyser.fftSize);
         const interval = window.setInterval(() => {
-          analyser.getByteFrequencyData(dataArray);
-          const avg = dataArray.reduce((s, v) => s + v, 0) / dataArray.length;
-          const speaking = avg > 8;
+          const speaking = getAnalyserSpeakingState(analyser, frequencyData, timeDomainData);
           if (remoteSpeaking.get(key) !== speaking) {
             remoteSpeaking.set(key, speaking);
             publish();
@@ -495,12 +515,11 @@ export function createRtcOrchestrator(options: UseRtcOrchestratorOptions = {}): 
     analyser.fftSize = 512;
     analyser.smoothingTimeConstant = 0.4;
     audioSourceNode.connect(analyser);
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    const frequencyData = new Uint8Array(analyser.frequencyBinCount);
+    const timeDomainData = new Uint8Array(analyser.fftSize);
     if (speakingCheckInterval !== undefined) { clearInterval(speakingCheckInterval); speakingCheckInterval = undefined; }
     speakingCheckInterval = window.setInterval(() => {
-      analyser.getByteFrequencyData(dataArray);
-      const average = dataArray.reduce((sum, val) => sum + val, 0) / dataArray.length;
-      const isSpeaking = average > 8;
+      const isSpeaking = getAnalyserSpeakingState(analyser, frequencyData, timeDomainData);
       if (isSpeaking !== localSpeaking) {
         localSpeaking = isSpeaking;
         publish();
