@@ -59,6 +59,7 @@ export interface ChannelScreenParams {
   channelName: string
   guildId: string
   guildName: string
+  channelType: BrowseChannelType
 }
 
 /** Params passed to the guild detail screen. */

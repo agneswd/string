@@ -9,6 +9,7 @@ interface BrowseChannelSectionProps {
   guild: Guild
   section: BrowseChannelSectionModel
   selectedChannelId?: string | null
+  currentVoiceChannelId?: string | null
   onOpenChannel?: (guild: Guild, channel: Channel) => void
 }
 
@@ -16,6 +17,7 @@ export function BrowseChannelSection({
   guild,
   section,
   selectedChannelId,
+  currentVoiceChannelId,
   onOpenChannel,
 }: BrowseChannelSectionProps) {
   const [collapsed, setCollapsed] = useState(false)
@@ -49,6 +51,7 @@ export function BrowseChannelSection({
                 <ChannelRow
                   channel={channel}
                   selected={channel.id === selectedChannelId}
+                  isCurrentVoice={channel.type === 'voice' && channel.id === currentVoiceChannelId}
                   nested={isCategorySection}
                   onPress={() => onOpenChannel?.(guild, channel)}
                 />

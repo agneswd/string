@@ -544,6 +544,20 @@ export function SpacetimeBootstrap({ children }: { children: React.ReactNode }) 
     })
   }, [])
 
+  const joinVoiceChannel = useCallback<SpacetimeContextValue['joinVoiceChannel']>(async (channelId) => {
+    const connection = connRef.current
+    if (!connection) {
+      throw new Error('SpacetimeDB is not connected yet.')
+    }
+
+    const reducer = (connection.reducers as Record<string, ((payload: unknown) => Promise<void>) | undefined>).joinVoiceChannel
+    if (!reducer) {
+      throw new Error('joinVoiceChannel reducer is not available.')
+    }
+
+    await reducer({ channelId })
+  }, [])
+
   const initiateDmCall = useCallback<SpacetimeContextValue['initiateDmCall']>(async (dmChannelId) => {
     const connection = connRef.current
     if (!connection) {
@@ -964,6 +978,7 @@ export function SpacetimeBootstrap({ children }: { children: React.ReactNode }) 
     reconnect,
     createGuild,
     createChannel,
+    joinVoiceChannel,
     initiateDmCall,
     updateGuild,
     inviteMember,

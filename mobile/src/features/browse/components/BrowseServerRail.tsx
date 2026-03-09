@@ -59,7 +59,7 @@ export function BrowseServerRail({
               >
                 <View style={[styles.selectionIndicator, isSelected && styles.selectionIndicatorActive]} />
                 <View style={[styles.avatarWrap, isSelected && styles.avatarWrapActive]}>
-                  <Avatar name={entry.label} uri={entry.avatarUri} size={42} />
+                  <Avatar name={entry.label} uri={entry.avatarUri} size={42} borderRadius={8} />
                   {!!entry.unreadCount && entry.unreadCount > 0 ? (
                     <View style={styles.dmUnreadBadge}>
                       <Text style={styles.dmUnreadBadgeText}>{entry.unreadCount > 99 ? '99+' : entry.unreadCount}</Text>
@@ -88,7 +88,7 @@ export function BrowseServerRail({
             >
               <View style={[styles.selectionIndicator, isSelected && styles.selectionIndicatorActive]} />
               <View style={[styles.avatarWrap, isSelected && styles.avatarWrapActive]}>
-                <Avatar name={item.name} uri={item.avatarUri} size={42} />
+                <Avatar name={item.name} uri={item.avatarUri} size={42} borderRadius={8} />
               </View>
             </TouchableOpacity>
           )
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   homeButton: {
     width: 46,
     height: 46,
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: 'transparent',
     backgroundColor: Colors.bgSecondary,
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   },
   avatarWrap: {
     padding: 2,
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: 'transparent',
     alignItems: 'center',

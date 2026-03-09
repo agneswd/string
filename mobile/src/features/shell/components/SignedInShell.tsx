@@ -40,6 +40,7 @@ export function SignedInShell() {
     updateVoiceState,
     createGuild,
     createChannel,
+    joinVoiceChannel,
     initiateDmCall,
     updateGuild,
     inviteMember,
@@ -260,6 +261,16 @@ export function SignedInShell() {
     return data.voiceStates.find((vs) => identityToString(vs.identity) === identity) ?? null
   }, [data.voiceStates, identity])
 
+  const currentGuildVoiceChannelId = useMemo(() => {
+    if (!myVoiceState || !selectedGuildId) {
+      return null
+    }
+
+    return toIdKey(myVoiceState.guildId) === selectedGuildId
+      ? toIdKey(myVoiceState.channelId)
+      : null
+  }, [myVoiceState, selectedGuildId])
+
   useEffect(() => {
     if (myVoiceState) {
       setPreMuted(myVoiceState.isMuted)
@@ -336,6 +347,7 @@ export function SignedInShell() {
           isLoading={shouldShowShellLoading}
           selectedGuildId={selectedGuildId}
           selectedChannelId={activeDetail?.kind === 'channel' ? activeDetail.channelId : null}
+          currentVoiceChannelId={currentGuildVoiceChannelId}
           selectedConversationId={activeDetail?.kind === 'dm' ? activeDetail.conversationId : null}
           pendingFriendCount={(liveShellData.requests ?? []).filter((request) => request.direction === 'incoming').length}
           onCreateLoom={async (name) => {
@@ -397,7 +409,14 @@ export function SignedInShell() {
             setActiveDetail(null)
             mobileShell.showFriends()
           }}
-          onOpenChannel={({ channelId, channelName, guildId, guildName }) => {
+          onOpenChannel={({ channelId, channelName, guildId, guildName, channelType }) => {
+            if (channelType === 'voice') {
+              if (canMutateSpacetime) {
+                void joinVoiceChannel(BigInt(channelId))
+              }
+              return
+            }
+
             setActiveDetail({
               kind: 'channel',
               guildId,
@@ -469,6 +488,7 @@ export function SignedInShell() {
     conversations,
     createGuild,
     createChannel,
+    currentGuildVoiceChannelId,
     updateGuild,
     deleteGuild,
     declineFriendRequest,
@@ -476,6 +496,7 @@ export function SignedInShell() {
     handleToggleMute,
     invitableFriends,
     inviteMember,
+    joinVoiceChannel,
     leaveGuild,
     liveShellData.channels,
     liveShellData.friends,

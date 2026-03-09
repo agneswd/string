@@ -83,6 +83,7 @@ export interface SpacetimeActions {
   reconnect: () => void
   createGuild: (params: { name: string }) => Promise<void>
   createChannel: (params: { guildId: unknown; name: string; channelType: unknown; parentCategoryId: unknown | null }) => Promise<void>
+  joinVoiceChannel: (channelId: unknown) => Promise<void>
   initiateDmCall: (dmChannelId: unknown) => Promise<void>
   updateGuild: (params: { guildId: unknown; name?: string | null; bio?: string | null; avatarBytes?: Uint8Array | null }) => Promise<void>
   inviteMember: (params: { guildId: unknown; targetIdentity: unknown }) => Promise<void>

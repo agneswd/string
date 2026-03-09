@@ -12,16 +12,17 @@ interface AvatarProps {
   uri?: string
   size?: number
   backgroundColor?: string
+  borderRadius?: number
 }
 
 /**
  * Tiny circular avatar.
  * React Native-safe (no img/DOM APIs).
  */
-export function Avatar({ name, seed, uri, size = 36, backgroundColor }: AvatarProps) {
+export function Avatar({ name, seed, uri, size = 36, backgroundColor, borderRadius }: AvatarProps) {
   const fallbackSeed = seed?.trim() || name.trim() || '?'
   const initial = getInitial(name.trim() || fallbackSeed)
-  const radius = Math.max(4, Math.floor(size * 0.16))
+  const radius = borderRadius ?? Math.max(4, Math.floor(size * 0.16))
   const resolvedBackgroundColor = backgroundColor ?? getAvatarColor(fallbackSeed)
 
   return (

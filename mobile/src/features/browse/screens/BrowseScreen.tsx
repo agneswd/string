@@ -29,6 +29,7 @@ interface BrowseScreenProps {
   isLoading?: boolean
   selectedGuildId?: string | null
   selectedChannelId?: string | null
+  currentVoiceChannelId?: string | null
   selectedConversationId?: string | null
   onOpenGuild?: (params: GuildScreenParams) => void
   onOpenChannel?: (params: ChannelScreenParams) => void
@@ -53,6 +54,7 @@ export function BrowseScreen({
   isLoading = false,
   selectedGuildId,
   selectedChannelId,
+  currentVoiceChannelId,
   selectedConversationId,
   onOpenGuild,
   onOpenChannel,
@@ -203,6 +205,7 @@ export function BrowseScreen({
               guild={model.selectedGuild}
               sections={model.selectedGuildSections}
               selectedChannelId={selectedChannelId}
+              currentVoiceChannelId={currentVoiceChannelId}
               onOpenChannel={(guild, channel) => {
                 setSettingsGuildId(null)
                 onOpenChannel?.({
@@ -210,6 +213,7 @@ export function BrowseScreen({
                   channelName: channel.name,
                   guildId: guild.id,
                   guildName: guild.name,
+                  channelType: channel.type,
                 })
               }}
             />

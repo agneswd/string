@@ -1,18 +1,13 @@
 import React from 'react'
+import { Megaphone, Volume2 } from 'lucide-react-native'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { Colors } from '../../../shared/theme/colors'
 import type { Channel } from '../types'
 
-const TYPE_ICON: Record<Channel['type'], string> = {
-  category: '▸',
-  text: '#',
-  voice: '↳',
-  announcement: '!',
-}
-
 interface ChannelRowProps {
   channel: Channel
   selected?: boolean
+  isCurrentVoice?: boolean
   nested?: boolean
   onPress: () => void
 }
@@ -22,19 +17,35 @@ interface ChannelRowProps {
  * Shows type icon, name, unread indicator, and mention badge.
  * React Native-safe.
  */
-export function ChannelRow({ channel, selected = false, nested = false, onPress }: ChannelRowProps) {
-  const icon = TYPE_ICON[channel.type]
+export function ChannelRow({ channel, selected = false, isCurrentVoice = false, nested = false, onPress }: ChannelRowProps) {
+  const showUnreadStyle = channel.hasUnread || selected || isCurrentVoice
+  const iconColor = selected || isCurrentVoice ? Colors.textPrimary : Colors.textMuted
 
   return (
     <TouchableOpacity
-      style={[styles.row, nested && styles.rowNested, selected && styles.rowSelected]}
+      style={[
+        styles.row,
+        nested && styles.rowNested,
+        selected && styles.rowSelected,
+        isCurrentVoice && !selected && styles.rowCurrentVoice,
+      ]}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <Text style={[styles.icon, selected && styles.iconSelected]}>{icon}</Text>
+      <View style={styles.iconWrap}>
+        {channel.type === 'text' ? (
+          <Text style={[styles.iconHash, { color: iconColor }]}>#</Text>
+        ) : channel.type === 'voice' ? (
+          <Volume2 color={iconColor} size={15} strokeWidth={2} />
+        ) : channel.type === 'announcement' ? (
+          <Megaphone color={iconColor} size={14} strokeWidth={2} />
+        ) : (
+          <Text style={[styles.iconHash, { color: iconColor }]}>▸</Text>
+        )}
+      </View>
       <View style={styles.content}>
         <Text
-          style={[styles.name, (channel.hasUnread || selected) && styles.nameUnread]}
+          style={[styles.name, showUnreadStyle && styles.nameUnread]}
           numberOfLines={1}
         >
           {channel.name}
@@ -70,14 +81,20 @@ const styles = StyleSheet.create({
   rowSelected: {
     backgroundColor: Colors.bgSecondary,
   },
-  icon: {
-    color: Colors.textMuted,
-    fontSize: 15,
-    width: 16,
-    textAlign: 'center',
+  rowCurrentVoice: {
+    backgroundColor: Colors.bgSecondary,
+    borderLeftWidth: 2,
+    borderLeftColor: Colors.accentGreen,
+    paddingLeft: 12,
   },
-  iconSelected: {
-    color: Colors.textSecondary,
+  iconWrap: {
+    width: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconHash: {
+    fontSize: 15,
+    textAlign: 'center',
   },
   name: {
     color: Colors.textSecondary,

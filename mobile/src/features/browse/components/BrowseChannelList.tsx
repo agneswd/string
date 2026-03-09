@@ -9,6 +9,7 @@ interface BrowseChannelListProps {
   guild: Guild | null
   sections: BrowseChannelSectionModel[]
   selectedChannelId?: string | null
+  currentVoiceChannelId?: string | null
   onOpenChannel?: (guild: Guild, channel: Channel) => void
 }
 
@@ -16,6 +17,7 @@ export function BrowseChannelList({
   guild,
   sections,
   selectedChannelId,
+  currentVoiceChannelId,
   onOpenChannel,
 }: BrowseChannelListProps) {
   if (!guild) {
@@ -47,6 +49,7 @@ export function BrowseChannelList({
           guild={guild}
           section={section}
           selectedChannelId={selectedChannelId}
+          currentVoiceChannelId={currentVoiceChannelId}
           onOpenChannel={onOpenChannel}
         />
       ))}
