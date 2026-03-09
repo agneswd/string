@@ -26,6 +26,8 @@ import { useAuth } from '../../features/auth'
 import { DbConnection, type SubscriptionHandle } from '../../module_bindings'
 import type {
   Channel,
+  DmCallEvent,
+  DmCallRequest,
   DmChannel,
   DmMessage,
   DmParticipant,
@@ -35,6 +37,7 @@ import type {
   GuildInvite,
   GuildMember,
   Message,
+  RtcSignal,
   User,
   UserPresence,
   VoiceState,
@@ -108,6 +111,9 @@ const SNAPSHOT_TABLE_KEYS = [
   'my_dm_channels',
   'my_dm_participants',
   'my_dm_messages',
+  'my_dm_call_events',
+  'dm_call_request',
+  'my_rtc_signals',
   'my_voice_states',
 ] as const
 
@@ -142,6 +148,9 @@ const EMPTY_DATA: SpacetimeDataSnapshot = {
   dmChannels: [],
   dmParticipants: [],
   dmMessages: [],
+  dmCallEvents: [],
+  dmCallRequests: [],
+  rtcSignals: [],
   voiceStates: [],
 }
 
@@ -189,6 +198,9 @@ function buildSnapshot(connection: DbConnection): SpacetimeDataSnapshot {
     dmChannels: readRows<DmChannel>(db, 'my_dm_channels'),
     dmParticipants: readRows<DmParticipant>(db, 'my_dm_participants'),
     dmMessages: readRows<DmMessage>(db, 'my_dm_messages'),
+    dmCallEvents: readRows<DmCallEvent>(db, 'my_dm_call_events'),
+    dmCallRequests: readRows<DmCallRequest>(db, 'dm_call_request'),
+    rtcSignals: readRows<RtcSignal>(db, 'my_rtc_signals'),
     voiceStates: readRows<VoiceState>(db, 'my_voice_states'),
   }
 }
@@ -558,6 +570,34 @@ export function SpacetimeBootstrap({ children }: { children: React.ReactNode }) 
     await reducer({ channelId })
   }, [])
 
+  const joinVoiceDm = useCallback<SpacetimeContextValue['joinVoiceDm']>(async (dmChannelId) => {
+    const connection = connRef.current
+    if (!connection) {
+      throw new Error('SpacetimeDB is not connected yet.')
+    }
+
+    const reducer = (connection.reducers as Record<string, ((payload: unknown) => Promise<void>) | undefined>).joinVoiceDm
+    if (!reducer) {
+      throw new Error('joinVoiceDm reducer is not available.')
+    }
+
+    await reducer({ dmChannelId })
+  }, [])
+
+  const leaveVoiceChannel = useCallback<SpacetimeContextValue['leaveVoiceChannel']>(async () => {
+    const connection = connRef.current
+    if (!connection) {
+      throw new Error('SpacetimeDB is not connected yet.')
+    }
+
+    const reducer = (connection.reducers as Record<string, ((payload: unknown) => Promise<void>) | undefined>).leaveVoiceChannel
+    if (!reducer) {
+      throw new Error('leaveVoiceChannel reducer is not available.')
+    }
+
+    await reducer({})
+  }, [])
+
   const initiateDmCall = useCallback<SpacetimeContextValue['initiateDmCall']>(async (dmChannelId) => {
     const connection = connRef.current
     if (!connection) {
@@ -570,6 +610,62 @@ export function SpacetimeBootstrap({ children }: { children: React.ReactNode }) 
     }
 
     await reducer({ dmChannelId })
+  }, [])
+
+  const acceptDmCall = useCallback<SpacetimeContextValue['acceptDmCall']>(async (callId) => {
+    const connection = connRef.current
+    if (!connection) {
+      throw new Error('SpacetimeDB is not connected yet.')
+    }
+
+    const reducer = (connection.reducers as Record<string, ((payload: unknown) => Promise<void>) | undefined>).acceptDmCall
+    if (!reducer) {
+      throw new Error('acceptDmCall reducer is not available.')
+    }
+
+    await reducer({ callId })
+  }, [])
+
+  const declineDmCall = useCallback<SpacetimeContextValue['declineDmCall']>(async (callId) => {
+    const connection = connRef.current
+    if (!connection) {
+      throw new Error('SpacetimeDB is not connected yet.')
+    }
+
+    const reducer = (connection.reducers as Record<string, ((payload: unknown) => Promise<void>) | undefined>).declineDmCall
+    if (!reducer) {
+      throw new Error('declineDmCall reducer is not available.')
+    }
+
+    await reducer({ callId })
+  }, [])
+
+  const sendDmRtcSignal = useCallback<SpacetimeContextValue['sendDmRtcSignal']>(async ({ dmChannelId, recipientIdentity, signalType, payload }) => {
+    const connection = connRef.current
+    if (!connection) {
+      throw new Error('SpacetimeDB is not connected yet.')
+    }
+
+    const reducer = (connection.reducers as Record<string, ((payload: unknown) => Promise<void>) | undefined>).sendDmRtcSignal
+    if (!reducer) {
+      throw new Error('sendDmRtcSignal reducer is not available.')
+    }
+
+    await reducer({ dmChannelId, recipientIdentity, signalType, payload })
+  }, [])
+
+  const ackRtcSignal = useCallback<SpacetimeContextValue['ackRtcSignal']>(async (signalId) => {
+    const connection = connRef.current
+    if (!connection) {
+      throw new Error('SpacetimeDB is not connected yet.')
+    }
+
+    const reducer = (connection.reducers as Record<string, ((payload: unknown) => Promise<void>) | undefined>).ackRtcSignal
+    if (!reducer) {
+      throw new Error('ackRtcSignal reducer is not available.')
+    }
+
+    await reducer({ signalId })
   }, [])
 
   const updateGuild = useCallback<SpacetimeContextValue['updateGuild']>(async (params) => {
@@ -979,7 +1075,13 @@ export function SpacetimeBootstrap({ children }: { children: React.ReactNode }) 
     createGuild,
     createChannel,
     joinVoiceChannel,
+    joinVoiceDm,
+    leaveVoiceChannel,
     initiateDmCall,
+    acceptDmCall,
+    declineDmCall,
+    sendDmRtcSignal,
+    ackRtcSignal,
     updateGuild,
     inviteMember,
     leaveGuild,

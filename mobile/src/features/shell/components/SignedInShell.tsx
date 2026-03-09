@@ -8,10 +8,12 @@ import { avatarBytesToUri } from '../../../shared/lib/avatarUtils'
 import { useSpacetime } from '../../../core/spacetime'
 import { useAuth } from '../../auth'
 import { BrowseScreen } from '../../browse'
+import { IncomingCallModal, MobileCallBanner, useDmRtcMedia, useMobileCallSfx, useMobileCallState } from '../../calls'
 import { ChatScreen, useDmList } from '../../dm'
 import { FriendsScreen } from '../../friends'
 import { ChannelChatScreen } from '../../guild'
 import { ProfileScreen } from '../../profile'
+import { useMobileNotificationSfx } from '../hooks/useMobileNotificationSfx'
 import { mapSpacetimeDataToShell } from '../liveData'
 import { usePersistedShellSelection } from '../hooks/usePersistedShellSelection'
 import { useMobileShellController } from '../useMobileShellController'
@@ -41,7 +43,13 @@ export function SignedInShell() {
     createGuild,
     createChannel,
     joinVoiceChannel,
+    joinVoiceDm,
+    leaveVoiceChannel,
     initiateDmCall,
+    acceptDmCall,
+    declineDmCall,
+    sendDmRtcSignal,
+    ackRtcSignal,
     updateGuild,
     inviteMember,
     leaveGuild,
@@ -50,6 +58,8 @@ export function SignedInShell() {
   const canMutateSpacetime = connectionPhase === 'connected' && subscriptionsReady
   const insets = useSafeAreaInsets()
   const [activeDetail, setActiveDetail] = useState<ShellActiveDetail>(null)
+  const [ignoredCallIds, setIgnoredCallIds] = useState<Set<string>>(() => new Set())
+  const [rtcError, setRtcError] = useState<string | null>(null)
   const [preMuted, setPreMuted] = useState(false)
   const [preDeafened, setPreDeafened] = useState(false)
   const [hasRestoredSelection, setHasRestoredSelection] = useState(false)
@@ -183,6 +193,41 @@ export function SignedInShell() {
     return channel?.dmChannelId ?? null
   }, [activeDetail, data.dmChannels, data.dmParticipants, data.users, identity])
 
+  const {
+    incomingCall,
+    outgoingCall,
+    incomingCallPeer,
+    outgoingCallPeer,
+    currentDmVoiceChannelId,
+    currentCallPeer,
+    activeDmHasLiveCall,
+    isCurrentCallForActiveDm,
+    isOutgoingCallForActiveDm,
+  } = useMobileCallState({
+    data,
+    identity,
+    activeDmChannelId,
+  })
+
+  const {
+    playHangupSound,
+    playCallDeclinedSound,
+    markOutgoingCallCanceledLocally,
+  } = useMobileCallSfx({
+    outgoingCall,
+    incomingCall,
+    currentDmVoiceChannelId,
+    voiceStates: data.voiceStates,
+    identity: identity ?? '',
+  })
+
+  useMobileNotificationSfx({
+    identity: identity ?? '',
+    conversations,
+    selectedConversationId: activeDetail?.kind === 'dm' ? activeDetail.conversationId : null,
+    liveShellData,
+  })
+
   const invitableFriends = useMemo(() => {
     const usersByIdentity = new Map(data.users.map((user) => [identityToString(user.identity), user]))
     const selfId = identity ?? ''
@@ -278,6 +323,20 @@ export function SignedInShell() {
     }
   }, [myVoiceState])
 
+  const { rtcReady } = useDmRtcMedia({
+    identity,
+    activeDmChannelId: currentDmVoiceChannelId ? activeDmChannelId : null,
+    currentCallPeer,
+    outgoingCallActive: Boolean(outgoingCall),
+    incomingCallActive: Boolean(incomingCall),
+    voiceStates: data.voiceStates,
+    rtcSignals: data.rtcSignals,
+    isMuted: myVoiceState?.isMuted ?? false,
+    sendDmRtcSignal,
+    ackRtcSignal,
+    onError: setRtcError,
+  })
+
   useEffect(() => {
     setHasRestoredSelection(false)
   }, [session.status, sessionUserId])
@@ -337,6 +396,112 @@ export function SignedInShell() {
     })
   }, [myVoiceState, updateVoiceState])
 
+  const openDmCallPeer = useCallback((peer: { conversationId: string; peerName: string }) => {
+    setActiveDetail({
+      kind: 'dm',
+      conversationId: peer.conversationId,
+      peerName: peer.peerName,
+    })
+    mobileShell.openContent()
+  }, [mobileShell])
+
+  const handleDmCallAction = useCallback(() => {
+    if (!canMutateSpacetime || !activeDmChannelId) {
+      return
+    }
+
+    if (isCurrentCallForActiveDm) {
+      playHangupSound()
+      void leaveVoiceChannel()
+      return
+    }
+
+    if (isOutgoingCallForActiveDm && outgoingCall) {
+      markOutgoingCallCanceledLocally()
+      playHangupSound()
+      void declineDmCall(outgoingCall.callId)
+      return
+    }
+
+    if (activeDmHasLiveCall) {
+      void joinVoiceDm(activeDmChannelId)
+      return
+    }
+
+    void initiateDmCall(activeDmChannelId)
+  }, [
+    activeDmChannelId,
+    activeDmHasLiveCall,
+    canMutateSpacetime,
+    declineDmCall,
+    initiateDmCall,
+    isCurrentCallForActiveDm,
+    isOutgoingCallForActiveDm,
+    joinVoiceDm,
+    leaveVoiceChannel,
+    outgoingCall,
+  ])
+
+  const handleAcceptIncomingCall = useCallback(() => {
+    if (!incomingCall) {
+      return
+    }
+
+    if (incomingCallPeer) {
+      openDmCallPeer(incomingCallPeer)
+    }
+
+    void acceptDmCall(incomingCall.callId)
+  }, [acceptDmCall, incomingCall, incomingCallPeer, openDmCallPeer])
+
+  const handleDeclineIncomingCall = useCallback(() => {
+    if (!incomingCall) {
+      return
+    }
+
+    playCallDeclinedSound()
+    void declineDmCall(incomingCall.callId)
+  }, [declineDmCall, incomingCall, playCallDeclinedSound])
+
+  const handleIgnoreIncomingCall = useCallback(() => {
+    if (!incomingCall) {
+      return
+    }
+
+    setIgnoredCallIds((current) => new Set(current).add(String(incomingCall.callId)))
+  }, [incomingCall])
+
+  const handleCancelOutgoingCall = useCallback(() => {
+    if (!outgoingCall) {
+      return
+    }
+
+    markOutgoingCallCanceledLocally()
+    playHangupSound()
+    void declineDmCall(outgoingCall.callId)
+  }, [declineDmCall, markOutgoingCallCanceledLocally, outgoingCall, playHangupSound])
+
+  const handleOpenCurrentCall = useCallback(() => {
+    if (currentCallPeer) {
+      openDmCallPeer(currentCallPeer)
+      return
+    }
+
+    if (outgoingCallPeer) {
+      openDmCallPeer(outgoingCallPeer)
+    }
+  }, [currentCallPeer, openDmCallPeer, outgoingCallPeer])
+
+  const incomingCallVisible = Boolean(incomingCall && !ignoredCallIds.has(String(incomingCall.callId)))
+  const voiceChannelLabel = useMemo(() => {
+    if (!myVoiceState || currentDmVoiceChannelId) {
+      return null
+    }
+
+    const activeChannel = data.channels.find((channel) => toIdKey(channel.channelId) === toIdKey(myVoiceState.channelId))
+    return activeChannel?.name ?? 'Voice channel'
+  }, [currentDmVoiceChannelId, data.channels, myVoiceState])
+
   const navigationBody = useMemo(() => {
     if (activeTab === 'browse') {
       return (
@@ -345,6 +510,7 @@ export function SignedInShell() {
           channels={liveShellData.channels ?? []}
           conversations={conversations}
           isLoading={shouldShowShellLoading}
+          topInset={insets.top}
           selectedGuildId={selectedGuildId}
           selectedChannelId={activeDetail?.kind === 'channel' ? activeDetail.channelId : null}
           currentVoiceChannelId={currentGuildVoiceChannelId}
@@ -482,6 +648,7 @@ export function SignedInShell() {
     )
   }, [
     acceptFriendRequest,
+    activeDetail,
     activeTab,
     canMutateSpacetime,
     cancelFriendRequest,
@@ -494,6 +661,7 @@ export function SignedInShell() {
     declineFriendRequest,
     handleToggleDeafen,
     handleToggleMute,
+    insets.top,
     invitableFriends,
     inviteMember,
     joinVoiceChannel,
@@ -509,6 +677,7 @@ export function SignedInShell() {
     preMuted,
     profile,
     removeFriend,
+    selectedGuildId,
     sendFriendRequest,
     setStatus,
     shouldShowShellLoading,
@@ -563,7 +732,7 @@ export function SignedInShell() {
         <MobileSwipeShell
           navigationPane={(
             <View style={styles.pane}>
-              <View style={[styles.body, { paddingTop: Math.max(insets.top, 12) }]}>{navigationBody}</View>
+              <View style={[styles.body, { paddingTop: activeTab === 'browse' ? 0 : Math.max(insets.top, 12) }]}>{navigationBody}</View>
             </View>
           )}
           navigationFooter={(
@@ -601,12 +770,41 @@ export function SignedInShell() {
                   mobileShell.setPane('navigation')
                 }}
                 onCallAction={activeDetail?.kind === 'dm' && activeDmChannelId
-                  ? () => { void initiateDmCall(activeDmChannelId) }
+                  ? handleDmCallAction
                   : undefined}
                 onRightAction={memberItems.length > 0 && activeDetail
                   ? mobileShell.openMembers
                   : undefined}
               />
+              {myVoiceState ? (
+                <MobileCallBanner
+                  mode="connected"
+                  title={currentCallPeer ? `In call with ${currentCallPeer.peerName}` : `Voice connected — ${voiceChannelLabel ?? 'Call'}`}
+                  subtitle={currentCallPeer
+                    ? (rtcError
+                      ?? (activeDetail?.kind === 'dm' && currentCallPeer.conversationId === activeDetail.conversationId
+                        ? (rtcReady ? 'Call controls are live for this conversation.' : 'Connecting direct message voice…')
+                        : 'Tap to jump back to the active DM call.'))
+                    : 'Voice controls stay available while you browse.'}
+                  canOpen={Boolean(currentCallPeer && (!activeDetail || activeDetail.kind !== 'dm' || currentCallPeer.conversationId !== activeDetail.conversationId))}
+                  onOpen={currentCallPeer ? handleOpenCurrentCall : undefined}
+                  onMute={() => { void handleToggleMute() }}
+                  onDeafen={() => { void handleToggleDeafen() }}
+                  onHangUp={() => {
+                    playHangupSound()
+                    void leaveVoiceChannel()
+                  }}
+                  isMuted={myVoiceState.isMuted}
+                  isDeafened={myVoiceState.isDeafened}
+                />
+              ) : outgoingCall && outgoingCallPeer ? (
+                <MobileCallBanner
+                  mode="calling"
+                  title={`Calling ${outgoingCallPeer.peerName}…`}
+                  subtitle="Waiting for them to accept on another device."
+                  onCancel={handleCancelOutgoingCall}
+                />
+              ) : null}
             </View>
           )}
           contentBody={contentBody}
@@ -633,6 +831,15 @@ export function SignedInShell() {
           canNavigateToMembers={mobileShell.canNavigateToMembers}
         />
       </View>
+      <IncomingCallModal
+        visible={incomingCallVisible && Boolean(incomingCallPeer)}
+        callerName={incomingCallPeer?.peerName ?? 'Incoming caller'}
+        callerAvatarUri={incomingCallPeer?.avatarUri}
+        callerProfileColor={incomingCallPeer?.profileColor ?? null}
+        onAccept={handleAcceptIncomingCall}
+        onDecline={handleDeclineIncomingCall}
+        onIgnore={handleIgnoreIncomingCall}
+      />
     </View>
   )
 }

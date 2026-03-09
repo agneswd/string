@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useSpacetime } from '../../core/spacetime'
+import { playSound } from '../../shared/sfx/index'
+import { buildChatTimeline } from './chatTimeline'
 import type { ChatMessage, ConversationId } from './types'
 
 interface UseChatResult {
@@ -63,22 +65,15 @@ export function useChat(
     }) ?? null
   }, [currentUserId, data.dmChannels, data.dmParticipants, peerIdentity])
 
-  const messages = useMemo<ChatMessage[]>(() => {
-    if (!activeChannel) {
-      return []
-    }
-
-    return data.dmMessages
-      .filter((message) => toIdKey(message.dmChannelId) === toIdKey(activeChannel.dmChannelId) && !message.isDeleted)
-      .sort((left, right) => timestampToMillis(left.sentAt) - timestampToMillis(right.sentAt))
-      .map((message) => ({
-        id: toIdKey(message.dmMessageId),
-        conversationId,
-        senderId: identityToString(message.authorIdentity),
-        text: message.content,
-        sentAt: timestampToMillis(message.sentAt),
-      }))
-  }, [activeChannel, conversationId, data.dmMessages])
+  const messages = useMemo<ChatMessage[]>(() => buildChatTimeline({
+    conversationId,
+    currentUserId,
+    activeDmChannelId: activeChannel?.dmChannelId ?? null,
+    dmMessages: data.dmMessages,
+    dmCallEvents: data.dmCallEvents,
+    dmParticipants: data.dmParticipants,
+    users: data.users,
+  }), [activeChannel?.dmChannelId, conversationId, currentUserId, data.dmCallEvents, data.dmMessages, data.dmParticipants, data.users])
 
   const isLoading = !subscriptionsReady
   const error = pendingError
@@ -149,6 +144,7 @@ export function useChat(
           content: text.trim(),
           replyTo: null,
         })
+        playSound('message-sent')
       } catch (nextError) {
         setPendingError(nextError instanceof Error ? nextError.message : 'Could not send the message.')
       }

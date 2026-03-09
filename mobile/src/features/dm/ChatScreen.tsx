@@ -13,11 +13,10 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useSpacetime } from '../../core/spacetime'
 import type { User } from '../../module_bindings/types'
-import { avatarBytesToUri } from '../../shared/lib/avatarUtils'
 import { Colors } from '../../shared/theme/colors'
-import { Avatar } from '../../shared/ui/Avatar'
 import { InlineActionInput } from '../../shared/ui/forms/InlineActionInput'
 import { ChatEmptyState } from './components/ChatEmptyState'
+import { ChatTimelineRow } from './components/ChatTimelineRow'
 import { useChat } from './useChat'
 import type { ChatMessage, ChatScreenParams } from './types'
 
@@ -25,46 +24,6 @@ interface ChatScreenProps extends ChatScreenParams {
   /** Called when the user taps the back / close affordance. */
   onBack: () => void
   showHeader?: boolean
-}
-
-function MessageRow({
-  message,
-  isOwn,
-  peerName,
-  avatarSeed,
-  avatarUri,
-  profileColor,
-  authorColor,
-}: {
-  message: ChatMessage
-  isOwn: boolean
-  peerName: string
-  avatarSeed: string
-  avatarUri?: string
-  profileColor?: string | null
-  authorColor?: string | null
-}) {
-  const authorName = isOwn ? 'You' : peerName
-  return (
-    <View style={styles.messageRow}>
-      <Avatar
-        name={authorName}
-        seed={avatarSeed}
-        size={32}
-        uri={avatarUri}
-        backgroundColor={profileColor ?? undefined}
-      />
-      <View style={styles.messageContent}>
-        <View style={styles.messageMeta}>
-          <Text style={[styles.messageAuthor, authorColor ? { color: authorColor } : null]}>{authorName}</Text>
-          <Text style={styles.messageTimestamp}>{message.pending ? 'sending' : formatTime(message.sentAt)}</Text>
-        </View>
-        <View style={styles.messageSurface}>
-          <Text style={styles.messageText}>{message.text}</Text>
-        </View>
-      </View>
-    </View>
-  )
 }
 
 /**
@@ -163,14 +122,20 @@ export function ChatScreen({ conversationId, peerName, onBack, showHeader = true
             />
           }
           renderItem={({ item }) => (
-            <MessageRow
+            <ChatTimelineRow
               message={item}
-              isOwn={item.senderId === currentUserId}
               peerName={peerName}
-              avatarSeed={item.senderId === currentUserId ? currentUserId : peerUser ? identityToString(peerUser.identity) : peerName}
-              avatarUri={item.senderId === currentUserId ? avatarBytesToUri(currentUser?.avatarBytes) : avatarBytesToUri(peerUser?.avatarBytes)}
-              profileColor={item.senderId === currentUserId ? currentUser?.profileColor ?? null : peerUser?.profileColor ?? null}
-              authorColor={item.senderId === currentUserId ? currentUser?.profileColor ?? null : peerUser?.profileColor ?? null}
+              currentUserId={currentUserId}
+              currentUser={currentUser ? {
+                id: currentUserId,
+                avatarBytes: currentUser.avatarBytes,
+                profileColor: currentUser.profileColor ?? null,
+              } : null}
+              peerUser={peerUser ? {
+                id: identityToString(peerUser.identity),
+                avatarBytes: peerUser.avatarBytes,
+                profileColor: peerUser.profileColor ?? null,
+              } : null}
             />
           )}
         />
@@ -243,40 +208,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 12,
   },
-  messageRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    marginBottom: 10,
-  },
-  messageContent: {
-    flex: 1,
-    gap: 4,
-  },
-  messageMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  messageAuthor: {
-    color: Colors.textPrimary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  messageTimestamp: {
-    color: Colors.textMuted,
-    fontSize: 10,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  messageSurface: {
-    paddingVertical: 2,
-  },
-  messageText: {
-    color: Colors.textPrimary,
-    fontSize: 14,
-    lineHeight: 20,
-  },
   // ── Input bar ───────────────────────────────────────────────────────────
   inputBar: {
     paddingHorizontal: 12,
@@ -298,9 +229,4 @@ function identityToString(value: unknown): string {
   }
 
   return String(value)
-}
-
-function formatTime(timestamp: number): string {
-  const date = new Date(timestamp)
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }

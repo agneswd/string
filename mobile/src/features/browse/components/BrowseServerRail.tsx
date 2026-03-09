@@ -10,6 +10,7 @@ import type { Guild } from '../types'
 interface BrowseServerRailProps {
   guilds: Guild[]
   dmQuickEntries?: Array<{ id: string; label: string; avatarUri?: string; unreadCount?: number }>
+  topInset?: number
   isHomeSelected?: boolean
   selectedGuildId?: string | null
   selectedConversationId?: string | null
@@ -22,6 +23,7 @@ interface BrowseServerRailProps {
 export function BrowseServerRail({
   guilds,
   dmQuickEntries = [],
+  topInset = 0,
   isHomeSelected = false,
   selectedGuildId,
   selectedConversationId,
@@ -30,19 +32,35 @@ export function BrowseServerRail({
   onSelectDm,
   onSelectGuild,
 }: BrowseServerRailProps) {
+  const renderRailButton = (
+    key: string,
+    isSelected: boolean,
+    onPress: (() => void) | undefined,
+    content: React.ReactNode,
+  ) => (
+    <View key={key} style={styles.itemRow}>
+      <View style={[styles.selectionIndicator, isSelected && styles.selectionIndicatorActive]} />
+      <TouchableOpacity
+        style={styles.itemPressable}
+        onPress={onPress}
+        activeOpacity={0.8}
+      >
+        {content}
+      </TouchableOpacity>
+    </View>
+  )
+
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, topInset > 0 ? { paddingTop: topInset } : null]}>
       <View style={styles.topSlot}>
-        <TouchableOpacity
-          style={styles.itemPressable}
-          onPress={onSelectHome}
-          activeOpacity={0.8}
-        >
-          <View style={[styles.selectionIndicator, isHomeSelected && styles.selectionIndicatorActive]} />
+        {renderRailButton(
+          'home',
+          isHomeSelected,
+          onSelectHome,
           <View style={[styles.homeButton, isHomeSelected && styles.homeButtonActive]}>
             <LineSquiggleIcon size={24} color={Colors.bgPrimary} />
-          </View>
-        </TouchableOpacity>
+          </View>,
+        )}
       </View>
 
       {dmQuickEntries.length > 0 ? (
@@ -50,14 +68,10 @@ export function BrowseServerRail({
           {dmQuickEntries.map((entry) => {
             const isSelected = entry.id === selectedConversationId
 
-            return (
-              <TouchableOpacity
-                key={entry.id}
-                style={styles.itemPressable}
-                onPress={() => onSelectDm?.(entry.id)}
-                activeOpacity={0.8}
-              >
-                <View style={[styles.selectionIndicator, isSelected && styles.selectionIndicatorActive]} />
+            return renderRailButton(
+              entry.id,
+              isSelected,
+              () => onSelectDm?.(entry.id),
                 <View style={[styles.avatarWrap, isSelected && styles.avatarWrapActive]}>
                   <Avatar name={entry.label} uri={entry.avatarUri} size={42} borderRadius={8} />
                   {!!entry.unreadCount && entry.unreadCount > 0 ? (
@@ -65,8 +79,7 @@ export function BrowseServerRail({
                       <Text style={styles.dmUnreadBadgeText}>{entry.unreadCount > 99 ? '99+' : entry.unreadCount}</Text>
                     </View>
                   ) : null}
-                </View>
-              </TouchableOpacity>
+              </View>,
             )
           })}
         </View>
@@ -80,17 +93,13 @@ export function BrowseServerRail({
         renderItem={({ item }) => {
           const isSelected = item.id === selectedGuildId
 
-          return (
-            <TouchableOpacity
-              style={styles.itemPressable}
-              onPress={() => onSelectGuild(item.id)}
-              activeOpacity={0.8}
-            >
-              <View style={[styles.selectionIndicator, isSelected && styles.selectionIndicatorActive]} />
+          return renderRailButton(
+            item.id,
+            isSelected,
+            () => onSelectGuild(item.id),
               <View style={[styles.avatarWrap, isSelected && styles.avatarWrapActive]}>
                 <Avatar name={item.name} uri={item.avatarUri} size={42} borderRadius={8} />
-              </View>
-            </TouchableOpacity>
+              </View>,
           )
         }}
         showsVerticalScrollIndicator={false}
@@ -118,6 +127,12 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 10,
   },
+  itemRow: {
+    width: '100%',
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   homeButton: {
     width: 46,
     height: 46,
@@ -143,23 +158,29 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   dmQuickList: {
-    alignItems: 'center',
     gap: 6,
     paddingBottom: 10,
   },
   itemPressable: {
+    width: 48,
+    height: 48,
     alignItems: 'center',
-    paddingHorizontal: 6,
-    gap: 4,
+    justifyContent: 'center',
   },
   selectionIndicator: {
-    width: 22,
-    height: 3,
-    borderRadius: 999,
+    position: 'absolute',
+    left: 0,
+    width: 4,
+    height: 0,
+    opacity: 0,
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
     backgroundColor: 'transparent',
   },
   selectionIndicatorActive: {
     backgroundColor: Colors.accentBlue,
+    height: 38,
+    opacity: 1,
   },
   avatarWrap: {
     padding: 2,

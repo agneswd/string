@@ -27,6 +27,7 @@ interface BrowseScreenProps {
   channels?: Channel[]
   conversations?: DmConversation[]
   isLoading?: boolean
+  topInset?: number
   selectedGuildId?: string | null
   selectedChannelId?: string | null
   currentVoiceChannelId?: string | null
@@ -52,6 +53,7 @@ export function BrowseScreen({
   channels = [],
   conversations = [],
   isLoading = false,
+  topInset = 0,
   selectedGuildId,
   selectedChannelId,
   currentVoiceChannelId,
@@ -143,6 +145,7 @@ export function BrowseScreen({
       <BrowseServerRail
         guilds={model.guilds}
         dmQuickEntries={dmQuickEntries}
+        topInset={topInset}
         isHomeSelected={!model.selectedGuild}
         selectedGuildId={model.selectedGuild?.id}
         selectedConversationId={selectedConversationId}
@@ -172,7 +175,7 @@ export function BrowseScreen({
         }}
       />
 
-      <View style={styles.detailPane}>
+      <View style={[styles.detailPane, topInset > 0 ? { paddingTop: topInset } : null]}>
         {model.selectedGuild ? (
           <>
             <View style={styles.guildHeader}>

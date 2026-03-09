@@ -23,6 +23,8 @@ export interface ChatMessage {
   senderId: UserId
   text: string
   sentAt: EpochMs
+  kind: 'message' | 'system'
+  systemLabel?: string
   /** Optimistic messages are pending server acknowledgement. */
   pending?: boolean
 }

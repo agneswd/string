@@ -1,5 +1,7 @@
 import type {
   Channel,
+  DmCallEvent,
+  DmCallRequest,
   DmChannel,
   DmMessage,
   DmParticipant,
@@ -9,6 +11,7 @@ import type {
   GuildInvite,
   GuildMember,
   Message,
+  RtcSignal,
   User,
   UserPresence,
   VoiceState,
@@ -70,6 +73,9 @@ export interface SpacetimeDataSnapshot {
   dmChannels: DmChannel[]
   dmParticipants: DmParticipant[]
   dmMessages: DmMessage[]
+  dmCallEvents: DmCallEvent[]
+  dmCallRequests: DmCallRequest[]
+  rtcSignals: RtcSignal[]
   /** Voice states for all visible users (includes self when in a voice channel). */
   voiceStates: VoiceState[]
 }
@@ -84,7 +90,13 @@ export interface SpacetimeActions {
   createGuild: (params: { name: string }) => Promise<void>
   createChannel: (params: { guildId: unknown; name: string; channelType: unknown; parentCategoryId: unknown | null }) => Promise<void>
   joinVoiceChannel: (channelId: unknown) => Promise<void>
+  joinVoiceDm: (dmChannelId: unknown) => Promise<void>
+  leaveVoiceChannel: () => Promise<void>
   initiateDmCall: (dmChannelId: unknown) => Promise<void>
+  acceptDmCall: (callId: unknown) => Promise<void>
+  declineDmCall: (callId: unknown) => Promise<void>
+  sendDmRtcSignal: (params: { dmChannelId: unknown; recipientIdentity: unknown; signalType: unknown; payload: string }) => Promise<void>
+  ackRtcSignal: (signalId: unknown) => Promise<void>
   updateGuild: (params: { guildId: unknown; name?: string | null; bio?: string | null; avatarBytes?: Uint8Array | null }) => Promise<void>
   inviteMember: (params: { guildId: unknown; targetIdentity: unknown }) => Promise<void>
   leaveGuild: (guildId: unknown) => Promise<void>
